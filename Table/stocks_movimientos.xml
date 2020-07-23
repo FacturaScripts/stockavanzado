@@ -17,16 +17,16 @@
         <null>NO</null>
     </column>
     <column>
-        <name>doccode</name>
-        <type>character varying(20)</type>
-    </column>
-    <column>
         <name>docid</name>
         <type>integer</type>
     </column>
     <column>
         <name>docmodel</name>
         <type>character varying(30)</type>
+    </column>
+    <column>
+        <name>documento</name>
+        <type>character varying(100)</type>
     </column>
     <column>
         <name>fecha</name>

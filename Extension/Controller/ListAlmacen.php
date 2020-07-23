@@ -40,13 +40,15 @@ class ListAlmacen
             $this->addView($viewName, 'MovimientoStock', 'stock-movements', 'fas fa-truck-loading');
             $this->addOrderBy($viewName, ['fecha', 'hora'], 'date', 2);
             $this->addOrderBy($viewName, ['cantidad'], 'quantity');
-            $this->addSearchFields($viewName, ['doccode', 'referencia']);
+            $this->addSearchFields($viewName, ['documento', 'referencia']);
 
             /// Filters
             $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
 
             /// disable buttons
+            $this->setSettings($viewName, 'btnDelete', false);
             $this->setSettings($viewName, 'btnNew', false);
+            $this->setSettings($viewName, 'checkBoxes', false);
         };
     }
 

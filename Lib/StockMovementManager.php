@@ -19,6 +19,7 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Core\Base\ToolBox;
 use FacturaScripts\Core\Model\Base\BusinessDocumentLine;
 use FacturaScripts\Core\Model\Base\TransformerDocument;
 use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
@@ -63,10 +64,19 @@ class StockMovementManager
             }
         }
 
-        $movement->cantidad = $line->cantidad;
-        $movement->doccode = $doc->codigo;
+        $movement->cantidad = $line->actualizastock * $line->cantidad;
+        $movement->documento = static::toolBox()->i18n()->trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
         empty($movement->cantidad) ? $movement->delete() : $movement->save();
+    }
+
+    /**
+     * 
+     * @return ToolBox
+     */
+    protected static function toolBox()
+    {
+        return new ToolBox();
     }
 }

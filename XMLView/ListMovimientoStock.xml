@@ -26,7 +26,7 @@
             </widget>
         </column>
         <column name="document" order="110">
-            <widget type="string" fieldname="doccode" />
+            <widget type="string" fieldname="documento" />
         </column>
         <column name="product" order="120">
             <widget type="autocomplete" fieldname="idproducto" onclick="EditProducto">

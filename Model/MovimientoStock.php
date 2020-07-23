@@ -46,12 +46,6 @@ class MovimientoStock extends Base\ModelClass
 
     /**
      *
-     * @var string
-     */
-    public $doccode;
-
-    /**
-     *
      * @var int
      */
     public $docid;
@@ -61,6 +55,12 @@ class MovimientoStock extends Base\ModelClass
      * @var string
      */
     public $docmodel;
+
+    /**
+     *
+     * @var string
+     */
+    public $documento;
 
     /**
      *
@@ -139,6 +139,16 @@ class MovimientoStock extends Base\ModelClass
     public static function tableName(): string
     {
         return 'stocks_movimientos';
+    }
+
+    /**
+     * 
+     * @return bool
+     */
+    public function test()
+    {
+        $this->documento = $this->toolBox()->utils()->noHtml($this->documento);
+        return parent::test();
     }
 
     /**
