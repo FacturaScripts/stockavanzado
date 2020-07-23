@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Document   : lineastransferenciasstock.xml
-    Author     : Cristo M. Estévez Hernández
+    Document   : stocks_lineastransferencias.xml
+    Author     : Carlos Garcia Gomez
     Description:
-        Structure for the lineastransferenciasstock table.
+        Structure for the stocks_lineastransferencias table.
 -->
 <table>
     <column>
@@ -31,19 +31,19 @@
         <type>character varying(30)</type>
     </column>
     <constraint>
-        <name>lineastransferenciasstock_pkey</name>
+        <name>stocks_lineastransferencias_pkey</name>
         <type>PRIMARY KEY (idlinea)</type>
     </constraint>
     <constraint>
-        <name>ca_lineastransferenciasstock_productos</name>
+        <name>ca_stocks_lineastransferencias_productos</name>
         <type>FOREIGN KEY (idproducto) REFERENCES productos (idproducto) ON DELETE CASCADE ON UPDATE CASCADE</type>
     </constraint>
     <constraint>
-        <name>ca_lineastransferenciasstock_transferenciasstock</name>
+        <name>ca_stocks_lineastransferencias_transferenciasstock</name>
         <type>FOREIGN KEY (idtrans) REFERENCES transferenciasstock (idtrans) ON DELETE CASCADE ON UPDATE CASCADE</type>
     </constraint>
     <constraint>
-        <name>ca_lineastransferenciasstock_variantes</name>
+        <name>ca_stocks_lineastransferencias_variantes</name>
         <type>FOREIGN KEY (referencia) REFERENCES variantes (referencia) ON DELETE CASCADE ON UPDATE CASCADE</type>
     </constraint>
 </table>

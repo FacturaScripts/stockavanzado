@@ -140,7 +140,7 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
      */
     public static function tableName()
     {
-        return 'lineastransferenciasstock';
+        return 'stocks_lineastransferencias';
     }
 
     /**

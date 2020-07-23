@@ -122,7 +122,7 @@ class TransferenciaStock extends Base\ModelClass
      */
     public static function tableName()
     {
-        return 'transferenciasstock';
+        return 'stocks_transferencias';
     }
 
     /**

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Document   : cabeceratransferencias.xml
-    Author     : Cristo M. Estévez Hernández
+    Document   : stocks_transferencias.xml
+    Author     : Carlos Garcia Gomez
     Description:
-        Structure for the transferenciasstock table.
+        Structure for the stocks_transferencias table.
 -->
 <table>
     <column>
@@ -34,19 +34,19 @@
         <type>text</type>
     </column>
     <constraint>
-        <name>transferenciasstock_pkey</name>
+        <name>stocks_transferencias_pkey</name>
         <type>PRIMARY KEY (idtrans)</type>
     </constraint>
     <constraint>
-        <name>ca_transferenciasstock_almacenes_ori</name>
-        <type>FOREIGN KEY (codalmacenorigen) REFERENCES almacenes (codalmacen) ON DELETE RESTRICT ON UPDATE CASCADE</type>
+        <name>ca_stocks_transferencias_almacenes_ori</name>
+        <type>FOREIGN KEY (codalmacenorigen) REFERENCES almacenes (codalmacen) ON DELETE CASCADE ON UPDATE CASCADE</type>
     </constraint>
     <constraint>
-        <name>ca_transferenciasstock_almacenes_des</name>
-        <type>FOREIGN KEY (codalmacendestino) REFERENCES almacenes (codalmacen) ON DELETE RESTRICT ON UPDATE CASCADE</type>
+        <name>ca_stocks_transferencias_almacenes_des</name>
+        <type>FOREIGN KEY (codalmacendestino) REFERENCES almacenes (codalmacen) ON DELETE CASCADE ON UPDATE CASCADE</type>
     </constraint>
     <constraint>
-        <name>ca_transferenciasstock_users</name>
+        <name>ca_stocks_transferencias_users</name>
         <type>FOREIGN KEY (nick) REFERENCES users (nick) ON DELETE SET NULL ON UPDATE CASCADE</type>
     </constraint>
 </table>

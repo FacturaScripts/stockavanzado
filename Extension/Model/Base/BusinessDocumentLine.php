@@ -16,26 +16,22 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-namespace FacturaScripts\Plugins\StockAvanzado;
+namespace FacturaScripts\Plugins\StockAvanzado\Extension\Model\Base;
 
-use FacturaScripts\Core\Base\InitClass;
+use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
 
 /**
- * Description of Init
+ * Description of BusinessDocumentLine
  *
  * @author Carlos Garcia Gomez <carlos@facturascripts.com>
  */
-class Init extends InitClass
+class BusinessDocumentLine
 {
 
-    public function init()
+    protected function updateStock()
     {
-        $this->loadExtension(new Extension\Controller\ListAlmacen());
-        $this->loadExtension(new Extension\Model\Base\BusinessDocumentLine());
-    }
-
-    public function update()
-    {
-        ;
+        return function($doc) {
+            StockMovementManager::updateLine($this, $this->previousData, $doc);
+        };
     }
 }

@@ -29,7 +29,24 @@ class ListAlmacen
     protected function createViews()
     {
         return function() {
+            $this->createViewsMovements();
             $this->createViewsTransfers();
+        };
+    }
+
+    protected function createViewsMovements()
+    {
+        return function($viewName = 'ListMovimientoStock') {
+            $this->addView($viewName, 'MovimientoStock', 'stock-movements', 'fas fa-truck-loading');
+            $this->addOrderBy($viewName, ['fecha', 'hora'], 'date', 2);
+            $this->addOrderBy($viewName, ['cantidad'], 'quantity');
+            $this->addSearchFields($viewName, ['doccode', 'referencia']);
+
+            /// Filters
+            $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
+
+            /// disable buttons
+            $this->setSettings($viewName, 'btnNew', false);
         };
     }
 
@@ -37,15 +54,14 @@ class ListAlmacen
     {
         return function($viewName = 'ListTransferenciaStock') {
             $this->addView($viewName, 'TransferenciaStock', 'stock-transfers', 'fas fa-exchange-alt');
-            $this->addSearchFields($viewName, ['observaciones']);
             $this->addOrderBy($viewName, ['codalmacenorigen'], 'origin-warehouse');
             $this->addOrderBy($viewName, ['codalmacendestino'], 'destination-warehouse');
-            $this->addOrderBy($viewName, ['fecha'], 'date');
+            $this->addOrderBy($viewName, ['fecha'], 'date', 2);
             $this->addOrderBy($viewName, ['usuario'], 'user');
+            $this->addSearchFields($viewName, ['observaciones']);
 
             /// Filters
-            $this->addFilterDatePicker($viewName, 'fromfecha', 'from-date', 'fecha', '>=');
-            $this->addFilterDatePicker($viewName, 'untilfecha', 'until-date', 'fecha', '<=');
+            $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
             $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
         };
     }
