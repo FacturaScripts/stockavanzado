@@ -37,13 +37,16 @@ class ListAlmacen
     protected function createViewsMovements()
     {
         return function($viewName = 'ListMovimientoStock') {
-            $this->addView($viewName, 'MovimientoStock', 'stock-movements', 'fas fa-truck-loading');
+            $this->addView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
             $this->addOrderBy($viewName, ['fecha', 'hora'], 'date', 2);
             $this->addOrderBy($viewName, ['cantidad'], 'quantity');
             $this->addSearchFields($viewName, ['documento', 'referencia']);
 
             /// Filters
             $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
+
+            $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
+            $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
 
             /// disable buttons
             $this->setSettings($viewName, 'btnDelete', false);
@@ -55,7 +58,7 @@ class ListAlmacen
     protected function createViewsTransfers()
     {
         return function($viewName = 'ListTransferenciaStock') {
-            $this->addView($viewName, 'TransferenciaStock', 'stock-transfers', 'fas fa-exchange-alt');
+            $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt');
             $this->addOrderBy($viewName, ['codalmacenorigen'], 'origin-warehouse');
             $this->addOrderBy($viewName, ['codalmacendestino'], 'destination-warehouse');
             $this->addOrderBy($viewName, ['fecha'], 'date', 2);
@@ -64,6 +67,9 @@ class ListAlmacen
 
             /// Filters
             $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
+            $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
+            $this->addFilterSelect($viewName, 'codalmacenorigen', 'origin-warehouse', 'codalmacenorigen', $warehouses);
+            $this->addFilterSelect($viewName, 'codalmacendestino', 'destination-warehouse', 'codalmacendestino', $warehouses);
             $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
         };
     }
