@@ -40,7 +40,7 @@
     </constraint>
     <constraint>
         <name>ca_stocks_lineastransferencias_transferenciasstock</name>
-        <type>FOREIGN KEY (idtrans) REFERENCES transferenciasstock (idtrans) ON DELETE CASCADE ON UPDATE CASCADE</type>
+        <type>FOREIGN KEY (idtrans) REFERENCES stocks_transferencias (idtrans) ON DELETE CASCADE ON UPDATE CASCADE</type>
     </constraint>
     <constraint>
         <name>ca_stocks_lineastransferencias_variantes</name>

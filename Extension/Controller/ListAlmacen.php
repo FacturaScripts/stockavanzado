@@ -63,7 +63,7 @@ class ListAlmacen
             $this->addOrderBy($viewName, ['codalmacendestino'], 'destination-warehouse');
             $this->addOrderBy($viewName, ['fecha'], 'date', 2);
             $this->addOrderBy($viewName, ['usuario'], 'user');
-            $this->addSearchFields($viewName, ['observaciones']);
+            $this->addSearchFields($viewName, ['idtrans', 'observaciones']);
 
             /// Filters
             $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');

@@ -40,7 +40,6 @@ class StockMovementManager
      */
     public static function updateLine($line, $prevData, $doc)
     {
-
         if (false === \in_array($line->actualizastock, [1, -1], true) &&
             false === \in_array($prevData['actualizastock'], [1, -1], true)) {
             return;

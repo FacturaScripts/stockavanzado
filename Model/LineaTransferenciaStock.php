@@ -21,7 +21,6 @@ namespace FacturaScripts\Plugins\StockAvanzado\Model;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base;
 use FacturaScripts\Dinamic\Model\Stock;
-use FacturaScripts\Dinamic\Model\TransferenciaStock;
 use FacturaScripts\Dinamic\Model\Variante;
 
 /**
@@ -191,6 +190,39 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
 
     /**
      * 
+     * @param string             $codalmacen
+     * @param float              $cantidad
+     * @param TransferenciaStock $transfer
+     *
+     * @return bool
+     */
+    protected function updateMovement($codalmacen, $cantidad, $transfer): bool
+    {
+        $movement = new MovimientoStock();
+        $where = [
+            new DataBaseWhere('codalmacen', $codalmacen),
+            new DataBaseWhere('docid', $transfer->primaryColumnValue()),
+            new DataBaseWhere('docmodel', $transfer->modelClassName()),
+            new DataBaseWhere('referencia', $this->referencia)
+        ];
+        if (false === $movement->loadFromCode('', $where)) {
+            $movement->codalmacen = $codalmacen;
+            $movement->docid = $transfer->primaryColumnValue();
+            $movement->docmodel = $transfer->modelClassName();
+            $movement->idproducto = $this->getVariant()->idproducto;
+            $movement->referencia = $this->referencia;
+            if (empty($cantidad)) {
+                return true;
+            }
+        }
+
+        $movement->cantidad = $cantidad;
+        $movement->documento = $this->toolBox()->i18n()->trans($transfer->modelClassName()) . ' ' . $transfer->primaryColumnValue();
+        return empty($movement->cantidad) ? $movement->delete() : $movement->save();
+    }
+
+    /**
+     * 
      * @param float $quantity
      *
      * @return bool
@@ -208,6 +240,12 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
             return false;
         }
 
-        return $stock->transferTo($transfer->codalmacendestino, $quantity);
+        if ($stock->transferTo($transfer->codalmacendestino, $quantity)) {
+            $this->updateMovement($transfer->codalmacenorigen, $this->cantidad * -1, $transfer);
+            $this->updateMovement($transfer->codalmacendestino, $this->cantidad, $transfer);
+            return true;
+        }
+
+        return false;
     }
 }
