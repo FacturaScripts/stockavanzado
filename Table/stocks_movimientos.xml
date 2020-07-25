@@ -42,6 +42,10 @@
         <null>NO</null>
     </column>
     <column>
+        <name>idlinea</name>
+        <type>integer</type>
+    </column>
+    <column>
         <name>idproducto</name>
         <type>integer</type>
         <null>NO</null>

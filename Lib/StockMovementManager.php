@@ -74,6 +74,7 @@ class StockMovementManager
             new DataBaseWhere('codalmacen', $fromCodalmacen),
             new DataBaseWhere('docid', $doc->primaryColumnValue()),
             new DataBaseWhere('docmodel', $doc->modelClassName()),
+            new DataBaseWhere('idlinea', $line->primaryColumnValue()),
             new DataBaseWhere('referencia', $line->referencia)
         ];
         if ($movement->loadFromCode('', $where)) {
@@ -100,12 +101,14 @@ class StockMovementManager
             new DataBaseWhere('codalmacen', $doc->codalmacen),
             new DataBaseWhere('docid', $doc->primaryColumnValue()),
             new DataBaseWhere('docmodel', $doc->modelClassName()),
+            new DataBaseWhere('idlinea', $line->primaryColumnValue()),
             new DataBaseWhere('referencia', $line->referencia)
         ];
         if (false === $movement->loadFromCode('', $where)) {
             $movement->codalmacen = $doc->codalmacen;
             $movement->docid = $doc->primaryColumnValue();
             $movement->docmodel = $doc->modelClassName();
+            $movement->idlinea = $line->primaryColumnValue();
             $movement->idproducto = $line->idproducto;
             $movement->referencia = $line->referencia;
             if (empty($line->cantidad)) {
