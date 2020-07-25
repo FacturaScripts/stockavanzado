@@ -22,6 +22,10 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Base\ToolBox;
 use FacturaScripts\Core\Model\Base\BusinessDocumentLine;
 use FacturaScripts\Core\Model\Base\TransformerDocument;
+use FacturaScripts\Dinamic\Model\AlbaranCliente;
+use FacturaScripts\Dinamic\Model\AlbaranProveedor;
+use FacturaScripts\Dinamic\Model\FacturaCliente;
+use FacturaScripts\Dinamic\Model\FacturaProveedor;
 use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 
 /**
@@ -31,6 +35,26 @@ use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
  */
 class StockMovementManager
 {
+
+    public static function rebuild()
+    {
+        $models = [
+            new AlbaranProveedor(), new FacturaProveedor(),
+            new AlbaranCliente(), new FacturaCliente()
+        ];
+        foreach ($models as $model) {
+            foreach ($model->all([], ['fecha' => 'DESC'], 0, 1000) as $doc) {
+                foreach ($doc->getLines() as $line) {
+                    if (empty($line->referencia) || $line->getProducto()->nostock) {
+                        continue;
+                    }
+
+                    $prevData['actualizastock'] = $line->actualizastock;
+                    static::updateLine($line, $prevData, $doc);
+                }
+            }
+        }
+    }
 
     /**
      * 

@@ -18,6 +18,8 @@
  */
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
+use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
+
 /**
  * Description of ListAlmacen
  *
@@ -52,6 +54,14 @@ class ListAlmacen
             $this->setSettings($viewName, 'btnDelete', false);
             $this->setSettings($viewName, 'btnNew', false);
             $this->setSettings($viewName, 'checkBoxes', false);
+
+            $this->addButton($viewName, [
+                'action' => 'rebuild-movements',
+                'color' => 'warning',
+                'confirm' => true,
+                'icon' => 'fas fa-magic',
+                'label' => 'rebuild-movements'
+            ]);
         };
     }
 
@@ -71,6 +81,17 @@ class ListAlmacen
             $this->addFilterSelect($viewName, 'codalmacenorigen', 'origin-warehouse', 'codalmacenorigen', $warehouses);
             $this->addFilterSelect($viewName, 'codalmacendestino', 'destination-warehouse', 'codalmacendestino', $warehouses);
             $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
+        };
+    }
+
+    protected function execPreviousAction()
+    {
+        return function($action) {
+            if ($action === 'rebuild-movements') {
+                StockMovementManager::rebuild();
+            }
+
+            return true;
         };
     }
 }
