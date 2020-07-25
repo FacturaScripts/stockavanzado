@@ -55,13 +55,15 @@ class ListAlmacen
             $this->setSettings($viewName, 'btnNew', false);
             $this->setSettings($viewName, 'checkBoxes', false);
 
-            $this->addButton($viewName, [
-                'action' => 'rebuild-movements',
-                'color' => 'warning',
-                'confirm' => true,
-                'icon' => 'fas fa-magic',
-                'label' => 'rebuild-movements'
-            ]);
+            if ($this->user->admin) {
+                $this->addButton($viewName, [
+                    'action' => 'rebuild-movements',
+                    'color' => 'warning',
+                    'confirm' => true,
+                    'icon' => 'fas fa-magic',
+                    'label' => 'rebuild-movements'
+                ]);
+            }
         };
     }
 

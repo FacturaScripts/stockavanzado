@@ -38,6 +38,10 @@ class StockMovementManager
 
     public static function rebuild()
     {
+        /// remove all movements
+        $movement = new MovimientoStock();
+        $movement->deleteAll();
+
         $models = [
             new AlbaranProveedor(), new FacturaProveedor(),
             new AlbaranCliente(), new FacturaCliente()
@@ -53,6 +57,28 @@ class StockMovementManager
                     static::updateLine($line, $prevData, $doc);
                 }
             }
+        }
+    }
+
+    /**
+     * 
+     * @param BusinessDocumentLine $line
+     * @param TransformerDocument  $doc
+     * @param string               $fromCodalmacen
+     * @param string               $toCodalmacen
+     */
+    public static function transferLine($line, $doc, $fromCodalmacen, $toCodalmacen)
+    {
+        $movement = new MovimientoStock();
+        $where = [
+            new DataBaseWhere('codalmacen', $fromCodalmacen),
+            new DataBaseWhere('docid', $doc->primaryColumnValue()),
+            new DataBaseWhere('docmodel', $doc->modelClassName()),
+            new DataBaseWhere('referencia', $line->referencia)
+        ];
+        if ($movement->loadFromCode('', $where)) {
+            $movement->codalmacen = $toCodalmacen;
+            $movement->save();
         }
     }
 

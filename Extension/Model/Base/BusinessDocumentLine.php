@@ -28,6 +28,13 @@ use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
 class BusinessDocumentLine
 {
 
+    public static function transfer()
+    {
+        return function($fromCodalmacen, $toCodalmacen, $doc) {
+            StockMovementManager::transferLine($this, $doc, $fromCodalmacen, $toCodalmacen);
+        };
+    }
+
     protected function updateStock()
     {
         return function($doc) {

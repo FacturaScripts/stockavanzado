@@ -102,6 +102,15 @@ class MovimientoStock extends Base\ModelClass
 
     /**
      * 
+     * @return bool
+     */
+    public function deleteAll()
+    {
+        return self::$dataBase->exec('DELETE FROM ' . static::tableName() . ';');
+    }
+
+    /**
+     * 
      * @return Variante
      */
     public function getVariant()
