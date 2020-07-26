@@ -18,7 +18,11 @@
  */
 namespace FacturaScripts\Plugins\StockAvanzado;
 
+use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Base\InitClass;
+use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
+use FacturaScripts\Plugins\StockAvanzado\Model\LineaTransferenciaStock;
+use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
 
 /**
  * Description of Init
@@ -38,6 +42,38 @@ class Init extends InitClass
 
     public function update()
     {
-        ;
+        $this->migrateData();
+    }
+
+    private function migrateData()
+    {
+        $database = new DataBase();
+        if (false === $database->tableExists('transferenciasstock')) {
+            return;
+        }
+
+        foreach ($database->select('SELECT * FROM transferenciasstock') as $row) {
+            $trans = new TransferenciaStock($row);
+            if (false === $trans->save()) {
+                return;
+            }
+        }
+
+        if (false === $database->tableExists('lineastransferenciasstock')) {
+            $database->exec('DROP TABLE transferenciasstock;');
+            return;
+        }
+
+        LineaTransferenciaStock::setDisableUpdateStock(true);
+        foreach ($database->select('SELECT * FROM lineastransferenciasstock') as $row) {
+            $line = new LineaTransferenciaStock($row);
+            if (false === $line->save()) {
+                return;
+            }
+        }
+
+        $database->exec('DROP TABLE lineastransferenciasstock;');
+        $database->exec('DROP TABLE transferenciasstock;');
+        StockMovementManager::rebuild();
     }
 }

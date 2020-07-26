@@ -26,7 +26,9 @@ use FacturaScripts\Dinamic\Model\AlbaranCliente;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\FacturaCliente;
 use FacturaScripts\Dinamic\Model\FacturaProveedor;
+use FacturaScripts\Plugins\StockAvanzado\Model\LineaTransferenciaStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
+use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
 
 /**
  * Description of StockMovementManager
@@ -36,18 +38,21 @@ use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 class StockMovementManager
 {
 
+    const REBUILD_LIMIT = 1000;
+
     public static function rebuild()
     {
         /// remove all movements
         $movement = new MovimientoStock();
         $movement->deleteAll();
 
+        /// save movements from business documents
         $models = [
             new AlbaranProveedor(), new FacturaProveedor(),
             new AlbaranCliente(), new FacturaCliente()
         ];
         foreach ($models as $model) {
-            foreach ($model->all([], ['fecha' => 'DESC'], 0, 1000) as $doc) {
+            foreach ($model->all([], ['fecha' => 'DESC'], 0, self::REBUILD_LIMIT) as $doc) {
                 foreach ($doc->getLines() as $line) {
                     if (empty($line->referencia) || $line->getProducto()->nostock) {
                         continue;
@@ -56,6 +61,14 @@ class StockMovementManager
                     $prevData['actualizastock'] = $line->actualizastock;
                     static::updateLine($line, $prevData, $doc);
                 }
+            }
+        }
+
+        /// save movements from transferences
+        $transferenciaStock = new TransferenciaStock();
+        foreach ($transferenciaStock->all([], [], 0, self::REBUILD_LIMIT) as $transfer) {
+            foreach ($transfer->getLines() as $line) {
+                static::updateLineTransfer($line, $transfer);
             }
         }
     }
@@ -121,6 +134,53 @@ class StockMovementManager
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
         empty($movement->cantidad) ? $movement->delete() : $movement->save();
+    }
+
+    /**
+     * 
+     * @param LineaTransferenciaStock $line
+     * @param TransferenciaStock      $transfer
+     */
+    public static function updateLineTransfer($line, $transfer)
+    {
+        static::updateLineTransferMovement($transfer->codalmacenorigen, $line->cantidad * -1, $transfer, $line);
+        static::updateLineTransferMovement($transfer->codalmacendestino, $line->cantidad, $transfer, $line);
+    }
+
+    /**
+     * 
+     * @param string                  $codalmacen
+     * @param float                   $cantidad
+     * @param TransferenciaStock      $transfer
+     * @param LineaTransferenciaStock $line
+     *
+     * @return bool
+     */
+    protected static function updateLineTransferMovement($codalmacen, $cantidad, $transfer, $line)
+    {
+        $movement = new MovimientoStock();
+        $where = [
+            new DataBaseWhere('codalmacen', $codalmacen),
+            new DataBaseWhere('docid', $transfer->primaryColumnValue()),
+            new DataBaseWhere('docmodel', $transfer->modelClassName()),
+            new DataBaseWhere('referencia', $line->referencia)
+        ];
+        if (false === $movement->loadFromCode('', $where)) {
+            $movement->codalmacen = $codalmacen;
+            $movement->docid = $transfer->primaryColumnValue();
+            $movement->docmodel = $transfer->modelClassName();
+            $movement->fecha = \date(MovimientoStock::DATE_STYLE, \strtotime($transfer->fecha));
+            $movement->hora = \date(MovimientoStock::HOUR_STYLE, \strtotime($transfer->fecha));
+            $movement->idproducto = $line->getVariant()->idproducto;
+            $movement->referencia = $line->referencia;
+            if (empty($cantidad)) {
+                return true;
+            }
+        }
+
+        $movement->cantidad = $cantidad;
+        $movement->documento = static::toolBox()->i18n()->trans($transfer->modelClassName()) . ' ' . $transfer->primaryColumnValue();
+        return empty($movement->cantidad) ? $movement->delete() : $movement->save();
     }
 
     /**
