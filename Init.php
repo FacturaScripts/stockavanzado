@@ -22,6 +22,7 @@ use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Base\InitClass;
 use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaTransferenciaStock;
+use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
 
 /**
@@ -43,6 +44,11 @@ class Init extends InitClass
     public function update()
     {
         $this->migrateData();
+
+        $movement = new MovimientoStock();
+        if ($movement->count() < 1) {
+            StockMovementManager::rebuild();
+        }
     }
 
     private function migrateData()
@@ -74,6 +80,5 @@ class Init extends InitClass
 
         $database->exec('DROP TABLE lineastransferenciasstock;');
         $database->exec('DROP TABLE transferenciasstock;');
-        StockMovementManager::rebuild();
     }
 }
