@@ -40,7 +40,7 @@ class EditProducto
     {
         return function($viewName = 'ListMovimientoStock') {
             $this->addListView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
-            $this->views[$viewName]->addOrderBy(['fecha', 'hora'], 'date', 2);
+            $this->views[$viewName]->addOrderBy(['fecha', 'hora', 'id'], 'date', 2);
             $this->views[$viewName]->addOrderBy(['cantidad'], 'quantity');
             $this->views[$viewName]->searchFields = ['documento', 'referencia'];
 

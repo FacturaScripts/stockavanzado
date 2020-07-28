@@ -40,7 +40,7 @@ class ListAlmacen
     {
         return function($viewName = 'ListMovimientoStock') {
             $this->addView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
-            $this->addOrderBy($viewName, ['fecha', 'hora'], 'date', 2);
+            $this->addOrderBy($viewName, ['fecha', 'hora', 'id'], 'date', 2);
             $this->addOrderBy($viewName, ['cantidad'], 'quantity');
             $this->addSearchFields($viewName, ['documento', 'referencia']);
 

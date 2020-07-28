@@ -46,4 +46,8 @@
         <name>ca_stocks_lineastransferencias_variantes</name>
         <type>FOREIGN KEY (referencia) REFERENCES variantes (referencia) ON DELETE CASCADE ON UPDATE CASCADE</type>
     </constraint>
+    <constraint>
+        <name>uniq_stocks_lineastransferencias_ref</name>
+        <type>UNIQUE (idtrans,referencia)</type>
+    </constraint>
 </table>

@@ -180,7 +180,8 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
      */
     protected function onDelete()
     {
-        $this->updateStock($this->cantidad * -1);
+        $this->cantidad = 0.0;
+        $this->updateStock($this->previousData['cantidad'] * -1);
     }
 
     /**
