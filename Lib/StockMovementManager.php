@@ -59,6 +59,7 @@ class StockMovementManager
                     }
 
                     $prevData['actualizastock'] = $line->actualizastock;
+                    $prevData['cantidad'] = 0.0;
                     static::updateLine($line, $prevData, $doc);
                 }
             }
@@ -126,7 +127,8 @@ class StockMovementManager
             }
         }
 
-        $movement->cantidad = $line->actualizastock * $line->cantidad;
+        $diff = empty($line->idlinea) ? $line->cantidad : $line->cantidad - $prevData['cantidad'];
+        $movement->cantidad += $line->actualizastock * $diff;
         $movement->documento = static::toolBox()->i18n()->trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
