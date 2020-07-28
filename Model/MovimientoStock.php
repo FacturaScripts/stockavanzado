@@ -84,12 +84,6 @@ class MovimientoStock extends Base\ModelClass
      *
      * @var int
      */
-    public $idlinea;
-
-    /**
-     *
-     * @var int
-     */
     public $idproducto;
 
     /**
