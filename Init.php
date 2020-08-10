@@ -38,6 +38,7 @@ class Init extends InitClass
         $this->loadExtension(new Extension\Controller\EditAlmacen());
         $this->loadExtension(new Extension\Controller\EditProducto());
         $this->loadExtension(new Extension\Controller\ListAlmacen());
+        $this->loadExtension(new Extension\Controller\ListProducto());
         $this->loadExtension(new Extension\Model\Base\BusinessDocumentLine());
     }
 

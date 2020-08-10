@@ -91,6 +91,7 @@ class ListAlmacen
         return function($action) {
             if ($action === 'rebuild-movements') {
                 StockMovementManager::rebuild();
+                $this->toolBox()->i18nLog()->notice('reconstructed-movements');
             }
 
             return true;

@@ -1,6 +1,9 @@
 {
     "movements": "Movimeintos",
     "rebuild-movements": "Reconstuir movimeintos",
+    "rebuild-stock": "Reconstuir stock",
+    "reconstructed-movements": "Movimientos de stock reconstruidos",
+    "rebuilt-stock": "Stock reconstruido",
     "TransferenciaStock": "Tranferencia de stock",
     "transfers": "Tranferencias"
 }
