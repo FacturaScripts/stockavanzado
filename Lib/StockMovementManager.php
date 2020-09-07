@@ -38,7 +38,7 @@ use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
 class StockMovementManager
 {
 
-    const REBUILD_LIMIT = 1000;
+    const REBUILD_LIMIT = 500;
 
     public static function rebuild()
     {
