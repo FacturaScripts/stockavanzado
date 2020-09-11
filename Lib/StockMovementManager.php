@@ -38,7 +38,7 @@ use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
 class StockMovementManager
 {
 
-    const REBUILD_LIMIT = 500;
+    const REBUILD_LIMIT = 300;
 
     public static function rebuild()
     {
@@ -54,7 +54,7 @@ class StockMovementManager
         foreach ($models as $model) {
             foreach ($model->all([], ['fecha' => 'DESC'], 0, self::REBUILD_LIMIT) as $doc) {
                 foreach ($doc->getLines() as $line) {
-                    if (empty($line->referencia) || $line->getProducto()->nostock) {
+                    if (empty($line->referencia) || false === $line->getProducto()->exists() || $line->getProducto()->nostock) {
                         continue;
                     }
 
