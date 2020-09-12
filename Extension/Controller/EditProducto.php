@@ -68,6 +68,7 @@ class EditProducto
             $idproducto = $this->getViewModelValue('EditProducto', 'idproducto');
             $where = [new DataBaseWhere('idproducto', $idproducto)];
             $view->loadData('', $where);
+            $this->setSettings($viewName, 'active', $view->model->count($where) > 0);
         };
     }
 }
