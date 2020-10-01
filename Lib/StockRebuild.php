@@ -62,7 +62,14 @@ class StockRebuild
                     continue;
                 }
 
-                $newStock = new Stock($data);
+                $newStock = new Stock();
+                $where = [
+                    new DataBaseWhere('idproducto', $data['idproducto']),
+                    new DataBaseWhere('referencia', $data['referencia'])
+                ];
+                
+                $newStock->loadFromCode('', $where);
+                $newStock->loadFromData($data);
                 $newStock->save();
             }
         }
@@ -73,6 +80,7 @@ class StockRebuild
     protected static function clear()
     {
         $database = new DataBase();
-        return $database->exec('DELETE FROM stocks;');
+        //return $database->exec('DELETE FROM stocks;');
+        return $database->exec('UPDATE stocks SET cantidad = 0, disponible = 0, pterecibir = 0, reservada = 0;');
     }
 }
