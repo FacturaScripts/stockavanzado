@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * This file is part of Inventory plugin for FacturaScripts
+ * Copyright (C) 2019 Juan José Prieto Dzul <juanjoseprieto88@gmail.com>
+-->
+
+<view>
+    <columns>
+        <column name="ID" order="100">
+            <widget type="text" fieldname="idlinea"/>
+        </column>
+        <column name="reference" order="100">
+            <widget type="text" fieldname="referencia"/>
+        </column>
+        <column name="record-date" order="100" display="right">
+            <widget type="date" fieldname="fechaconteo" />
+        </column>
+        <column name="record-time" order="100" display="right">
+            <widget type="time" fieldname="horaconteo" />
+        </column>
+        <column name="total-counted" display="right" order="100">
+            <widget type="number" decimal="2" fieldname="cantidad" />
+        </column>
+    </columns>
+    <rows>
+        <row type="status">
+            <option color="warning" title="pending" fieldname="pendiente">1</option>
+        </row>
+    </rows>
+</view>

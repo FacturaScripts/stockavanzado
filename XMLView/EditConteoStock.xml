@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * This file is part of EasyPOS plugin for FacturaScripts
+ * Copyright (C) 2019 Juan José Prieto Dzul <juanjoseprieto88@gmail.com>
+-->
+
+<view>
+    <columns>
+        <group name="data" numcolumns="12">
+            <column name="user" numcolumns="3" order="100">
+                <widget type="select" fieldname="nick" readonly="true">
+                    <values source="users" fieldcode="nick" fieldtitle="nick" />
+                </widget>
+            </column>
+            <column name="description" numcolumns="3" order="100">
+                <widget type="text" fieldname="descripcion" icon="fas fa-tag" required="true" />
+            </column>
+            <column name="warehouse" titleurl="ListAlmacen" numcolumns="3" order="100">
+                <widget type="select" fieldname="codalmacen" required='true' onclick="EditAlmacen">
+                    <values source="almacenes" fieldcode="codalmacen" fieldtitle="nombre"/>
+                </widget>
+            </column>
+            <column name="company" titleurl="ListEmpresa" numcolumns="3" order="100">
+                <widget type="select" fieldname="idempresa" required='true' onclick="EditEmpresa">
+                    <values source="empresas" fieldcode="idempresa" fieldtitle="nombre"/>
+                </widget>
+            </column>
+            <column name="start-date" numcolumns="3" order="100">
+                <widget type="date" fieldname="fechainicio" icon="fas fa-calendar-alt" readonly="true" />
+            </column>
+            <column name="start-time" numcolumns="3" order="100">
+                <widget type="time" fieldname="horainicio" icon="fas fa-clock" readonly="true" />
+            </column>
+            <column name="end-date" numcolumns="3" order='100'>
+                <widget type='date' fieldname='fechafin' icon="fas fa-calendar-alt" readonly="true" />
+            </column>
+            <column name="end-time" numcolumns="3" order="100">
+                <widget type="time" fieldname="horafin" icon="fas fa-clock" readonly="true" />
+            </column>
+        </group>
+    </columns>
+</view>

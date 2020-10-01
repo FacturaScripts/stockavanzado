@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * This file is part of Inventory plugin for FacturaScripts
+ * Copyright (C) 2019 Juan José Prieto Dzul <juanjoseprieto88@gmail.com>
+-->
+
+<view>
+    <columns>
+        <column name="ID" order="100">
+            <widget type="text" fieldname="idconteo"/>
+        </column>
+        <column name="user" order="100">
+            <widget type="text" fieldname="nick"/>
+        </column>
+        <column name="description" order="100">
+            <widget type="text" fieldname="descripcion"/>
+        </column>
+        <column name="observations" order="100">
+            <widget type="text" fieldname="observaciones"/>
+        </column>
+        <column name='start-date' order='100' display='right'>
+            <widget type='date' fieldname='fechainicio' />
+        </column>
+        <column name='start-time' order='100' display='right'>
+            <widget type='time' fieldname='horainicio' />
+        </column>
+        <column name='end-date' order='100' display='right'>
+            <widget type='date' fieldname='fechafin' />
+        </column>
+        <column name='end-time' order='100' display='right'>
+            <widget type='time' fieldname='horafin' />
+        </column>
+        <column name="total-counted" display="right" order="100">
+            <widget type="number" decimal="2" fieldname="totalcontado" />
+        </column>
+    </columns>
+    <rows>
+        <row type='status'>
+            <option color='warning' title="pending" fieldname='editable'>1</option>
+            <option color='success' title="approved" fieldname='editable'>0</option>
+        </row>
+    </rows>
+</view>

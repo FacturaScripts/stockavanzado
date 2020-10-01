@@ -67,7 +67,7 @@ class StockRebuild
                     new DataBaseWhere('idproducto', $data['idproducto']),
                     new DataBaseWhere('referencia', $data['referencia'])
                 ];
-                
+
                 $newStock->loadFromCode('', $where);
                 $newStock->loadFromData($data);
                 $newStock->save();
