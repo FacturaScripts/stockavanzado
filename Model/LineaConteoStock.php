@@ -3,7 +3,7 @@
  * This file is part of Inventory plugin for FacturaScripts
  * Copyright (C) 2019 Juan José Prieto Dzul <juanjoseprieto88@gmail.com>
  */
-namespace FacturaScripts\Plugins\ConteoInventario\Model;
+namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base;

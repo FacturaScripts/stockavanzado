@@ -3,7 +3,7 @@
  * This file is part of Inventory plugin for FacturaScripts
  * Copyright (C) 2020 Juan José Prieto Dzul <juanjoseprieto88@gmail.com>
  */
-namespace FacturaScripts\Plugins\ConteoInventario\Controller;
+namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
 use FacturaScripts\Core\Base\Controller;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
@@ -11,7 +11,7 @@ use FacturaScripts\Dinamic\Model\CodeModel;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Variante;
 use FacturaScripts\Dinamic\Model\ConteoStock;
-use FacturaScripts\Plugins\ConteoInventario\Model\LineaConteoStock;
+use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use function json_encode;
 
 /**
@@ -22,6 +22,7 @@ use function json_encode;
 class CapturaInventario extends Controller
 {
     public $variante;
+    public $session;
     /**
      * @param Response $response
      * @param User $user
@@ -31,9 +32,11 @@ class CapturaInventario extends Controller
     {
         /** @noinspection PhpParamsInspection */
         parent::privateCore($response, $user, $permissions);
-        $this->setTemplate(false);
 
-        if (false === $this->isSessionOpen()) {
+        $this->setTemplate(false);
+        $this->session = new ConteoStock();
+
+        if (false === $this->session->loadFromUser($user->nick)) {
             $this->toolBox()->log()->warning('No se ha abierto ninguna sesion de conteo.');
         }
 
@@ -44,7 +47,7 @@ class CapturaInventario extends Controller
         if ($this->execPreviusAction($action) === false) return;
 
         /** Set view template*/
-        $template = 'InventarioMovil';
+        $template = 'ConteoInventario';
         $this->setTemplate($template);
     }
 
@@ -176,16 +179,11 @@ class CapturaInventario extends Controller
         }
     }
 
-    private function isSessionOpen()
-    {
-        return (new ConteoStock())->loadFromUser($this->user->nick);
-    }
-
     private function saveProductCount()
     {
         $session = new ConteoStock();
 
-        if (false === $session->loadFromUser($this->user->nick))
+        if (false === $this->session->exists())
             return;
 
         $cantidad = $this->request->request->get('cantidad');

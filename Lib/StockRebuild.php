@@ -80,7 +80,6 @@ class StockRebuild
     protected static function clear()
     {
         $database = new DataBase();
-        //return $database->exec('DELETE FROM stocks;');
         return $database->exec('UPDATE stocks SET cantidad = 0, disponible = 0, pterecibir = 0, reservada = 0;');
     }
 }

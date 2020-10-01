@@ -3,7 +3,7 @@
  * This file is part of Inventory plugin for FacturaScripts
  * Copyright (C) 2019 Juan José Prieto Dzul <juanjoseprieto88@gmail.com>
  */
-namespace FacturaScripts\Plugins\ConteoInventario\Model;
+namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base;
@@ -82,9 +82,10 @@ class ConteoStock extends Base\ModelClass
 
     public function loadFromUser($nick = null)
     {
-        if (false === empty($nick)) {
-            $where = [new DataBaseWhere('nick', $nick)];
-            return $this->loadFromCode('', $where);
+        $where = [new DataBaseWhere('nick', $nick)];
+
+        if (isset($nick) && $this->loadFromCode('', $where)) {
+            return true;
         }
 
         return false;
