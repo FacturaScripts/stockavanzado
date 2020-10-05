@@ -58,7 +58,14 @@ class StockRebuild
 
             /// save stock
             foreach ($stockData as $data) {
-                if (empty($data['cantidad'])) {
+                $stock = new Stock();
+                $where2 = [
+                    new DataBaseWhere('codalmacen', $data['codalmacen']),
+                    new DataBaseWhere('referencia', $data['referencia'])
+                ];
+                if ($stock->loadFromCode('', $where2)) {
+                    $stock->loadFromData($data);
+                    $stock->save();
                     continue;
                 }
 
@@ -70,9 +77,17 @@ class StockRebuild
         return true;
     }
 
+    /**
+     * 
+     * @return bool
+     */
     protected static function clear()
     {
         $database = new DataBase();
-        return $database->exec('DELETE FROM stocks;');
+        if ($database->tableExists('stocks')) {
+            return $database->exec("UPDATE stocks SET cantidad = '0', disponible = '0';");
+        }
+
+        return true;
     }
 }
