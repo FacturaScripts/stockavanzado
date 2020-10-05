@@ -32,6 +32,23 @@ class EditAlmacen
     {
         return function() {
             $this->createViewsMovements();
+            $this->createViewsCounts();
+        };
+    }
+
+    protected function createViewsCounts()
+    {
+        return function($viewName = 'ListConteoStock') {
+            $this->addListView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll');
+            $this->views[$viewName]->addOrderBy(['fechainicio'], 'date', 2);
+            $this->views[$viewName]->searchFields = ['observaiones'];
+
+            /// disable column
+            $this->views[$viewName]->disableColumn('warehouse');
+
+            /// disable buttons
+            $this->setSettings($viewName, 'btnDelete', false);
+            $this->setSettings($viewName, 'checkBoxes', false);
         };
     }
 
@@ -56,13 +73,14 @@ class EditAlmacen
     protected function loadData()
     {
         return function($viewName, $view) {
-            if ($viewName !== 'ListMovimientoStock') {
-                return;
+            switch ($viewName) {
+                case 'ListConteoStock':
+                case 'ListMovimientoStock':
+                    $codalmacen = $this->getViewModelValue('EditAlmacen', 'codalmacen');
+                    $where = [new DataBaseWhere('codalmacen', $codalmacen)];
+                    $view->loadData('', $where);
+                    break;
             }
-
-            $codalmacen = $this->getViewModelValue('EditAlmacen', 'codalmacen');
-            $where = [new DataBaseWhere('codalmacen', $codalmacen)];
-            $view->loadData('', $where);
         };
     }
 }

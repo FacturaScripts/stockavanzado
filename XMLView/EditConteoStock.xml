@@ -22,7 +22,7 @@
     <columns>
         <group name="main">
             <column name="warehouse" order="100">
-                <widget type="select" fieldname="codalmacen" readonly="dinamic" required="true">
+                <widget type="select" fieldname="codalmacen" onclick="EditAlmacen" readonly="dinamic" required="true">
                     <values source="almacenes" fieldcode="codalmacen" fieldtitle="nombre" />
                 </widget>
             </column>
