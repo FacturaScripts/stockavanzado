@@ -22,6 +22,7 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\BaseView;
 use FacturaScripts\Core\Lib\ExtendedController\EditController;
 use FacturaScripts\Dinamic\Model\Variante;
+use FacturaScripts\Plugins\StockAvanzado\Lib\StockRebuild;
 use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
 
@@ -196,6 +197,9 @@ class EditConteoStock extends EditController
             case 'edit-line':
                 return $this->editLineAction();
 
+            case 'rebuild-stock':
+                return $this->rebuildStockAction();
+
             default:
                 return parent::execPreviousAction($action);
         }
@@ -228,5 +232,16 @@ class EditConteoStock extends EditController
                 parent::loadData($viewName, $view);
                 break;
         }
+    }
+
+    /**
+     * 
+     * @return bool
+     */
+    protected function rebuildStockAction()
+    {
+        StockRebuild::rebuild();
+        $this->toolBox()->i18nLog()->notice('record-updated-correctly');
+        return true;
     }
 }

@@ -37,6 +37,11 @@
                         {{ i18n.trans('add') }}
                     </button>
                 </div>
+                <div class="col-sm text-right">
+                    <a href="{{ fsc.getModel().url() }}&action=rebuild-stock" class="btn btn-warning">
+                        {{ i18n.trans('update-stock') }}
+                    </a>
+                </div>
             </div>
         </form>
     </div>
