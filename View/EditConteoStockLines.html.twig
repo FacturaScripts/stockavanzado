@@ -1,0 +1,69 @@
+<div class="card shadow mb-3">
+    <div class="card-body">
+        <h2 class="h5 card-title">
+            {{ i18n.trans('lines') }}
+            <span class="badge badge-secondary">{{ fsc.getCurrentView().count }}</span>
+        </h2>
+        <p>{{ i18n.trans('add-line-p') }}</p>
+        <form method="post">
+            <input type="hidden" name="action" value="add-line" />
+            <div class="form-row">
+                <div class="col-sm">
+                    <div class="form-group">
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    <i class="fas fa-barcode"></i>
+                                </span>
+                            </div>
+                            <input type="text" name="codbarras" class="form-control" placeholder="{{ i18n.trans('barcode') }}" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm">
+                    <div class="form-group">
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    <i class="fas fa-hashtag"></i>
+                                </span>
+                            </div>
+                            <input type="text" name="referencia" class="form-control" placeholder="{{ i18n.trans('reference') }}" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm">
+                    <button type="submit" class="btn btn-success">
+                        {{ i18n.trans('add') }}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>{{ i18n.trans('reference') }}</th>
+                    <th class="text-right">{{ i18n.trans('quantity') }}</th>
+                    <th>{{ i18n.trans('user') }}</th>
+                    <th class="text-right">{{ i18n.trans('date') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in fsc.getCurrentView().cursor %}
+                    <tr>
+                        <td>{{ line.referencia }}</td>
+                        <td class="text-right">{{ line.cantidad }}</td>
+                        <td>{{ line.nick }}</td>
+                        <td class="text-right">{{ line.fecha }}</td>
+                    </tr>
+                {% else %}
+                    <tr class="table-warning">
+                        <td colspan="4">{{ i18n.trans('no-data') }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

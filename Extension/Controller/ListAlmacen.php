@@ -33,6 +33,22 @@ class ListAlmacen
         return function() {
             $this->createViewsMovements();
             $this->createViewsTransfers();
+            $this->createViewsCountings();
+        };
+    }
+
+    protected function createViewsCountings()
+    {
+        return function($viewName = 'ListConteoStock') {
+            $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll');
+            $this->addOrderBy($viewName, ['fechainicio'], 'date', 2);
+            $this->addSearchFields($viewName, ['idconteo', 'observaciones']);
+
+            /// Filters
+            $this->addFilterPeriod($viewName, 'fechainicio', 'date', 'fechainicio');
+            $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
+            $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
+            $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
         };
     }
 
@@ -71,10 +87,7 @@ class ListAlmacen
     {
         return function($viewName = 'ListTransferenciaStock') {
             $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt');
-            $this->addOrderBy($viewName, ['codalmacenorigen'], 'origin-warehouse');
-            $this->addOrderBy($viewName, ['codalmacendestino'], 'destination-warehouse');
             $this->addOrderBy($viewName, ['fecha'], 'date', 2);
-            $this->addOrderBy($viewName, ['usuario'], 'user');
             $this->addSearchFields($viewName, ['idtrans', 'observaciones']);
 
             /// Filters

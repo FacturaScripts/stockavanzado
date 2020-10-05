@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : stocks_conteos.xml
+    Author     : Carlos Garcia Gomez
+    Description:
+        Structure for the stocks_conteos table.
+-->
+<table>
+    <column>
+        <name>codalmacen</name>
+        <type>character varying(4)</type>
+        <null>NO</null>
+    </column>
+    <column>
+        <name>fechafin</name>
+        <type>date</type>
+    </column>
+    <column>
+        <name>fechainicio</name>
+        <type>date</type>
+        <null>NO</null>
+    </column>
+    <column>
+        <name>idconteo</name>
+        <type>serial</type>
+        <null>NO</null>
+    </column>
+    <column>
+        <name>nick</name>
+        <type>character varying(50)</type>
+    </column>
+    <column>
+        <name>observaciones</name>
+        <type>text</type>
+    </column>
+    <constraint>
+        <name>stocks_conteos_pkey</name>
+        <type>PRIMARY KEY (idconteo)</type>
+    </constraint>
+    <constraint>
+        <name>ca_stocks_conteos_almacenes</name>
+        <type>FOREIGN KEY (codalmacen) REFERENCES almacenes (codalmacen) ON DELETE CASCADE ON UPDATE CASCADE</type>
+    </constraint>
+    <constraint>
+        <name>ca_stocks_conteos_users</name>
+        <type>FOREIGN KEY (nick) REFERENCES users (nick) ON DELETE SET NULL ON UPDATE CASCADE</type>
+    </constraint>
+</table>
