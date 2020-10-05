@@ -23,6 +23,7 @@ use FacturaScripts\Core\Model\Base;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
+use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
 
 /**
  * Description of LineaConteoStock
@@ -124,7 +125,7 @@ class LineaConteoStock extends Base\ModelClass
      * 
      * @return Variante
      */
-    public function getVariante()
+    public function getVariant()
     {
         $variante = new Variante();
         $where = [new DataBaseWhere('referencia', $this->referencia)];
@@ -139,6 +140,20 @@ class LineaConteoStock extends Base\ModelClass
     public static function primaryColumn(): string
     {
         return 'idlinea';
+    }
+
+    /**
+     * 
+     * @return bool
+     */
+    public function save()
+    {
+        if (parent::save()) {
+            StockMovementManager::updateLineCount($this, $this->getConteo());
+            return true;
+        }
+
+        return false;
     }
 
     /**

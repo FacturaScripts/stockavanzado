@@ -26,6 +26,8 @@ use FacturaScripts\Dinamic\Model\AlbaranCliente;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\FacturaCliente;
 use FacturaScripts\Dinamic\Model\FacturaProveedor;
+use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
+use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaTransferenciaStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
@@ -70,6 +72,14 @@ class StockMovementManager
         foreach ($transferenciaStock->all([], [], 0, self::REBUILD_LIMIT) as $transfer) {
             foreach ($transfer->getLines() as $line) {
                 static::updateLineTransfer($line, $transfer);
+            }
+        }
+
+        /// save movements from stock counts
+        $conteoStock = new ConteoStock();
+        foreach ($conteoStock->all([], [], 0, 0) as $conteo) {
+            foreach ($conteo->getLines() as $line) {
+                static::updateLineCount($line, $conteo);
             }
         }
     }
@@ -137,6 +147,42 @@ class StockMovementManager
 
     /**
      * 
+     * @param LineaConteoStock $line
+     * @param ConteoStock      $stockCount
+     */
+    public static function updateLineCount($line, $stockCount)
+    {
+        $docid = $stockCount->primaryColumnValue();
+        $docmodel = $stockCount->modelClassName();
+        $cantidad = $line->cantidad - static::getStockSum($line->referencia, $stockCount->codalmacen, $docid, $docmodel, $line->fecha);
+
+        $movement = new MovimientoStock();
+        $where = [
+            new DataBaseWhere('codalmacen', $stockCount->codalmacen),
+            new DataBaseWhere('docid', $docid),
+            new DataBaseWhere('docmodel', $docmodel),
+            new DataBaseWhere('referencia', $line->referencia)
+        ];
+        if (false === $movement->loadFromCode('', $where)) {
+            $movement->codalmacen = $stockCount->codalmacen;
+            $movement->docid = $docid;
+            $movement->docmodel = $docmodel;
+            $movement->idproducto = $line->idproducto;
+            $movement->referencia = $line->referencia;
+            if (empty($cantidad)) {
+                return true;
+            }
+        }
+
+        $movement->cantidad = $cantidad;
+        $movement->documento = static::toolBox()->i18n()->trans($stockCount->modelClassName()) . ' ' . $stockCount->primaryColumnValue();
+        $movement->fecha = \date(MovimientoStock::DATE_STYLE, \strtotime($line->fecha));
+        $movement->hora = \date(MovimientoStock::HOUR_STYLE, \strtotime($line->fecha));
+        return empty($movement->cantidad) ? $movement->delete() : $movement->save();
+    }
+
+    /**
+     * 
      * @param LineaTransferenciaStock $line
      * @param TransferenciaStock      $transfer
      */
@@ -144,6 +190,37 @@ class StockMovementManager
     {
         static::updateLineTransferMovement($transfer->codalmacenorigen, $line->cantidad * -1, $transfer, $line);
         static::updateLineTransferMovement($transfer->codalmacendestino, $line->cantidad, $transfer, $line);
+    }
+
+    /**
+     * 
+     * @param string $reference
+     * @param string $codalmacen
+     * @param int    $docid
+     * @param string $docmodel
+     * @param string $datetime
+     *
+     * @return float
+     */
+    protected static function getStockSum($reference, $codalmacen, $docid, $docmodel, $datetime)
+    {
+        $sum = 0.0;
+        $movement = new MovimientoStock();
+        $date = \date(MovimientoStock::DATE_STYLE, \strtotime($datetime));
+        $where = [
+            new DataBaseWhere('codalmacen', $codalmacen),
+            new DataBaseWhere('docid', $docid, '!='),
+            new DataBaseWhere('docmodel', $docmodel, '!='),
+            new DataBaseWhere('fecha', $date, '<='),
+            new DataBaseWhere('referencia', $reference)
+        ];
+        foreach ($movement->all($where, [], 0, 0) as $move) {
+            if (\strtotime($datetime) > \strtotime($move->fecha . ' ' . $move->hora)) {
+                $sum += $move->cantidad;
+            }
+        }
+
+        return $sum;
     }
 
     /**
