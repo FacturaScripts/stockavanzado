@@ -5,5 +5,8 @@
     "rebuild-stock": "Reconstruir stock",
     "rebuilt-stock": "Stock reconstruido",
     "reconstructed-movements": "Movimientos de stock reconstruidos",
+    "stock-count": "Conteo de stock",
+    "stock-count-line-p": "Añade líneas a este listado escribiendo\/escaneando un código de barras o referencia. Si el producto ya estaba, se incrementa la cantidad.",
+    "stock-counts": "Conteos",
     "transfers": "Tranferencias"
 }

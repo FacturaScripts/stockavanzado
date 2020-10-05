@@ -4,11 +4,11 @@
             {{ i18n.trans('lines') }}
             <span class="badge badge-secondary">{{ fsc.getCurrentView().count }}</span>
         </h2>
-        <p>{{ i18n.trans('add-line-p') }}</p>
+        <p>{{ i18n.trans('stock-count-line-p') }}</p>
         <form method="post">
             <input type="hidden" name="action" value="add-line" />
             <div class="form-row">
-                <div class="col-sm">
+                <div class="col-sm-3">
                     <div class="form-group">
                         <div class="input-group mb-3">
                             <div class="input-group-prepend">
@@ -20,7 +20,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-sm">
+                <div class="col-sm-3">
                     <div class="form-group">
                         <div class="input-group mb-3">
                             <div class="input-group-prepend">
@@ -41,11 +41,12 @@
         </form>
     </div>
     <div class="table-responsive">
-        <table class="table mb-0">
+        <table class="table table-hover mb-0">
             <thead>
                 <tr>
                     <th>{{ i18n.trans('reference') }}</th>
                     <th class="text-right">{{ i18n.trans('quantity') }}</th>
+                    <th></th>
                     <th>{{ i18n.trans('user') }}</th>
                     <th class="text-right">{{ i18n.trans('date') }}</th>
                 </tr>
@@ -55,15 +56,54 @@
                     <tr>
                         <td>{{ line.referencia }}</td>
                         <td class="text-right">{{ line.cantidad }}</td>
+                        <td>{{ _self.editCountLine(i18n, line) }}</td>
                         <td>{{ line.nick }}</td>
                         <td class="text-right">{{ line.fecha }}</td>
                     </tr>
                 {% else %}
                     <tr class="table-warning">
-                        <td colspan="4">{{ i18n.trans('no-data') }}</td>
+                        <td colspan="5">{{ i18n.trans('no-data') }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+{% macro editCountLine(i18n, line) %}
+    <a href="#" data-toggle="modal" data-target="#modalCountLine{{ line.idlinea }}">
+        <i class="fas fa-edit"></i>
+    </a>
+    <form method="post">
+        <input type="hidden" name="action" value="edit-line" />
+        <input type="hidden" name="idlinea" value="{{ line.idlinea }}" />
+        <div class="modal fade" id="modalCountLine{{ line.idlinea }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ i18n.trans('quantity') }}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <input type="number" name="quantity" min="0" steap="any" value="{{ line.cantidad }}" class="form-control" required="" />
+                        </div>
+                        <div class="form-row">
+                            <div class="col">
+                                <button type="button" class="btn btn-outline-danger" onclick="this.form.action.value = 'delete-line';
+                                        this.form.submit();">
+                                    {{ i18n.trans('delete') }}
+                                </button>
+                            </div>
+                            <div class="col text-right">
+                                <button type="submit" class="btn btn-primary">{{ i18n.trans('save') }}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endmacro %}

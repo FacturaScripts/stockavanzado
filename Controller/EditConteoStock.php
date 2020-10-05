@@ -56,6 +56,10 @@ class EditConteoStock extends EditController
         return $data;
     }
 
+    /**
+     * 
+     * @return bool
+     */
     protected function addLineAction()
     {
         if (false === $this->permissions->allowUpdate) {
@@ -124,6 +128,58 @@ class EditConteoStock extends EditController
 
     /**
      * 
+     * @return bool
+     */
+    protected function deleteLineAction()
+    {
+        if (false === $this->permissions->allowDelete) {
+            $this->toolBox()->i18nLog()->warning('not-allowed-delete');
+            return true;
+        }
+
+        $lineaConteo = new LineaConteoStock();
+        $idlinea = $this->request->request->get('idlinea');
+        if ($lineaConteo->loadFromCode($idlinea) && $lineaConteo->delete()) {
+            $this->toolBox()->i18nLog()->notice('record-deleted-correctly');
+            return true;
+        }
+
+        $this->toolBox()->i18nLog()->error('record-deleted-error');
+        return true;
+    }
+
+    /**
+     * 
+     * @return bool
+     */
+    protected function editLineAction()
+    {
+        if (false === $this->permissions->allowUpdate) {
+            $this->toolBox()->i18nLog()->warning('not-allowed-update');
+            return true;
+        }
+
+        $lineaConteo = new LineaConteoStock();
+        $idlinea = $this->request->request->get('idlinea');
+        if (false === $lineaConteo->loadFromCode($idlinea)) {
+            $this->toolBox()->i18nLog()->notice('record-not-found');
+            return true;
+        }
+
+        $lineaConteo->cantidad = (float) $this->request->request->get('quantity');
+        $lineaConteo->fecha = \date(LineaConteoStock::DATETIME_STYLE);
+        $lineaConteo->nick = $this->user->nick;
+        if (false === $lineaConteo->save()) {
+            $this->toolBox()->i18nLog()->error('record-save-error');
+            return true;
+        }
+
+        $this->toolBox()->i18nLog()->notice('record-updated-correctly');
+        return true;
+    }
+
+    /**
+     * 
      * @param string $action
      *
      * @return bool
@@ -133,6 +189,12 @@ class EditConteoStock extends EditController
         switch ($action) {
             case 'add-line':
                 return $this->addLineAction();
+
+            case 'delete-line':
+                return $this->deleteLineAction();
+
+            case 'edit-line':
+                return $this->editLineAction();
 
             default:
                 return parent::execPreviousAction($action);

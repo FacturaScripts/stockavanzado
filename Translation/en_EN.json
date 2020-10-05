@@ -5,5 +5,8 @@
     "rebuild-stock": "Rebuild stock",
     "rebuilt-stock": "Rebuilt stock",
     "reconstructed-movements": "Reconstructed movements",
+    "stock-count": "Stock count",
+    "stock-count-line-p": "Add lines to this count by typing\/scanning a barcode or reference. If the product was already in the list, the quantity increases",
+    "stock-counts": "Stock counts",
     "transfers": "Transfers"
 }
