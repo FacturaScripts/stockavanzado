@@ -77,6 +77,19 @@ class ConteoStock extends Base\ModelClass
 
     /**
      * 
+     * @return bool
+     */
+    public function delete()
+    {
+        foreach ($this->getLines() as $line) {
+            $line->delete();
+        }
+
+        return parent::delete();
+    }
+
+    /**
+     * 
      * @return Almacen
      */
     public function getAlmacen()

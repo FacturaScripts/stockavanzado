@@ -86,6 +86,21 @@ class LineaConteoStock extends Base\ModelClass
 
     /**
      * 
+     * @return bool
+     */
+    public function delete()
+    {
+        if (parent::delete()) {
+            $this->cantidad = 0.0;
+            StockMovementManager::updateLineCount($this, $this->getConteo());
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 
      * @return ConteoStock
      */
     public function getConteo()
