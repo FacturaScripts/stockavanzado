@@ -209,12 +209,15 @@ class StockMovementManager
         $date = \date(MovimientoStock::DATE_STYLE, \strtotime($datetime));
         $where = [
             new DataBaseWhere('codalmacen', $codalmacen),
-            new DataBaseWhere('docid', $docid, '!='),
-            new DataBaseWhere('docmodel', $docmodel, '!='),
             new DataBaseWhere('fecha', $date, '<='),
             new DataBaseWhere('referencia', $reference)
         ];
         foreach ($movement->all($where, [], 0, 0) as $move) {
+            /// exclude selected movement
+            if ($move->docid == $docid && $move->docmodel == $docmodel) {
+                continue;
+            }
+
             if (\strtotime($datetime) > \strtotime($move->fecha . ' ' . $move->hora)) {
                 $sum += $move->cantidad;
             }
