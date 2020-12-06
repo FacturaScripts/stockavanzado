@@ -106,8 +106,6 @@ class ListAlmacen
                 StockMovementManager::rebuild();
                 $this->toolBox()->i18nLog()->notice('reconstructed-movements');
             }
-
-            return true;
         };
     }
 }

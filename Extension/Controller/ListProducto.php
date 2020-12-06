@@ -50,8 +50,6 @@ class ListProducto
                 StockRebuild::rebuild();
                 $this->toolBox()->i18nLog()->notice('rebuilt-stock');
             }
-
-            return true;
         };
     }
 }
