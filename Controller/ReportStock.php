@@ -18,6 +18,7 @@
  */
 namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
+use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\ListController;
 
 /**
@@ -60,6 +61,22 @@ class ReportStock extends ListController
         $this->addSearchFields($viewName, ['productos.descripcion', 'stocks.referencia']);
 
         /// filters
+        $values = [
+            [
+                'label' => $this->toolBox()->i18n()->trans('all'),
+                'where' => []
+            ],
+            [
+                'label' => $this->toolBox()->i18n()->trans('under-minimums'),
+                'where' => [new DataBaseWhere('disponible', 'field:stockmin', '<')]
+            ],
+            [
+                'label' => $this->toolBox()->i18n()->trans('excess'),
+                'where' => [new DataBaseWhere('disponible', 'field:stockmax', '>')]
+            ]
+        ];
+        $this->addFilterSelectWhere($viewName, 'type', $values);
+
         $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
         $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
 
