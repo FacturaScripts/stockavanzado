@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -169,8 +169,8 @@ class MovimientoStock extends Base\ModelClass
      */
     public function url(string $type = 'auto', string $list = 'List'): string
     {
-        if (!empty($this->docmodel)) {
-            $modelClass = '\\FacturaScripts\\Dinamic\\Model\\' . $this->docmodel;
+        $modelClass = '\\FacturaScripts\\Dinamic\\Model\\' . $this->docmodel;
+        if (!empty($this->docmodel) && \class_exists($modelClass)) {
             $model = new $modelClass();
             if ($model->loadFromCode($this->docid)) {
                 return $model->url();

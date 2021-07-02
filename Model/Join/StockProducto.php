@@ -19,6 +19,7 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Model\Join;
 
 use FacturaScripts\Core\Model\Base\JoinModel;
+use FacturaScripts\Dinamic\Model\Producto;
 
 /**
  * Description of StockProducto
@@ -27,6 +28,18 @@ use FacturaScripts\Core\Model\Base\JoinModel;
  */
 class StockProducto extends JoinModel
 {
+
+    /**
+     * Class constructor.
+     * Set master model for controller actions.
+     *
+     * @param array $data
+     */
+    public function __construct($data = [])
+    {
+        parent::__construct($data);
+        $this->setMasterModel(new Producto());
+    }
 
     /**
      * 
@@ -42,8 +55,12 @@ class StockProducto extends JoinModel
             'coste' => 'variantes.coste',
             'descripcion' => 'productos.descripcion',
             'disponible' => 'stocks.disponible',
+            'idproducto' => 'stocks.idproducto',
+            'idstock' => 'stocks.idstock',
             'precio' => 'variantes.precio',
+            'pterecibir' => 'stocks.pterecibir',
             'referencia' => 'stocks.referencia',
+            'reservada' => 'stocks.reservada',
             'stockmax' => 'stocks.stockmax',
             'stockmin' => 'stocks.stockmin',
             'total' => 'sum(stocks.cantidad*variantes.coste)'
