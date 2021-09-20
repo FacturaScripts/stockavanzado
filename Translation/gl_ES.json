@@ -1,0 +1,10 @@
+{
+    "TransferenciaStock": "Transferencia de stock",
+    "movements": "Movementos",
+    "rebuild-movements": "Reconstruir movementos",
+    "rebuilt-stock": "Stock reconstruido",
+    "reconstructed-movements": "Movementos de stock reconstruidos",
+    "stock-count": "Conteos de stock",
+    "stock-count-line-p": "Engade liñas a esta listaxe escribindo \/ dixitalizando un código de barras ou unha referencia. Se o produto xa estaba alí, a cantidade aumenta.",
+    "stock-counts": "Conteos"
+}

@@ -1,0 +1,10 @@
+{
+    "TransferenciaStock": "Transferència de stock",
+    "movements": "moviments",
+    "rebuild-movements": "Reconstruir moviments",
+    "rebuilt-stock": "Stock reconstruït",
+    "reconstructed-movements": "Moviments d'estoc reconstruïts",
+    "stock-count": "Conteo d'estoc",
+    "stock-count-line-p": "Afegeix línies a aquest llistat escrivint\/escanejant un codi de barres o referència. Si el producte ja estava, s'incrementa la quantitat.",
+    "stock-counts": "Conteos"
+}

@@ -1,0 +1,10 @@
+{
+    "TransferenciaStock": "Stock Transferentzia",
+    "movements": "Mugimenduak",
+    "rebuild-movements": "Mugimenduak berritu",
+    "rebuilt-stock": "Berritutako stocka",
+    "reconstructed-movements": "Berritutako stock mugimenduak",
+    "stock-count": "Stock kopurua",
+    "stock-count-line-p": "Zerrenda honi lerroak gehitu barra kode edo erreferentzi bat idatziz\/eskaneatuz. Produktua lehendik bertan bazegoen, kantitatea handitu egingo da.",
+    "stock-counts": "Zenbaketak"
+}
