@@ -20,9 +20,9 @@ namespace FacturaScripts\Plugins\StockAvanzado;
 
 use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Base\InitClass;
-use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
+//use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager; // Esta parte se ha llevado a Cron.php
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaTransferenciaStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
+//use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock; // Esta parte se ha llevado a Cron.php
 use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
 
 /**
@@ -46,10 +46,11 @@ class Init extends InitClass
     {
         $this->migrateData();
 
-        $movement = new MovimientoStock();
-        if ($movement->count() < 1) {
-            StockMovementManager::rebuild();
-        }
+//        Esta parte se ha llevado a Cron.php
+//        $movement = new MovimientoStock();
+//        if ($movement->count() < 1) {
+//            StockMovementManager::rebuild();
+//        }
     }
 
     private function migrateData()
