@@ -35,12 +35,13 @@ use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
 /**
  * Description of StockMovementManager
  *
- * @author Carlos Garcia Gomez <carlos@facturascripts.com>
+ * @author       Carlos Garcia Gomez            <carlos@facturascripts.com>
+ * @collaborator Jerónimo Pedro Sánchez Manzano <socger@gmail.com>
  */
 class StockMovementManager
 {
 
-    const REBUILD_LIMIT = 300;
+ // const REBUILD_LIMIT = 300;
 
     public static function rebuild()
     {
@@ -54,7 +55,10 @@ class StockMovementManager
             new AlbaranCliente(), new FacturaCliente()
         ];
         foreach ($models as $model) {
-            foreach ($model->all([], ['fecha' => 'DESC'], 0, self::REBUILD_LIMIT) as $doc) {
+            
+         // foreach ($model->all([], ['fecha' => 'DESC'], 0, self::REBUILD_LIMIT) as $doc) { 
+            foreach ($model->all([], ['fecha' => 'DESC']) as $doc)  // Quitamos la limitación a 300 registros
+            {
                 foreach ($doc->getLines() as $line) {
                     if (empty($line->referencia) || false === $line->getProducto()->exists() || $line->getProducto()->nostock) {
                         continue;
@@ -69,7 +73,10 @@ class StockMovementManager
 
         /// save movements from transferences
         $transferenciaStock = new TransferenciaStock();
-        foreach ($transferenciaStock->all([], [], 0, self::REBUILD_LIMIT) as $transfer) {
+
+     // foreach ($transferenciaStock->all([], [], 0, self::REBUILD_LIMIT) as $transfer) {
+        foreach ($transferenciaStock->all() as $transfer) // Quitamos la limitación a 300 registros
+        {    
             foreach ($transfer->getLines() as $line) {
                 static::updateLineTransfer($line, $transfer);
             }
