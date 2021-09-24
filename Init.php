@@ -64,7 +64,7 @@ class Init extends InitClass
         {
             // NO exist, then will be create
             $role->codrole = $nameOfRole;
-            $role->descripcion = 'Rol para el plugin ' . $nameOfRole;
+            $role->descripcion = 'Rol - plugin ' . $nameOfRole;
             
             // Try to save. If can't do it will be to do rollback for the 
             // Transaction and not will continue
