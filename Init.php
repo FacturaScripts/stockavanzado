@@ -52,7 +52,6 @@ class Init extends InitClass
 
     private function createRoleForPlugin()
     {
-        $createSomething = false;
         $dataBase = new DataBase();
         $dataBase->beginTransaction();
         
@@ -61,8 +60,7 @@ class Init extends InitClass
         
         // Check if exist the name of this plugin between roles
         if (false === $role->loadFromCode($nameOfRole)) 
-        {
-            // NO exist, then will be create
+        {   // NO exist, then will be create
             $role->codrole = $nameOfRole;
             $role->descripcion = 'Rol - plugin ' . $nameOfRole;
             
@@ -72,8 +70,6 @@ class Init extends InitClass
             {   // Can't create it
                 $dataBase->rollback();
             }
-            
-            $createSomething = true;
         }
         
             // if the plugin is active and then we decide it will be deactive, 
@@ -107,19 +103,11 @@ class Init extends InitClass
                         $dataBase->rollback();
                         return; // to not create permission for this role
                     }
-
-                    $createSomething = true;
                 }
             }
             
-        // Was create something?
-        if ($createSomething === true)
-        {
-            $dataBase->commit();
-        } else 
-        {
-            $dataBase->rollback();
-        }
+        // without problems = Commit
+        $dataBase->commit();
         
         return;
     }
