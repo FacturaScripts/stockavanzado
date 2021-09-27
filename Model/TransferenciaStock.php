@@ -86,12 +86,27 @@ class TransferenciaStock extends Base\ModelClass
      */
     public function delete()
     {
+        $newTransation = false === self::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
+                
         /// remove lines to force update stock
         foreach ($this->getLines() as $line) {
             $line->delete();
         }
 
-        return parent::delete();
+        if (parent::delete()) {
+            if ($newTransation) 
+            {
+                self::$dataBase->commit(); 
+            }
+            return true;
+        }
+        
+        if ($newTransation) 
+        {
+            self::$dataBase->rollback();
+        }
+        
+        return false;
     }
 
     /**
