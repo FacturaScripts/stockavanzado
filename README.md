@@ -6,5 +6,5 @@ https://facturascripts.com/plugins/stockavanzado
 ## Soporte
 https://facturascripts.com/contacto
 
-## A recordar
-En la carpeta plugin de donde tengamos instalado FacturaScripts la carpeta raiz de este pluging tiene que llamarse exactamente ... StockAvanzado
+## Nombre de carpeta
+Como con todos los plugins, la carpeta se debe llamar igual que el plugin. En este caso StockAvanzado.
