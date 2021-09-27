@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2013-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2013-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
@@ -69,7 +70,6 @@ class TransferenciaStock extends Base\ModelClass
     public $nick;
 
     /**
-     *
      * @var string
      */
     public $observaciones;
@@ -81,36 +81,32 @@ class TransferenciaStock extends Base\ModelClass
     }
 
     /**
-     * 
      * @return bool
      */
     public function delete()
     {
         $newTransation = false === self::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
-                
+
         /// remove lines to force update stock
         foreach ($this->getLines() as $line) {
             $line->delete();
         }
 
         if (parent::delete()) {
-            if ($newTransation) 
-            {
-                self::$dataBase->commit(); 
+            if ($newTransation) {
+                self::$dataBase->commit();
             }
             return true;
         }
-        
-        if ($newTransation) 
-        {
+
+        if ($newTransation) {
             self::$dataBase->rollback();
         }
-        
+
         return false;
     }
 
     /**
-     * 
      * @return LineaTransferenciaStock[]
      */
     public function getLines()
@@ -141,7 +137,6 @@ class TransferenciaStock extends Base\ModelClass
     }
 
     /**
-     * 
      * @return bool
      */
     public function test()
@@ -162,10 +157,9 @@ class TransferenciaStock extends Base\ModelClass
     }
 
     /**
-     * 
      * @param string $type
      * @param string $list
-     * 
+     *
      * @return string
      */
     public function url(string $type = 'auto', string $list = 'ListAlmacen?activetab=List')
@@ -174,7 +168,6 @@ class TransferenciaStock extends Base\ModelClass
     }
 
     /**
-     * 
      * @param string $codalmacen
      *
      * @return int

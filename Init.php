@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado;
 
 use FacturaScripts\Core\Base\DataBase;
@@ -34,6 +35,7 @@ use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
  */
 class Init extends InitClass
 {
+    const ROLE_NAME = 'StockAvanzado';
 
     public function init()
     {
@@ -46,69 +48,53 @@ class Init extends InitClass
 
     public function update()
     {
-        $this->migrateData();
         $this->createRoleForPlugin();
+        $this->migrateData();
     }
 
     private function createRoleForPlugin()
     {
         $dataBase = new DataBase();
         $dataBase->beginTransaction();
-        
+
+        // creates the role if not exists
         $role = new Role();
-        $nameOfRole = 'StockAvanzado'; // Name of plugin in facturascripts.ini
-        
-        // Check if exist the name of this plugin between roles
-        if (false === $role->loadFromCode($nameOfRole)) 
-        {   // NO exist, then will be create
-            $role->codrole = $nameOfRole;
-            $role->descripcion = 'Rol - plugin ' . $nameOfRole;
-            
-            // Try to save. If can't do it will be to do rollback for the 
-            // Transaction and not will continue
-            if (false === $role->save())
-            {   // Can't create it
+        if (false === $role->loadFromCode(self::ROLE_NAME)) {
+            $role->codrole = $role->descripcion = self::ROLE_NAME;
+            if (false === $role->save()) {
+                /// exit and rollback on fail
                 $dataBase->rollback();
+                return;
             }
         }
-        
-        // if the plugin is active and then we decide it will be deactive, 
-        // the permissions of the rule will be delete.
-        // Then always is necesary to check ir they exist
-        $nameControllers = ['EditConteoStock', 'EditTransferenciaStock', 'ReportStock'];
-        foreach ($nameControllers as $nameController) 
-        {
+
+        // check the role permissions
+        $controllerNames = ['EditConteoStock', 'EditTransferenciaStock', 'ReportStock'];
+        foreach ($controllerNames as $controllerName) {
             $roleAccess = new RoleAccess();
-
-            // Check if exist the $nameController between permissions for 
-            // this role/plugin
             $where = [
-                new DataBaseWhere('codrole', $nameOfRole),
-                new DataBaseWhere('pagename', $nameController)
+                new DataBaseWhere('codrole', self::ROLE_NAME),
+                new DataBaseWhere('pagename', $controllerName)
             ];
+            if ($roleAccess->loadFromCode('', $where)) {
+                continue;
+            }
 
-            if (false === $roleAccess->loadFromCode('', $where)) 
-            {
-                // NO exist, then will be create
-                $roleAccess->allowdelete = true;
-                $roleAccess->allowupdate = true;
-                $roleAccess->codrole = $nameOfRole; 
-                $roleAccess->pagename = $nameController;
-                $roleAccess->onlyownerdata = false;
-
-                // Try to save. If can't do it will be to do rollback for the 
-                // Transaction and not will continue
-                if (false === $roleAccess->save())
-                {   // Can't create it
-                    $dataBase->rollback();
-                    return; // to not create permission for this role
-                }
+            // creates the permission if not exists
+            $roleAccess->allowdelete = true;
+            $roleAccess->allowupdate = true;
+            $roleAccess->codrole = self::ROLE_NAME;
+            $roleAccess->pagename = $controllerName;
+            $roleAccess->onlyownerdata = false;
+            if (false === $roleAccess->save()) {
+                /// exit and rollback on fail
+                $dataBase->rollback();
+                return;
             }
         }
-            
-        // without problems = Commit
+
+        // commit if there is no problem
         $dataBase->commit();
-        return;
     }
 
     private function migrateData()

@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,9 +16,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
-use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
+namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 /**
  * Description of ListAlmacen
@@ -30,7 +29,7 @@ class ListAlmacen
 
     protected function createViews()
     {
-        return function() {
+        return function () {
             $this->createViewsMovements();
             $this->createViewsTransfers();
             $this->createViewsCountings();
@@ -39,7 +38,7 @@ class ListAlmacen
 
     protected function createViewsCountings()
     {
-        return function($viewName = 'ListConteoStock') {
+        return function ($viewName = 'ListConteoStock') {
             $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll');
             $this->addOrderBy($viewName, ['fechainicio'], 'date', 2);
             $this->addSearchFields($viewName, ['idconteo', 'observaciones']);
@@ -54,7 +53,7 @@ class ListAlmacen
 
     protected function createViewsMovements()
     {
-        return function($viewName = 'ListMovimientoStock') {
+        return function ($viewName = 'ListMovimientoStock') {
             $this->addView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
             $this->addOrderBy($viewName, ['fecha', 'hora', 'id'], 'date', 2);
             $this->addOrderBy($viewName, ['cantidad'], 'quantity');
@@ -70,22 +69,12 @@ class ListAlmacen
             $this->setSettings($viewName, 'btnDelete', false);
             $this->setSettings($viewName, 'btnNew', false);
             $this->setSettings($viewName, 'checkBoxes', false);
-
-            if ($this->user->admin) {
-                $this->addButton($viewName, [
-                    'action' => 'rebuild-movements',
-                    'color' => 'warning',
-                    'confirm' => true,
-                    'icon' => 'fas fa-magic',
-                    'label' => 'rebuild-movements'
-                ]);
-            }
         };
     }
 
     protected function createViewsTransfers()
     {
-        return function($viewName = 'ListTransferenciaStock') {
+        return function ($viewName = 'ListTransferenciaStock') {
             $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt');
             $this->addOrderBy($viewName, ['fecha'], 'date', 2);
             $this->addSearchFields($viewName, ['idtrans', 'observaciones']);
@@ -96,16 +85,6 @@ class ListAlmacen
             $this->addFilterSelect($viewName, 'codalmacenorigen', 'origin-warehouse', 'codalmacenorigen', $warehouses);
             $this->addFilterSelect($viewName, 'codalmacendestino', 'destination-warehouse', 'codalmacendestino', $warehouses);
             $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
-        };
-    }
-
-    protected function execPreviousAction()
-    {
-        return function($action) {
-            if ($action === 'rebuild-movements') {
-                StockMovementManager::rebuild();
-                $this->toolBox()->i18nLog()->notice('reconstructed-movements');
-            }
         };
     }
 }

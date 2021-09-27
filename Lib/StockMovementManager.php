@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
@@ -41,26 +42,36 @@ use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
 class StockMovementManager
 {
 
- // const REBUILD_LIMIT = 300;
+    /**
+     * @var array
+     */
+    private static $docStates = [];
 
     public static function rebuild()
     {
-        /// remove all movements
+        // removes all movements
         $movement = new MovimientoStock();
         $movement->deleteAll();
 
-        /// save movements from business documents
-        $models = [
-            new AlbaranProveedor(), new FacturaProveedor(),
-            new AlbaranCliente(), new FacturaCliente()
-        ];
+        // saves movements from business documents
+        $models = [new AlbaranProveedor(), new FacturaProveedor(), new AlbaranCliente(), new FacturaCliente()];
         foreach ($models as $model) {
-            
-         // foreach ($model->all([], ['fecha' => 'DESC'], 0, self::REBUILD_LIMIT) as $doc) { 
-            foreach ($model->all([], ['fecha' => 'DESC']) as $doc)  // Quitamos la limitación a 300 registros
-            {
+            // to prevent memory issues we set limit to 1000 items
+            foreach ($model->all([], ['fecha' => 'DESC'], 0, 1000) as $doc) {
+                // skip states that do not modify the stock
+                if (static::ignoredState($doc)) {
+                    continue;
+                }
+
                 foreach ($doc->getLines() as $line) {
-                    if (empty($line->referencia) || false === $line->getProducto()->exists() || $line->getProducto()->nostock) {
+                    // skip empty lines
+                    if (empty($line->referencia)) {
+                        continue;
+                    }
+
+                    // skip missing product or products without stock management
+                    $product = $line->getProducto();
+                    if (false === $product->exists() || $product->nostock) {
                         continue;
                     }
 
@@ -71,18 +82,16 @@ class StockMovementManager
             }
         }
 
-        /// save movements from transferences
+        // save movements from transferences
         $transferenciaStock = new TransferenciaStock();
 
-     // foreach ($transferenciaStock->all([], [], 0, self::REBUILD_LIMIT) as $transfer) {
-        foreach ($transferenciaStock->all() as $transfer) // Quitamos la limitación a 300 registros
-        {    
+        foreach ($transferenciaStock->all([], [], 0, 0) as $transfer) {
             foreach ($transfer->getLines() as $line) {
                 static::updateLineTransfer($line, $transfer);
             }
         }
 
-        /// save movements from stock counts
+        // save movements from stock counts
         $conteoStock = new ConteoStock();
         foreach ($conteoStock->all([], [], 0, 0) as $conteo) {
             foreach ($conteo->getLines() as $line) {
@@ -92,11 +101,10 @@ class StockMovementManager
     }
 
     /**
-     * 
      * @param BusinessDocumentLine $line
-     * @param TransformerDocument  $doc
-     * @param string               $fromCodalmacen
-     * @param string               $toCodalmacen
+     * @param TransformerDocument $doc
+     * @param string $fromCodalmacen
+     * @param string $toCodalmacen
      */
     public static function transferLine($line, $doc, $fromCodalmacen, $toCodalmacen)
     {
@@ -114,15 +122,14 @@ class StockMovementManager
     }
 
     /**
-     * 
      * @param BusinessDocumentLine $line
-     * @param array                $prevData
-     * @param TransformerDocument  $doc
+     * @param array $prevData
+     * @param TransformerDocument $doc
      */
     public static function updateLine($line, $prevData, $doc)
     {
-        if (false === \in_array($line->actualizastock, [1, -1], true) &&
-            false === \in_array($prevData['actualizastock'], [1, -1], true)) {
+        if (false === in_array($line->actualizastock, [1, -1], true) &&
+            false === in_array($prevData['actualizastock'], [1, -1], true)) {
             return;
         }
 
@@ -137,7 +144,7 @@ class StockMovementManager
             $movement->codalmacen = $doc->codalmacen;
             $movement->docid = $doc->primaryColumnValue();
             $movement->docmodel = $doc->modelClassName();
-            $movement->idproducto = $line->idproducto;
+            $movement->idproducto = $line->idproducto ?? $line->getProducto()->idproducto;
             $movement->referencia = $line->referencia;
             if (empty($line->cantidad)) {
                 return;
@@ -153,9 +160,8 @@ class StockMovementManager
     }
 
     /**
-     * 
      * @param LineaConteoStock $line
-     * @param ConteoStock      $stockCount
+     * @param ConteoStock $stockCount
      */
     public static function updateLineCount($line, $stockCount)
     {
@@ -183,15 +189,14 @@ class StockMovementManager
 
         $movement->cantidad = $cantidad;
         $movement->documento = static::toolBox()->i18n()->trans($stockCount->modelClassName()) . ' ' . $stockCount->primaryColumnValue();
-        $movement->fecha = \date(MovimientoStock::DATE_STYLE, \strtotime($line->fecha));
-        $movement->hora = \date(MovimientoStock::HOUR_STYLE, \strtotime($line->fecha));
+        $movement->fecha = date(MovimientoStock::DATE_STYLE, strtotime($line->fecha));
+        $movement->hora = date(MovimientoStock::HOUR_STYLE, strtotime($line->fecha));
         return empty($movement->cantidad) ? $movement->delete() : $movement->save();
     }
 
     /**
-     * 
      * @param LineaTransferenciaStock $line
-     * @param TransferenciaStock      $transfer
+     * @param TransferenciaStock $transfer
      */
     public static function updateLineTransfer($line, $transfer)
     {
@@ -200,10 +205,9 @@ class StockMovementManager
     }
 
     /**
-     * 
      * @param string $reference
      * @param string $codalmacen
-     * @param int    $docid
+     * @param int $docid
      * @param string $docmodel
      * @param string $datetime
      *
@@ -213,19 +217,19 @@ class StockMovementManager
     {
         $sum = 0.0;
         $movement = new MovimientoStock();
-        $date = \date(MovimientoStock::DATE_STYLE, \strtotime($datetime));
+        $date = date(MovimientoStock::DATE_STYLE, strtotime($datetime));
         $where = [
             new DataBaseWhere('codalmacen', $codalmacen),
             new DataBaseWhere('fecha', $date, '<='),
             new DataBaseWhere('referencia', $reference)
         ];
         foreach ($movement->all($where, [], 0, 0) as $move) {
-            /// exclude selected movement
+            // exclude selected movement
             if ($move->docid == $docid && $move->docmodel == $docmodel) {
                 continue;
             }
 
-            if (\strtotime($datetime) > \strtotime($move->fecha . ' ' . $move->hora)) {
+            if (strtotime($datetime) > strtotime($move->fecha . ' ' . $move->hora)) {
                 $sum += $move->cantidad;
             }
         }
@@ -234,10 +238,25 @@ class StockMovementManager
     }
 
     /**
-     * 
-     * @param string                  $codalmacen
-     * @param float                   $cantidad
-     * @param TransferenciaStock      $transfer
+     * @param TransformerDocument $doc
+     *
+     * @return bool
+     */
+    protected static function ignoredState($doc): bool
+    {
+        // check or add the status to the list
+        if (!isset(self::$docStates[$doc->idestado])) {
+            self::$docStates[$doc->idestado] = $doc->getStatus();
+        }
+
+        // ignore status with actualizastock == 0
+        return empty(self::$docStates[$doc->idestado]->actualizastock);
+    }
+
+    /**
+     * @param string $codalmacen
+     * @param float $cantidad
+     * @param TransferenciaStock $transfer
      * @param LineaTransferenciaStock $line
      *
      * @return bool
@@ -264,13 +283,12 @@ class StockMovementManager
 
         $movement->cantidad = $cantidad;
         $movement->documento = static::toolBox()->i18n()->trans($transfer->modelClassName()) . ' ' . $transfer->primaryColumnValue();
-        $movement->fecha = \date(MovimientoStock::DATE_STYLE, \strtotime($transfer->fecha));
-        $movement->hora = \date(MovimientoStock::HOUR_STYLE, \strtotime($transfer->fecha));
+        $movement->fecha = date(MovimientoStock::DATE_STYLE, strtotime($transfer->fecha));
+        $movement->hora = date(MovimientoStock::HOUR_STYLE, strtotime($transfer->fecha));
         return empty($movement->cantidad) ? $movement->delete() : $movement->save();
     }
 
     /**
-     * 
      * @return ToolBox
      */
     protected static function toolBox()
