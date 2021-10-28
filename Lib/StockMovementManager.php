@@ -56,8 +56,7 @@ class StockMovementManager
         // saves movements from business documents
         $models = [new AlbaranProveedor(), new FacturaProveedor(), new AlbaranCliente(), new FacturaCliente()];
         foreach ($models as $model) {
-            // to prevent memory issues we set limit to 1000 items
-            foreach ($model->all([], ['fecha' => 'DESC'], 0, 1000) as $doc) {
+            foreach ($model->all([], ['fecha' => 'DESC'], 0, 0) as $doc) {
                 // skip states that do not modify the stock
                 if (static::ignoredState($doc)) {
                     continue;

@@ -1,9 +1,9 @@
 {
-    "TransferenciaStock": "TransferenciaStock",
+    "TransferenciaStock": "Umlagerung",
     "movements": "movements",
     "rebuild-movements": "rebuild-movements",
     "rebuilt-stock": "rebuilt-stock",
-    "reconstructed-movements": "reconstructed-movements",
+    "reconstructed-movements": "Lagerbewegungen wieder hergestellt",
     "stock-count": "stock-count",
     "stock-count-line-p": "stock-count-line-p",
     "stock-counts": "stock-counts"

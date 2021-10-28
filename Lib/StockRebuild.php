@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 
 use FacturaScripts\Core\Base\DataBase;
@@ -38,7 +39,7 @@ class StockRebuild
 
         $warehouse = new Almacen();
         foreach ($warehouse->all([], [], 0, 0) as $war) {
-            /// calculate stock from movements
+            // calculate stock from movements
             $stockData = [];
             $stockMovement = new MovimientoStock();
             $where = [new DataBaseWhere('codalmacen', $war->codalmacen)];
@@ -56,8 +57,12 @@ class StockRebuild
                 $stockData[$move->referencia]['cantidad'] += $move->cantidad;
             }
 
-            /// save stock
+            // save stock
             foreach ($stockData as $data) {
+                // we calculate the rest of the fields
+                $data['pterecibir'] = static::getPterecibir($data['referencia']);
+                $data['reservada'] = static::getReservada($data['referencia']);
+
                 $stock = new Stock();
                 $where2 = [
                     new DataBaseWhere('codalmacen', $data['codalmacen']),
@@ -78,16 +83,54 @@ class StockRebuild
     }
 
     /**
-     * 
      * @return bool
      */
     protected static function clear()
     {
         $database = new DataBase();
         if ($database->tableExists('stocks')) {
-            return $database->exec("UPDATE stocks SET cantidad = '0', disponible = '0';");
+            $sql = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0';";
+            return $database->exec($sql);
         }
 
         return true;
+    }
+
+    /**
+     * @param string $ref
+     *
+     * @return float
+     */
+    protected static function getPterecibir(string $ref): float
+    {
+        $database = new DataBase();
+        if ($database->tableExists('lineaspedidosprov')) {
+            $sql = "SELECT SUM(cantidad) as pte FROM lineaspedidosprov WHERE actualizastock = '2'"
+                . " AND referencia = " . $database->var2str($ref) . ";";
+            foreach ($database->select($sql) as $row) {
+                return (float)$row['pte'];
+            }
+        }
+
+        return 0.0;
+    }
+
+    /**
+     * @param string $ref
+     *
+     * @return float
+     */
+    protected static function getReservada(string $ref): float
+    {
+        $database = new DataBase();
+        if ($database->tableExists('lineaspedidoscli')) {
+            $sql = "SELECT SUM(cantidad) as reservada FROM lineaspedidoscli WHERE actualizastock = '-2'"
+                . " AND referencia = " . $database->var2str($ref) . ";";
+            foreach ($database->select($sql) as $row) {
+                return (float)$row['reservada'];
+            }
+        }
+
+        return 0.0;
     }
 }
