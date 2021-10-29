@@ -27,6 +27,8 @@ use FacturaScripts\Dinamic\Model\AlbaranCliente;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\FacturaCliente;
 use FacturaScripts\Dinamic\Model\FacturaProveedor;
+use FacturaScripts\Dinamic\Model\Producto;
+use FacturaScripts\Dinamic\Model\Variante;
 use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaTransferenciaStock;
@@ -47,6 +49,16 @@ class StockMovementManager
      */
     private static $docStates = [];
 
+    /**
+     * @var array
+     */
+    private static $products = [];
+
+    /**
+     * @var array
+     */
+    private static $variants = [];
+
     public static function rebuild()
     {
         // removes all movements
@@ -54,32 +66,7 @@ class StockMovementManager
         $movement->deleteAll();
 
         // saves movements from business documents
-        $models = [new AlbaranProveedor(), new FacturaProveedor(), new AlbaranCliente(), new FacturaCliente()];
-        foreach ($models as $model) {
-            foreach ($model->all([], ['fecha' => 'DESC'], 0, 0) as $doc) {
-                // skip states that do not modify the stock
-                if (static::ignoredState($doc)) {
-                    continue;
-                }
-
-                foreach ($doc->getLines() as $line) {
-                    // skip empty lines
-                    if (empty($line->referencia)) {
-                        continue;
-                    }
-
-                    // skip missing product or products without stock management
-                    $product = $line->getProducto();
-                    if (false === $product->exists() || $product->nostock) {
-                        continue;
-                    }
-
-                    $prevData['actualizastock'] = $line->actualizastock;
-                    $prevData['cantidad'] = 0.0;
-                    static::updateLine($line, $prevData, $doc);
-                }
-            }
-        }
+        static::rebuildMovements();
 
         // save movements from transferences
         $transferenciaStock = new TransferenciaStock();
@@ -205,6 +192,38 @@ class StockMovementManager
 
     /**
      * @param string $reference
+     *
+     * @return Producto
+     */
+    protected static function getProduct(string $reference): Producto
+    {
+        $variant = static::getVariant($reference);
+        if (!isset(self::$products[$variant->idproducto])) {
+            self::$products[$variant->idproducto] = $variant->getProducto();
+        }
+
+        return self::$products[$variant->idproducto];
+    }
+
+    /**
+     * @param string $referencia
+     *
+     * @return Variante
+     */
+    protected static function getVariant(string $referencia): Variante
+    {
+        if (!isset(self::$variants[$referencia])) {
+            $variante = new Variante();
+            $where = [new DataBaseWhere('referencia', $referencia)];
+            $variante->loadFromCode('', $where);
+            self::$variants[$referencia] = $variante;
+        }
+
+        return self::$variants[$referencia];
+    }
+
+    /**
+     * @param string $reference
      * @param string $codalmacen
      * @param int $docid
      * @param string $docmodel
@@ -250,6 +269,47 @@ class StockMovementManager
 
         // ignore status with actualizastock == 0
         return empty(self::$docStates[$doc->idestado]->actualizastock);
+    }
+
+    protected static function rebuildMovements()
+    {
+        $limit = 1000;
+        $models = [new AlbaranProveedor(), new FacturaProveedor(), new AlbaranCliente(), new FacturaCliente()];
+        foreach ($models as $model) {
+            $offset = 0;
+            $docs = $model->all([], ['fecha' => 'DESC'], $offset, $limit);
+
+            while (count($docs) > 0) {
+                foreach ($docs as $doc) {
+                    // skip states that do not modify the stock
+                    if (static::ignoredState($doc)) {
+                        continue;
+                    }
+
+                    foreach ($doc->getLines() as $line) {
+                        // skip empty lines
+                        if (empty($line->referencia)) {
+                            continue;
+                        }
+
+                        // skip missing product or products without stock management
+                        $product = static::getProduct($line->referencia);
+                        if (empty($product->idproducto) || $product->nostock) {
+                            continue;
+                        }
+
+                        $prevData['actualizastock'] = $line->actualizastock;
+                        $prevData['cantidad'] = 0.0;
+                        static::updateLine($line, $prevData, $doc);
+                    }
+                }
+
+                $offset += $limit;
+                $docs = $model->all([], ['fecha' => 'DESC'], $offset, $limit);
+            }
+
+            echo memory_get_usage() . "\n";
+        }
     }
 
     /**

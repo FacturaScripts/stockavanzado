@@ -29,10 +29,9 @@ class Cron extends CronClass
     public function run()
     {
         /**
-         * To speed up the installation, we add this cron to regenerate all the stock movements,
-         * but we will only execute it once (100 years -> never more)
+         * To speed up the installation, we add this cron to regenerate all the stock movements.
          */
-        if ($this->isTimeForJob(self::JOB_NAME, '100 years')) {
+        if ($this->isTimeForJob(self::JOB_NAME, '1 month')) {
             StockMovementManager::rebuild();
             $this->jobDone(self::JOB_NAME);
         }
