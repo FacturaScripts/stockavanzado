@@ -20,11 +20,17 @@ namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Dinamic\Model\Almacen;
+use FacturaScripts\Dinamic\Model\Stock;
+use FacturaScripts\Dinamic\Model\TotalModel;
+use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
+use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
+use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 
 /**
  * Description of EditProducto
  *
  * @author Carlos Garcia Gomez <carlos@facturascripts.com>
+ * @author Jose Antonio Cuello <yopli2000@gmail.com>
  */
 class EditProducto
 {
@@ -33,6 +39,7 @@ class EditProducto
     {
         return function() {
             $this->createViewsMovements();
+            $this->views['EditStock']->disableColumn('quantity', false, 'true');
         };
     }
 
@@ -58,6 +65,17 @@ class EditProducto
         };
     }
 
+    protected function execPreviousAction() {
+        return function($action) {
+            if ($action === '') {
+                if ($this->changeStock()) {
+                    $this->toolBox()->i18nLog()->notice('stock-changed');
+                }
+            }
+        };
+    }
+
+
     protected function loadData()
     {
         return function($viewName, $view) {
@@ -70,5 +88,65 @@ class EditProducto
             $view->loadData('', $where);
             $this->setSettings($viewName, 'active', $view->model->count($where) > 0);
         };
+    }
+
+    private function changeStock()
+    {
+        $data = $this->request->request->all();
+        $idstock = $data['idstock'] ?? -1;
+
+        $stock = new Stock();
+        if (false === $stock->loadFromCode($idstock)) {
+            return false;
+        }
+
+        $header = new ConteoStock();
+        $this->dataBase->beginTransaction();
+        try {
+            if (false === $this->saveHeader($stock, $header, $data['mov-description']) ||
+                false === $this->saveLine($stock, $header->idconteo, $data['mov-quantity']))
+            {
+                return false;
+            }
+
+            $quantity = TotalModel::sum(MovimientoStock::tableName(), 'cantidad', [
+                    new DataBaseWhere('codalmacen', $stock->codalmacen),
+                    new DataBaseWhere('referencia', $stock->referencia),
+                ]
+            );
+
+            $stock->cantidad = $quantity;
+            if (false === $stock->save()) {
+                return false;
+            }
+
+            $this->dataBase->commit();
+        } finally {
+            if ($this->dataBase->inTransaction()) {
+                $this->dataBase->rollback();
+            }
+        }
+
+        return true;
+    }
+
+    private function saveHeader($stock, &$header, $notes): bool
+    {
+        $header->nick = $this->user->nick;
+        $header->codalmacen = $stock->codalmacen;
+        $header->observaciones = $notes;
+        if (false === $header->save()) {
+            return false;
+        }
+    }
+
+    private function saveLine($stock, $idconteo, $quantity): bool
+    {
+        $line = new LineaConteoStock();
+        $line->idconteo = $idconteo;
+        $line->idproducto = $stock->idproducto;
+        $line->referencia = $stock->referencia;
+        $line->cantidad = $quantity;
+        return $line->save();
     }
 }
