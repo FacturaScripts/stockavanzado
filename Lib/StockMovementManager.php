@@ -307,8 +307,6 @@ class StockMovementManager
                 $offset += $limit;
                 $docs = $model->all([], ['fecha' => 'DESC'], $offset, $limit);
             }
-
-            echo memory_get_usage() . "\n";
         }
     }
 
