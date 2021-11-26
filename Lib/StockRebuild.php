@@ -23,7 +23,6 @@ use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Stock;
-use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 
 /**
  * Description of StockRebuild
@@ -32,105 +31,155 @@ use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
  */
 class StockRebuild
 {
+    private static $database;
 
-    public static function rebuild()
+    public static function rebuild(): bool
     {
+        self::dataBase()->beginTransaction();
         static::clear();
 
         $warehouse = new Almacen();
         foreach ($warehouse->all([], [], 0, 0) as $war) {
-            // calculate stock from movements
-            $stockData = [];
-            $stockMovement = new MovimientoStock();
-            $where = [new DataBaseWhere('codalmacen', $war->codalmacen)];
-            foreach ($stockMovement->all($where, ['referencia' => 'ASC'], 0, 0) as $move) {
-                if (!isset($stockData[$move->referencia])) {
-                    $stockData[$move->referencia] = [
-                        'cantidad' => $move->cantidad,
-                        'codalmacen' => $war->codalmacen,
-                        'idproducto' => $move->idproducto,
-                        'referencia' => $move->referencia
-                    ];
-                    continue;
-                }
-
-                $stockData[$move->referencia]['cantidad'] += $move->cantidad;
-            }
-
-            // save stock
-            foreach ($stockData as $data) {
-                // we calculate the rest of the fields
-                $data['pterecibir'] = static::getPterecibir($data['referencia']);
-                $data['reservada'] = static::getReservada($data['referencia']);
-
+            foreach (static::calculateStockData($war->codalmacen) as $data) {
                 $stock = new Stock();
-                $where2 = [
+                $where = [
                     new DataBaseWhere('codalmacen', $data['codalmacen']),
                     new DataBaseWhere('referencia', $data['referencia'])
                 ];
-                if ($stock->loadFromCode('', $where2)) {
+                if ($stock->loadFromCode('', $where)) {
+                    // el stock ya existe
                     $stock->loadFromData($data);
                     $stock->save();
                     continue;
                 }
 
+                // creamos y guardamos el stock
                 $newStock = new Stock($data);
                 $newStock->save();
             }
         }
 
+        self::dataBase()->commit();
         return true;
     }
 
     /**
      * @return bool
      */
-    protected static function clear()
+    protected static function clear(): bool
     {
-        $database = new DataBase();
-        if ($database->tableExists('stocks')) {
+        if (self::dataBase()->tableExists('stocks')) {
             $sql = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0';";
-            return $database->exec($sql);
+            return self::dataBase()->exec($sql);
         }
 
         return true;
     }
 
     /**
-     * @param string $ref
+     * @param string $codalmacen
      *
-     * @return float
+     * @return array
      */
-    protected static function getPterecibir(string $ref): float
+    protected static function calculateStockData(string $codalmacen): array
     {
-        $database = new DataBase();
-        if ($database->tableExists('lineaspedidosprov')) {
-            $sql = "SELECT SUM(cantidad) as pte FROM lineaspedidosprov WHERE actualizastock = '2'"
-                . " AND referencia = " . $database->var2str($ref) . ";";
-            foreach ($database->select($sql) as $row) {
-                return (float)$row['pte'];
-            }
+        if (false === self::dataBase()->tableExists('stocks_movimientos')) {
+            return [];
         }
 
-        return 0.0;
+        $stockData = [];
+        $sql = "SELECT referencia, SUM(cantidad) as sum FROM stocks_movimientos"
+            . " WHERE codalmacen = " . self::dataBase()->var2str($codalmacen)
+            . " GROUP BY 1";
+        foreach (self::dataBase()->select($sql) as $row) {
+            $ref = trim($row['referencia']);
+            $stockData[$ref] = [
+                'cantidad' => (float)$row['sum'],
+                'codalmacen' => $codalmacen,
+                'pterecibir' => 0,
+                'referencia' => $ref,
+                'reservada' => 0
+            ];
+        }
+
+        static::setPterecibir($stockData, $codalmacen);
+        static::setReservada($stockData, $codalmacen);
+        return $stockData;
     }
 
     /**
-     * @param string $ref
-     *
-     * @return float
+     * @return DataBase
      */
-    protected static function getReservada(string $ref): float
+    protected static function dataBase(): DataBase
     {
-        $database = new DataBase();
-        if ($database->tableExists('lineaspedidoscli')) {
-            $sql = "SELECT SUM(cantidad) as reservada FROM lineaspedidoscli WHERE actualizastock = '-2'"
-                . " AND referencia = " . $database->var2str($ref) . ";";
-            foreach ($database->select($sql) as $row) {
-                return (float)$row['reservada'];
-            }
+        if (!isset(self::$database)) {
+            self::$database = new DataBase();
         }
 
-        return 0.0;
+        return self::$database;
+    }
+
+    /**
+     * @param array $stockData
+     * @param string $codalmacen
+     */
+    protected static function setPterecibir(array &$stockData, string $codalmacen)
+    {
+        if (false === self::dataBase()->tableExists('lineaspedidosprov')) {
+            return;
+        }
+
+        $sql = "SELECT referencia, SUM(l.cantidad) as pte FROM lineaspedidosprov l"
+            . " LEFT JOIN pedidosprov p ON l.idpedido = p.idpedido"
+            . " WHERE l.referencia IS NOT NULL"
+            . " AND l.actualizastock = '2'"
+            . " AND p.codalmacen = " . self::dataBase()->var2str($codalmacen)
+            . " GROUP BY 1;";
+        foreach (self::dataBase()->select($sql) as $row) {
+            $ref = trim($row['referencia']);
+            if (!isset($stockData[$ref])) {
+                $stockData[$ref] = [
+                    'cantidad' => 0,
+                    'codalmacen' => $codalmacen,
+                    'pterecibir' => 0,
+                    'referencia' => $ref,
+                    'reservada' => 0
+                ];
+            }
+
+            $stockData[$ref]['pterecibir'] = (float)$row['pte'];
+        }
+    }
+
+    /**
+     * @param array $stockData
+     * @param string $codalmacen
+     */
+    protected static function setReservada(array &$stockData, string $codalmacen)
+    {
+        if (false === self::dataBase()->tableExists('lineaspedidoscli')) {
+            return;
+        }
+
+        $sql = "SELECT referencia, SUM(l.cantidad) as reservada FROM lineaspedidoscli l"
+            . " LEFT JOIN pedidoscli p ON l.idpedido = p.idpedido"
+            . " WHERE l.referencia IS NOT NULL"
+            . " AND l.actualizastock = '-2'"
+            . " AND p.codalmacen = " . self::dataBase()->var2str($codalmacen)
+            . " GROUP BY 1;";
+        foreach (self::dataBase()->select($sql) as $row) {
+            $ref = trim($row['referencia']);
+            if (!isset($stockData[$ref])) {
+                $stockData[$ref] = [
+                    'cantidad' => 0,
+                    'codalmacen' => $codalmacen,
+                    'pterecibir' => 0,
+                    'referencia' => $ref,
+                    'reservada' => 0
+                ];
+            }
+
+            $stockData[$ref]['reservada'] = (float)$row['reservada'];
+        }
     }
 }
