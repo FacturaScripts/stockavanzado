@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,9 +16,11 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\TotalModel;
@@ -37,7 +39,7 @@ class EditProducto
 
     protected function createViews()
     {
-        return function() {
+        return function () {
             $this->createViewsMovements();
             $this->views['EditStock']->disableColumn('quantity', false, 'true');
         };
@@ -45,20 +47,24 @@ class EditProducto
 
     protected function createViewsMovements()
     {
-        return function($viewName = 'ListMovimientoStock') {
+        return function ($viewName = 'ListMovimientoStock') {
             $this->addListView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
             $this->views[$viewName]->addOrderBy(['fecha', 'hora', 'id'], 'date', 2);
             $this->views[$viewName]->addOrderBy(['cantidad'], 'quantity');
             $this->views[$viewName]->searchFields = ['documento', 'referencia'];
 
-            /// disable column
+            // disable product column
             $this->views[$viewName]->disableColumn('product');
+
+            // disable warehouse column or add warehouse filter
             $almacen = new Almacen();
             if ($almacen->count() <= 1) {
                 $this->views[$viewName]->disableColumn('warehouse');
+            } else {
+                $this->views[$viewName]->addFilterSelect('codalmacen', 'warehouse', 'codalmacen', Almacenes::codeModel());
             }
 
-            /// disable buttons
+            // disable buttons
             $this->setSettings($viewName, 'btnDelete', false);
             $this->setSettings($viewName, 'btnNew', false);
             $this->setSettings($viewName, 'checkBoxes', false);
@@ -78,7 +84,7 @@ class EditProducto
 
     protected function loadData()
     {
-        return function($viewName, $view) {
+        return function ($viewName, $view) {
             if ($viewName !== 'ListMovimientoStock') {
                 return;
             }
