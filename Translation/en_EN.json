@@ -1,6 +1,9 @@
 {
     "TransferenciaStock": "Stock transference",
     "movements": "Movements",
+    "new-quantity": "New quantity",
+    "new-quantity-description": "Enter quantity",
+    "reason-for-change": "Reason for change",
     "rebuild-movements": "Rebuild movements",
     "rebuilt-stock": "Rebuilt stock",
     "reconstructed-movements": "Reconstructed movements",

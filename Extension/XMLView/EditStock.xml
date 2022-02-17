@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
  * This file is part of FacturaScripts
- * Copyright (C) 2017-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -22,20 +22,17 @@
 <view>
     <rows>
         <row type="actions">
-            <button type="modal" label='update-stock' color="warning" action="update-stock" icon="fas fa-dolly" />
+            <button type="modal" label="new-quantity" color="warning" action="change-stock" icon="fas fa-pen"/>
         </row>
     </rows>
 
     <modals>
-        <group name="update-stock" title="update-stock" icon="fas fa-dolly fa-fw">
-            <column name="idstock" display="none" order="0">
-                <widget type="text" fieldname="idstock" />
+        <group name="change-stock" title="stock" icon="fas fa-dolly fa-fw">
+            <column name="new-quantity" numcolumns="12" description="new-quantity-description">
+                <widget type="number" fieldname="mov-quantity" required="true"/>
             </column>
-            <column name="description" numcolumns="12" description="mov-stock-description">
-                <widget type="text" fieldname="mov-description" required="true" />
-            </column>
-            <column name="quantity" title="new-description" numcolumns="12" description="new-quantity-description">
-                <widget type="number" fieldname="mov-quantity" required="true" />
+            <column name="reason-for-change" numcolumns="12">
+                <widget type="text" fieldname="mov-description" required="true"/>
             </column>
         </group>
     </modals>

@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,13 +20,11 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Core\Base\ToolBox;
 use FacturaScripts\Core\DataSrc\Almacenes;
-use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Stock;
-use FacturaScripts\Dinamic\Model\TotalModel;
 use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 
 /**
  * Description of EditProducto
@@ -57,8 +55,7 @@ class EditProducto
             $this->views[$viewName]->disableColumn('product');
 
             // disable warehouse column or add warehouse filter
-            $almacen = new Almacen();
-            if ($almacen->count() <= 1) {
+            if (Almacenes::codeModel(false) <= 1) {
                 $this->views[$viewName]->disableColumn('warehouse');
             } else {
                 $this->views[$viewName]->addFilterSelect('codalmacen', 'warehouse', 'codalmacen', Almacenes::codeModel());
@@ -71,13 +68,14 @@ class EditProducto
         };
     }
 
-    protected function execPreviousAction() {
-        return function($action) {
-            if ($action === '') {
-                if ($this->changeStock()) {
-                    $this->toolBox()->i18nLog()->notice('stock-changed');
-                }
+    protected function execPreviousAction()
+    {
+        return function ($action) {
+            if ($action === 'change-stock') {
+                return $this->changeStockAction();
             }
+
+            return true;
         };
     }
 
@@ -96,63 +94,53 @@ class EditProducto
         };
     }
 
-    private function changeStock()
+    protected function changeStockAction()
     {
-        $data = $this->request->request->all();
-        $idstock = $data['idstock'] ?? -1;
+        return function () {
+            $data = $this->request->request->all();
 
-        $stock = new Stock();
-        if (false === $stock->loadFromCode($idstock)) {
-            return false;
-        }
-
-        $header = new ConteoStock();
-        $this->dataBase->beginTransaction();
-        try {
-            if (false === $this->saveHeader($stock, $header, $data['mov-description']) ||
-                false === $this->saveLine($stock, $header->idconteo, $data['mov-quantity']))
-            {
-                return false;
+            $stock = new Stock();
+            if (empty($data['code']) || false === $stock->loadFromCode($data['code'])) {
+                ToolBox::i18nLog()->warning('record-not-found');
+                return true;
             }
 
-            $quantity = TotalModel::sum(MovimientoStock::tableName(), 'cantidad', [
-                    new DataBaseWhere('codalmacen', $stock->codalmacen),
-                    new DataBaseWhere('referencia', $stock->referencia),
-                ]
-            );
+            $this->dataBase->beginTransaction();
 
-            $stock->cantidad = $quantity;
+            // creamos un nuevo conteo
+            $conteo = new ConteoStock();
+            $conteo->nick = $this->user->nick;
+            $conteo->codalmacen = $stock->codalmacen;
+            $conteo->observaciones = $data['mov-description'];
+            if (false === $conteo->save()) {
+                $this->dataBase->rollback();
+                ToolBox::i18nLog()->warning('record-save-error');
+                return true;
+            }
+
+            // añadimos una línea con la nueva cantidad
+            $line = new LineaConteoStock();
+            $line->idconteo = $conteo->idconteo;
+            $line->idproducto = $stock->idproducto;
+            $line->referencia = $stock->referencia;
+            $line->cantidad = (float)$data['mov-quantity'];
+            if (false === $line->save()) {
+                $this->dataBase->rollback();
+                ToolBox::i18nLog()->warning('record-save-error');
+                return true;
+            }
+
+            // actualizamos el stock
+            $stock->cantidad = (float)$data['mov-quantity'];
             if (false === $stock->save()) {
-                return false;
+                $this->dataBase->rollback();
+                ToolBox::i18nLog()->warning('record-save-error');
+                return true;
             }
 
             $this->dataBase->commit();
-        } finally {
-            if ($this->dataBase->inTransaction()) {
-                $this->dataBase->rollback();
-            }
-        }
-
-        return true;
-    }
-
-    private function saveHeader($stock, &$header, $notes): bool
-    {
-        $header->nick = $this->user->nick;
-        $header->codalmacen = $stock->codalmacen;
-        $header->observaciones = $notes;
-        if (false === $header->save()) {
-            return false;
-        }
-    }
-
-    private function saveLine($stock, $idconteo, $quantity): bool
-    {
-        $line = new LineaConteoStock();
-        $line->idconteo = $idconteo;
-        $line->idproducto = $stock->idproducto;
-        $line->referencia = $stock->referencia;
-        $line->cantidad = $quantity;
-        return $line->save();
+            ToolBox::i18nLog()->notice('record-updated-correctly');
+            return true;
+        };
     }
 }

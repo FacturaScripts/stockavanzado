@@ -1,10 +1,13 @@
 {
     "TransferenciaStock": "Transfert de Stock",
-    "movements": "movements",
-    "rebuild-movements": "rebuild-movements",
-    "rebuilt-stock": "rebuilt-stock",
-    "reconstructed-movements": "reconstructed-movements",
-    "stock-count": "stock-count",
-    "stock-count-line-p": "stock-count-line-p",
-    "stock-counts": "stock-counts"
+    "movements": "Mouvements",
+    "new-quantity": "Nueva cantidad",
+    "new-quantity-description": "Introduzca la cantidad",
+    "reason-for-change": "Motivo del cambio",
+    "rebuild-movements": "Reconstituer les mouvements",
+    "rebuilt-stock": "Stock reconstitué",
+    "reconstructed-movements": "Mouvements reconstruits",
+    "stock-count": "Inventaire",
+    "stock-count-line-p": "Ajoutez des lignes à cet inventaire en tapant\/numérisant un code-barres ou une référence. Si le produit se trouve déjà dans la liste, la quantité augmentera.",
+    "stock-counts": "Inventaires"
 }

@@ -1,6 +1,9 @@
 {
     "TransferenciaStock": "Stock Transferentzia",
     "movements": "Mugimenduak",
+    "new-quantity": "Kopuru berria",
+    "new-quantity-description": "Sartu zenbatekoa",
+    "reason-for-change": "Aldaketaren arrazoia",
     "rebuild-movements": "Mugimenduak berritu",
     "rebuilt-stock": "Berritutako stocka",
     "reconstructed-movements": "Berritutako stock mugimenduak",

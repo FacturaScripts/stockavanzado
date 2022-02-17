@@ -1,6 +1,9 @@
 {
     "TransferenciaStock": "Umlagerung",
     "movements": "movements",
+    "new-quantity": "Nueva cantidad",
+    "new-quantity-description": "Introduzca la cantidad",
+    "reason-for-change": "Motivo del cambio",
     "rebuild-movements": "rebuild-movements",
     "rebuilt-stock": "rebuilt-stock",
     "reconstructed-movements": "Lagerbewegungen wieder hergestellt",

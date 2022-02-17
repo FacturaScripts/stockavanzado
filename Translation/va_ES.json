@@ -1,6 +1,9 @@
 {
     "TransferenciaStock": "Transferència d'Estoc",
     "movements": "Moviments",
+    "new-quantity": "Nueva cantidad",
+    "new-quantity-description": "Introduzca la cantidad",
+    "reason-for-change": "Motivo del cambio",
     "rebuild-movements": "Reconstruir moviments",
     "rebuilt-stock": "Estoc reconstruït",
     "reconstructed-movements": "Moviments d'estoc reconstruïts",
