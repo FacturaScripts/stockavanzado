@@ -63,9 +63,6 @@ class StockRebuild
         return true;
     }
 
-    /**
-     * @return bool
-     */
     protected static function clear(): bool
     {
         if (self::dataBase()->tableExists('stocks')) {
@@ -76,11 +73,6 @@ class StockRebuild
         return true;
     }
 
-    /**
-     * @param string $codalmacen
-     *
-     * @return array
-     */
     protected static function calculateStockData(string $codalmacen): array
     {
         if (false === self::dataBase()->tableExists('stocks_movimientos')) {
@@ -107,9 +99,6 @@ class StockRebuild
         return $stockData;
     }
 
-    /**
-     * @return DataBase
-     */
     protected static function dataBase(): DataBase
     {
         if (!isset(self::$database)) {
@@ -119,10 +108,6 @@ class StockRebuild
         return self::$database;
     }
 
-    /**
-     * @param array $stockData
-     * @param string $codalmacen
-     */
     protected static function setPterecibir(array &$stockData, string $codalmacen)
     {
         if (false === self::dataBase()->tableExists('lineaspedidosprov')) {
@@ -151,10 +136,6 @@ class StockRebuild
         }
     }
 
-    /**
-     * @param array $stockData
-     * @param string $codalmacen
-     */
     protected static function setReservada(array &$stockData, string $codalmacen)
     {
         if (false === self::dataBase()->tableExists('lineaspedidoscli')) {

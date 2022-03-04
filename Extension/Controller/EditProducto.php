@@ -72,10 +72,8 @@ class EditProducto
     {
         return function ($action) {
             if ($action === 'change-stock') {
-                return $this->changeStockAction();
+                $this->changeStockAction();
             }
-
-            return true;
         };
     }
 

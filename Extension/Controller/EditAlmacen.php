@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
@@ -30,7 +31,7 @@ class EditAlmacen
 
     protected function createViews()
     {
-        return function() {
+        return function () {
             $this->createViewsMovements();
             $this->createViewsCounts();
         };
@@ -38,15 +39,15 @@ class EditAlmacen
 
     protected function createViewsCounts()
     {
-        return function($viewName = 'ListConteoStock') {
+        return function ($viewName = 'ListConteoStock') {
             $this->addListView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll');
             $this->views[$viewName]->addOrderBy(['fechainicio'], 'date', 2);
             $this->views[$viewName]->searchFields = ['observaiones'];
 
-            /// disable column
+            // disable column
             $this->views[$viewName]->disableColumn('warehouse');
 
-            /// disable buttons
+            // disable buttons
             $this->setSettings($viewName, 'btnDelete', false);
             $this->setSettings($viewName, 'checkBoxes', false);
         };
@@ -54,16 +55,16 @@ class EditAlmacen
 
     protected function createViewsMovements()
     {
-        return function($viewName = 'ListMovimientoStock') {
+        return function ($viewName = 'ListMovimientoStock') {
             $this->addListView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
             $this->views[$viewName]->addOrderBy(['fecha', 'hora', 'id'], 'date', 2);
             $this->views[$viewName]->addOrderBy(['cantidad'], 'quantity');
             $this->views[$viewName]->searchFields = ['documento', 'referencia'];
 
-            /// disable column
+            // disable column
             $this->views[$viewName]->disableColumn('warehouse');
 
-            /// disable buttons
+            // disable buttons
             $this->setSettings($viewName, 'btnDelete', false);
             $this->setSettings($viewName, 'btnNew', false);
             $this->setSettings($viewName, 'checkBoxes', false);
@@ -72,7 +73,7 @@ class EditAlmacen
 
     protected function loadData()
     {
-        return function($viewName, $view) {
+        return function ($viewName, $view) {
             switch ($viewName) {
                 case 'ListConteoStock':
                 case 'ListMovimientoStock':
