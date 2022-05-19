@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2014-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2014-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
@@ -44,7 +45,6 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
     public $cantidad;
 
     /**
-     *
      * @var bool
      */
     private static $disableUpdateStock = false;
@@ -64,36 +64,24 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
     public $idtrans;
 
     /**
-     *
      * @var string
      */
     public $referencia;
 
-    /**
-     * Reset the values of all model properties.
-     */
     public function clear()
     {
         parent::clear();
         $this->cantidad = 1.0;
     }
 
-    /**
-     * 
-     * @return TransferenciaStock
-     */
-    public function getTransference()
+    public function getTransference(): TransferenciaStock
     {
         $transf = new TransferenciaStock();
         $transf->loadFromCode($this->idtrans);
         return $transf;
     }
 
-    /**
-     * 
-     * @return Variante
-     */
-    public function getVariant()
+    public function getVariant(): Variante
     {
         $variant = new Variante();
         $where = [new DataBaseWhere('referencia', $this->referencia)];
@@ -101,43 +89,26 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
         return $variant;
     }
 
-    /**
-     * 
-     * @return string
-     */
-    public function install()
+    public function install(): string
     {
-        /// needed dependencies
+        // needed dependencies
         new TransferenciaStock();
         new Variante();
 
         return parent::install();
     }
 
-    /**
-     * Returns the name of the column that is the model's primary key.
-     *
-     * @return string
-     */
-    public static function primaryColumn()
+    public static function primaryColumn(): string
     {
         return 'idlinea';
     }
 
-    /**
-     * 
-     * @param bool $disable
-     */
     public static function setDisableUpdateStock(bool $disable)
     {
         self::$disableUpdateStock = $disable;
     }
 
-    /**
-     * 
-     * @return bool
-     */
-    public function test()
+    public function test(): bool
     {
         $this->referencia = $this->toolBox()->utils()->noHtml($this->referencia);
         if (empty($this->idproducto)) {
@@ -148,19 +119,14 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
         return parent::test();
     }
 
-    /**
-     * Returns the name of the table that uses this model.
-     *
-     * @return string
-     */
-    public static function tableName()
+    public static function tableName(): string
     {
         return 'stocks_lineastransferencias';
     }
 
     /**
      * This methos is called before save (update) when some field value has changes.
-     * 
+     *
      * @param string $field
      *
      * @return bool
@@ -184,33 +150,17 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
         $this->updateStock($this->previousData['cantidad'] * -1);
     }
 
-    /**
-     * 
-     * @param array $values
-     *
-     * @return bool
-     */
-    protected function saveInsert(array $values = [])
+    protected function saveInsert(array $values = []): bool
     {
         return $this->updateStock($this->cantidad) && parent::saveInsert($values);
     }
 
-    /**
-     * 
-     * @param array $fields
-     */
     protected function setPreviousData(array $fields = [])
     {
         $more = ['cantidad'];
         parent::setPreviousData(\array_merge($more, $fields));
     }
 
-    /**
-     * 
-     * @param float $quantity
-     *
-     * @return bool
-     */
     protected function updateStock(float $quantity): bool
     {
         if (self::$disableUpdateStock) {

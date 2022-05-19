@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
@@ -36,43 +37,36 @@ class LineaConteoStock extends Base\ModelClass
     use Base\ModelTrait;
 
     /**
-     *
      * @var float
      */
     public $cantidad;
 
     /**
-     *
      * @var string
      */
     public $fecha;
 
     /**
-     *
      * @var int
      */
     public $idlinea;
 
     /**
-     *
      * @var int
      */
     public $idproducto;
 
     /**
-     *
      * @var int
      */
     public $idconteo;
 
     /**
-     *
      * @var string
      */
     public $nick;
 
     /**
-     *
      * @var string
      */
     public $referencia;
@@ -81,14 +75,10 @@ class LineaConteoStock extends Base\ModelClass
     {
         parent::clear();
         $this->cantidad = 1.0;
-        $this->fecha = \date(self::DATETIME_STYLE);
+        $this->fecha = date(self::DATETIME_STYLE);
     }
 
-    /**
-     * 
-     * @return bool
-     */
-    public function delete()
+    public function delete(): bool
     {
         if (parent::delete()) {
             $this->cantidad = 0.0;
@@ -99,33 +89,21 @@ class LineaConteoStock extends Base\ModelClass
         return false;
     }
 
-    /**
-     * 
-     * @return ConteoStock
-     */
-    public function getConteo()
+    public function getConteo(): ConteoStock
     {
         $conteo = new ConteoStock();
         $conteo->loadFromCode($this->idconteo);
         return $conteo;
     }
 
-    /**
-     * 
-     * @return Producto
-     */
-    public function getProducto()
+    public function getProducto(): Producto
     {
         $producto = new Producto();
         $producto->loadFromCode($this->idproducto);
         return $producto;
     }
 
-    /**
-     * 
-     * @return Stock
-     */
-    public function getStock()
+    public function getStock(): Stock
     {
         $stock = new Stock();
         $where = [
@@ -136,11 +114,7 @@ class LineaConteoStock extends Base\ModelClass
         return $stock;
     }
 
-    /**
-     * 
-     * @return Variante
-     */
-    public function getVariant()
+    public function getVariant(): Variante
     {
         $variante = new Variante();
         $where = [new DataBaseWhere('referencia', $this->referencia)];
@@ -148,20 +122,12 @@ class LineaConteoStock extends Base\ModelClass
         return $variante;
     }
 
-    /**
-     * 
-     * @return string
-     */
     public static function primaryColumn(): string
     {
         return 'idlinea';
     }
 
-    /**
-     * 
-     * @return bool
-     */
-    public function save()
+    public function save(): bool
     {
         if (parent::save()) {
             StockMovementManager::updateLineCount($this, $this->getConteo());
@@ -171,10 +137,6 @@ class LineaConteoStock extends Base\ModelClass
         return false;
     }
 
-    /**
-     * 
-     * @return string
-     */
     public static function tableName(): string
     {
         return 'stocks_lineasconteos';

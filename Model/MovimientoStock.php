@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Model\Base;
@@ -33,61 +34,51 @@ class MovimientoStock extends Base\ModelClass
     use Base\ModelTrait;
 
     /**
-     *
      * @var float
      */
     public $cantidad;
 
     /**
-     *
      * @var string
      */
     public $codalmacen;
 
     /**
-     *
      * @var int
      */
     public $docid;
 
     /**
-     *
      * @var string
      */
     public $docmodel;
 
     /**
-     *
      * @var string
      */
     public $documento;
 
     /**
-     *
      * @var string
      */
     public $fecha;
 
     /**
-     *
      * @var string
      */
     public $hora;
 
     /**
-     *
      * @var int
      */
     public $id;
 
     /**
-     *
      * @var int
      */
     public $idproducto;
 
     /**
-     *
      * @var string
      */
     public $referencia;
@@ -96,24 +87,16 @@ class MovimientoStock extends Base\ModelClass
     {
         parent::clear();
         $this->cantidad = 0.0;
-        $this->fecha = \date(self::DATE_STYLE);
-        $this->hora = \date(self::HOUR_STYLE);
+        $this->fecha = date(self::DATE_STYLE);
+        $this->hora = date(self::HOUR_STYLE);
     }
 
-    /**
-     * 
-     * @return bool
-     */
-    public function deleteAll()
+    public function deleteAll(): bool
     {
         return self::$dataBase->exec('DELETE FROM ' . static::tableName() . ';');
     }
 
-    /**
-     * 
-     * @return Variante
-     */
-    public function getVariant()
+    public function getVariant(): Variante
     {
         $variant = new Variante();
         $where = [new DataBaseWhere('referencia', $this->referencia)];
@@ -121,52 +104,29 @@ class MovimientoStock extends Base\ModelClass
         return $variant;
     }
 
-    /**
-     * 
-     * @return Producto
-     */
-    public function getProduct()
+    public function getProduct(): Producto
     {
         $product = new Producto();
         $product->loadFromCode($this->idproducto);
         return $product;
     }
 
-    /**
-     * 
-     * @return string
-     */
     public static function primaryColumn(): string
     {
         return 'id';
     }
 
-    /**
-     * 
-     * @return string
-     */
     public static function tableName(): string
     {
         return 'stocks_movimientos';
     }
 
-    /**
-     * 
-     * @return bool
-     */
-    public function test()
+    public function test(): bool
     {
         $this->documento = $this->toolBox()->utils()->noHtml($this->documento);
         return parent::test();
     }
 
-    /**
-     * 
-     * @param string $type
-     * @param string $list
-     *
-     * @return string
-     */
     public function url(string $type = 'auto', string $list = 'List'): string
     {
         $modelClass = '\\FacturaScripts\\Dinamic\\Model\\' . $this->docmodel;

@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
@@ -34,19 +35,11 @@ use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
 class EditConteoStock extends EditController
 {
 
-    /**
-     * 
-     * @return string
-     */
-    public function getModelClassName()
+    public function getModelClassName(): string
     {
         return 'ConteoStock';
     }
 
-    /**
-     * 
-     * @return array
-     */
     public function getPageData(): array
     {
         $data = parent::getPageData();
@@ -57,11 +50,7 @@ class EditConteoStock extends EditController
         return $data;
     }
 
-    /**
-     * 
-     * @return bool
-     */
-    protected function addLineAction()
+    protected function addLineAction(): bool
     {
         if (false === $this->permissions->allowUpdate) {
             $this->toolBox()->i18nLog()->warning('not-allowed-update');
@@ -118,20 +107,12 @@ class EditConteoStock extends EditController
         $this->createViewsLines();
     }
 
-    /**
-     * 
-     * @param string $viewName
-     */
     protected function createViewsLines(string $viewName = 'lines')
     {
         $this->addHtmlView($viewName, 'EditConteoStockLines', 'LineaConteoStock', 'lines', 'fas fa-list');
     }
 
-    /**
-     * 
-     * @return bool
-     */
-    protected function deleteLineAction()
+    protected function deleteLineAction(): bool
     {
         if (false === $this->permissions->allowDelete) {
             $this->toolBox()->i18nLog()->warning('not-allowed-delete');
@@ -149,11 +130,7 @@ class EditConteoStock extends EditController
         return true;
     }
 
-    /**
-     * 
-     * @return bool
-     */
-    protected function editLineAction()
+    protected function editLineAction(): bool
     {
         if (false === $this->permissions->allowUpdate) {
             $this->toolBox()->i18nLog()->warning('not-allowed-update');
@@ -167,7 +144,7 @@ class EditConteoStock extends EditController
             return true;
         }
 
-        $lineaConteo->cantidad = (float) $this->request->request->get('quantity');
+        $lineaConteo->cantidad = (float)$this->request->request->get('quantity');
         $lineaConteo->fecha = \date(LineaConteoStock::DATETIME_STYLE);
         $lineaConteo->nick = $this->user->nick;
         if (false === $lineaConteo->save()) {
@@ -180,7 +157,6 @@ class EditConteoStock extends EditController
     }
 
     /**
-     * 
      * @param string $action
      *
      * @return bool
@@ -206,8 +182,7 @@ class EditConteoStock extends EditController
     }
 
     /**
-     * 
-     * @param string   $viewName
+     * @param string $viewName
      * @param BaseView $view
      */
     protected function loadData($viewName, $view)
@@ -234,11 +209,7 @@ class EditConteoStock extends EditController
         }
     }
 
-    /**
-     * 
-     * @return bool
-     */
-    protected function rebuildStockAction()
+    protected function rebuildStockAction(): bool
     {
         StockRebuild::rebuild();
         $this->toolBox()->i18nLog()->notice('record-updated-correctly');

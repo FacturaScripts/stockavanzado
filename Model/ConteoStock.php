@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
@@ -33,37 +34,31 @@ class ConteoStock extends Base\ModelClass
     use Base\ModelTrait;
 
     /**
-     *
      * @var string
      */
     public $codalmacen;
 
     /**
-     *
      * @var string
      */
     public $fechafin;
 
     /**
-     *
      * @var string
      */
     public $fechainicio;
 
     /**
-     *
      * @var int
      */
     public $idconteo;
 
     /**
-     *
      * @var string
      */
     public $nick;
 
     /**
-     *
      * @var string
      */
     public $observaciones;
@@ -71,15 +66,11 @@ class ConteoStock extends Base\ModelClass
     public function clear()
     {
         parent::clear();
-        $this->fechafin = \date(self::DATE_STYLE);
-        $this->fechainicio = \date(self::DATE_STYLE);
+        $this->fechafin = date(self::DATE_STYLE);
+        $this->fechainicio = date(self::DATE_STYLE);
     }
 
-    /**
-     * 
-     * @return bool
-     */
-    public function delete()
+    public function delete(): bool
     {
         foreach ($this->getLines() as $line) {
             $line->delete();
@@ -88,11 +79,7 @@ class ConteoStock extends Base\ModelClass
         return parent::delete();
     }
 
-    /**
-     * 
-     * @return Almacen
-     */
-    public function getAlmacen()
+    public function getAlmacen(): Almacen
     {
         $almacen = new Almacen();
         $almacen->loadFromCode($this->codalmacen);
@@ -100,51 +87,31 @@ class ConteoStock extends Base\ModelClass
     }
 
     /**
-     * 
      * @return LineaConteoStock[]
      */
-    public function getLines()
+    public function getLines(): array
     {
         $lineaConteo = new LineaConteoStock();
         $where = [new DataBaseWhere('idconteo', $this->idconteo)];
         return $lineaConteo->all($where, ['fecha' => 'DESC'], 0, 0);
     }
 
-    /**
-     * 
-     * @return string
-     */
     public static function primaryColumn(): string
     {
         return 'idconteo';
     }
 
-    /**
-     * 
-     * @return string
-     */
     public static function tableName(): string
     {
         return 'stocks_conteos';
     }
 
-    /**
-     * 
-     * @return bool
-     */
-    public function test()
+    public function test(): bool
     {
         $this->observaciones = $this->toolBox()->utils()->noHtml($this->observaciones);
         return parent::test();
     }
 
-    /**
-     * 
-     * @param string $type
-     * @param string $list
-     *
-     * @return string
-     */
     public function url(string $type = 'auto', string $list = 'ListAlmacen?activetab=List'): string
     {
         return parent::url($type, $list);

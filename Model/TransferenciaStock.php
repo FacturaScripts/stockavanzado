@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2013-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2013-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -77,29 +77,26 @@ class TransferenciaStock extends Base\ModelClass
     public function clear()
     {
         parent::clear();
-        $this->fecha = \date(self::DATETIME_STYLE);
+        $this->fecha = date(self::DATETIME_STYLE);
     }
 
-    /**
-     * @return bool
-     */
-    public function delete()
+    public function delete(): bool
     {
-        $newTransation = false === self::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
+        $newTransaction = false === self::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
 
-        /// remove lines to force update stock
+        // remove lines to force update stock
         foreach ($this->getLines() as $line) {
             $line->delete();
         }
 
         if (parent::delete()) {
-            if ($newTransation) {
+            if ($newTransaction) {
                 self::$dataBase->commit();
             }
             return true;
         }
 
-        if ($newTransation) {
+        if ($newTransaction) {
             self::$dataBase->rollback();
         }
 
@@ -109,37 +106,24 @@ class TransferenciaStock extends Base\ModelClass
     /**
      * @return LineaTransferenciaStock[]
      */
-    public function getLines()
+    public function getLines(): array
     {
         $line = new LineaTransferenciaStock();
         $where = [new DataBaseWhere('idtrans', $this->primaryColumnValue())];
         return $line->all($where, [], 0, 0);
     }
 
-    /**
-     * Returns the name of the column that is the model's primary key.
-     *
-     * @return string
-     */
-    public static function primaryColumn()
+    public static function primaryColumn(): string
     {
         return 'idtrans';
     }
 
-    /**
-     * Returns the name of the table that uses this model.
-     *
-     * @return string
-     */
-    public static function tableName()
+    public static function tableName(): string
     {
         return 'stocks_transferencias';
     }
 
-    /**
-     * @return bool
-     */
-    public function test()
+    public function test(): bool
     {
         $this->observaciones = $this->toolBox()->utils()->noHtml($this->observaciones);
 
@@ -156,13 +140,7 @@ class TransferenciaStock extends Base\ModelClass
         return parent::test();
     }
 
-    /**
-     * @param string $type
-     * @param string $list
-     *
-     * @return string
-     */
-    public function url(string $type = 'auto', string $list = 'ListAlmacen?activetab=List')
+    public function url(string $type = 'auto', string $list = 'ListAlmacen?activetab=List'): string
     {
         return parent::url($type, $list);
     }
