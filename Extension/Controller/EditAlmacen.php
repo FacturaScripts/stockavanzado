@@ -19,6 +19,7 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
+use Closure;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 
 /**
@@ -28,8 +29,7 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
  */
 class EditAlmacen
 {
-
-    protected function createViews()
+    protected function createViews(): Closure
     {
         return function () {
             $this->createViewsMovements();
@@ -37,7 +37,7 @@ class EditAlmacen
         };
     }
 
-    protected function createViewsCounts()
+    protected function createViewsCounts(): Closure
     {
         return function ($viewName = 'ListConteoStock') {
             $this->addListView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll');
@@ -53,7 +53,7 @@ class EditAlmacen
         };
     }
 
-    protected function createViewsMovements()
+    protected function createViewsMovements(): Closure
     {
         return function ($viewName = 'ListMovimientoStock') {
             $this->addListView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
@@ -71,7 +71,7 @@ class EditAlmacen
         };
     }
 
-    protected function loadData()
+    protected function loadData(): Closure
     {
         return function ($viewName, $view) {
             switch ($viewName) {

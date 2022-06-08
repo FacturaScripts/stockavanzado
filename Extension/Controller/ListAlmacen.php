@@ -19,6 +19,8 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
+use Closure;
+
 /**
  * Description of ListAlmacen
  *
@@ -26,8 +28,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
  */
 class ListAlmacen
 {
-
-    protected function createViews()
+    protected function createViews(): Closure
     {
         return function () {
             $this->createViewsMovements();
@@ -36,7 +37,7 @@ class ListAlmacen
         };
     }
 
-    protected function createViewsCountings()
+    protected function createViewsCountings(): Closure
     {
         return function ($viewName = 'ListConteoStock') {
             $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll');
@@ -51,7 +52,7 @@ class ListAlmacen
         };
     }
 
-    protected function createViewsMovements()
+    protected function createViewsMovements(): Closure
     {
         return function ($viewName = 'ListMovimientoStock') {
             $this->addView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
@@ -72,7 +73,7 @@ class ListAlmacen
         };
     }
 
-    protected function createViewsTransfers()
+    protected function createViewsTransfers(): Closure
     {
         return function ($viewName = 'ListTransferenciaStock') {
             $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt');

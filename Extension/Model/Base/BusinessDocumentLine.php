@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -16,8 +16,10 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Model\Base;
 
+use Closure;
 use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
 
 /**
@@ -27,17 +29,16 @@ use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
  */
 class BusinessDocumentLine
 {
-
-    public static function transfer()
+    public static function transfer(): Closure
     {
-        return function($fromCodalmacen, $toCodalmacen, $doc) {
+        return function ($fromCodalmacen, $toCodalmacen, $doc) {
             StockMovementManager::transferLine($this, $doc, $fromCodalmacen, $toCodalmacen);
         };
     }
 
-    protected function updateStock()
+    protected function updateStock(): Closure
     {
-        return function($doc) {
+        return function ($doc) {
             StockMovementManager::updateLine($this, $this->previousData, $doc);
         };
     }
