@@ -29,6 +29,7 @@ use FacturaScripts\Dinamic\Model\FacturaCliente;
 use FacturaScripts\Dinamic\Model\FacturaProveedor;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Variante;
+use FacturaScripts\Plugins\StockAvanzado\Contract\StockMovementModInterface;
 use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaTransferenciaStock;
@@ -50,6 +51,11 @@ class StockMovementManager
     private static $docStates = [];
 
     /**
+     * @var StockMovementModInterface[]
+     */
+    private static $mods = [];
+
+    /**
      * @var array
      */
     private static $products = [];
@@ -58,6 +64,11 @@ class StockMovementManager
      * @var array
      */
     private static $variants = [];
+
+    public static function addMod(StockMovementModInterface $mod): void
+    {
+        self::$mods[] = $mod;
+    }
 
     public static function rebuild()
     {
@@ -68,9 +79,13 @@ class StockMovementManager
         // saves movements from business documents
         static::rebuildMovements();
 
-        // save movements from transferences
-        $transferenciaStock = new TransferenciaStock();
+        // run mods
+        foreach (self::$mods as $mod) {
+            $mod->run();
+        }
 
+        // save movements from transference
+        $transferenciaStock = new TransferenciaStock();
         foreach ($transferenciaStock->all([], [], 0, 0) as $transfer) {
             foreach ($transfer->getLines() as $line) {
                 static::updateLineTransfer($line, $transfer);

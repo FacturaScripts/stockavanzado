@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -17,24 +17,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-namespace FacturaScripts\Plugins\StockAvanzado;
+namespace FacturaScripts\Plugins\StockAvanzado\Contract;
 
-use FacturaScripts\Core\Base\CronClass;
-use FacturaScripts\Dinamic\Lib\StockMovementManager;
-
-class Cron extends CronClass
+interface StockMovementModInterface
 {
-    const JOB_NAME = 'rebuild-movements';
-
-    public function run()
-    {
-        /**
-         * To speed up the installation, we add this cron to regenerate all the stock movements.
-         */
-        if ($this->isTimeForJob(self::JOB_NAME, '1 month')) {
-            StockMovementManager::rebuild();
-            $this->jobDone(self::JOB_NAME);
-        }
-    }
+    public function run(): void;
 }
-
