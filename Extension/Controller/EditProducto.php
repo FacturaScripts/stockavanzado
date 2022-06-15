@@ -51,6 +51,11 @@ class EditProducto
             $this->views[$viewName]->addOrderBy(['cantidad'], 'quantity');
             $this->views[$viewName]->searchFields = ['documento', 'referencia'];
 
+            // filters
+            $this->views[$viewName]->addFilterPeriod('fecha', 'date', 'fecha');
+            $this->views[$viewName]->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=');
+            $this->views[$viewName]->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=');
+
             // disable product column
             $this->views[$viewName]->disableColumn('product');
 

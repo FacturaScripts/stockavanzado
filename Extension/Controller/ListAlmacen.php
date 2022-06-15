@@ -62,6 +62,8 @@ class ListAlmacen
 
             // Filters
             $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
+            $this->addFilterNumber($viewName, 'cantidadgt', 'quantity', 'cantidad', '>=');
+            $this->addFilterNumber($viewName, 'cantidadlt', 'quantity', 'cantidad', '<=');
 
             $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
             $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
