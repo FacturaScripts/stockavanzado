@@ -76,9 +76,9 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
 
     public function getTransference(): TransferenciaStock
     {
-        $transf = new TransferenciaStock();
-        $transf->loadFromCode($this->idtrans);
-        return $transf;
+        $trans = new TransferenciaStock();
+        $trans->loadFromCode($this->idtrans);
+        return $trans;
     }
 
     public function getVariant(): Variante
@@ -133,9 +133,8 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
      */
     protected function onChange($field)
     {
-        switch ($field) {
-            case 'cantidad':
-                return $this->updateStock($this->cantidad - $this->previousData['cantidad']);
+        if ($field == 'cantidad') {
+            return $this->updateStock($this->cantidad - $this->previousData['cantidad']);
         }
 
         return parent::onChange($field);
