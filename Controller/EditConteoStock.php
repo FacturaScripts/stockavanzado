@@ -211,7 +211,12 @@ class EditConteoStock extends EditController
 
     protected function rebuildStockAction(): bool
     {
-        StockRebuild::rebuild();
+        $conteo = new ConteoStock();
+        if (false === $conteo->loadFromCode($this->request->get('code', ''))) {
+            return true;
+        }
+
+        StockRebuild::rebuild($conteo);
         $this->toolBox()->i18nLog()->notice('record-updated-correctly');
         return true;
     }
