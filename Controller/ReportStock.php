@@ -82,6 +82,7 @@ class ReportStock extends ListController
     protected function createViewsStock(string $viewName = 'StockProducto')
     {
         $this->addView($viewName, 'Join\StockProducto', 'stock', 'fas fa-dolly');
+        $this->addOrderBy($viewName, ['referencia', 'codalmacen'], 'reference');
         $this->addOrderBy($viewName, ['disponible'], 'available');
         $this->addOrderBy($viewName, ['cantidad'], 'quantity', 2);
         $this->addOrderBy($viewName, ['coste'], 'cost-price');
