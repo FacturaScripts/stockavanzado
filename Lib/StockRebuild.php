@@ -24,7 +24,6 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Base\ToolBox;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Stock;
-use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 
 /**
  * Description of StockRebuild
@@ -35,27 +34,30 @@ class StockRebuild
 {
     private static $database;
 
-    public static function rebuild(ConteoStock $conteo): bool
+    public static function rebuild(): bool
     {
         self::dataBase()->beginTransaction();
-        static::clear($conteo->codalmacen);
+        static::clear();
 
-        foreach (static::calculateStockData($conteo) as $data) {
-            $stock = new Stock();
-            $where = [
-                new DataBaseWhere('codalmacen', $data['codalmacen']),
-                new DataBaseWhere('referencia', $data['referencia'])
-            ];
-            if ($stock->loadFromCode('', $where)) {
-                // el stock ya existe
-                $stock->loadFromData($data);
-                $stock->save();
-                continue;
+        $warehouse = new Almacen();
+        foreach ($warehouse->all([], [], 0, 0) as $war) {
+            foreach (static::calculateStockData($war->codalmacen) as $data) {
+                $stock = new Stock();
+                $where = [
+                    new DataBaseWhere('codalmacen', $data['codalmacen']),
+                    new DataBaseWhere('referencia', $data['referencia'])
+                ];
+                if ($stock->loadFromCode('', $where)) {
+                    // el stock ya existe
+                    $stock->loadFromData($data);
+                    $stock->save();
+                    continue;
+                }
+
+                // creamos y guardamos el stock
+                $newStock = new Stock($data);
+                $newStock->save();
             }
-
-            // creamos y guardamos el stock
-            $newStock = new Stock($data);
-            $newStock->save();
         }
 
         ToolBox::i18nLog()->notice('rebuilt-stock');
@@ -65,31 +67,39 @@ class StockRebuild
         return true;
     }
 
-    protected static function clear(int $codalmacen): bool
+    protected static function clear(): bool
     {
         if (self::dataBase()->tableExists('stocks')) {
-            $sql = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0' WHERE codalmacen='" . $codalmacen . "';";
+            $sql = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0';";
             return self::dataBase()->exec($sql);
         }
 
         return true;
     }
 
-    protected static function calculateStockData(ConteoStock $conteo): array
+    protected static function calculateStockData(string $codalmacen): array
     {
+        if (false === self::dataBase()->tableExists('stocks_movimientos')) {
+            return [];
+        }
+
         $stockData = [];
-        foreach ($conteo->getLines() as $line) {
-            $stockData[$line->referencia] = [
-                'codalmacen' => $conteo->codalmacen,
-                'referencia' => $line->referencia,
-                'cantidad' => $line->cantidad,
+        $sql = "SELECT referencia, SUM(cantidad) as sum FROM stocks_movimientos"
+            . " WHERE codalmacen = " . self::dataBase()->var2str($codalmacen)
+            . " GROUP BY 1";
+        foreach (self::dataBase()->select($sql) as $row) {
+            $ref = trim($row['referencia']);
+            $stockData[$ref] = [
+                'cantidad' => (float)$row['sum'],
+                'codalmacen' => $codalmacen,
                 'pterecibir' => 0,
+                'referencia' => $ref,
                 'reservada' => 0
             ];
         }
 
-        static::setPterecibir($stockData, $conteo->codalmacen);
-        static::setReservada($stockData, $conteo->codalmacen);
+        static::setPterecibir($stockData, $codalmacen);
+        static::setReservada($stockData, $codalmacen);
         return $stockData;
     }
 
