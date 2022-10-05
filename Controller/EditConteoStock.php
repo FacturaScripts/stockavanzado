@@ -22,6 +22,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\BaseView;
 use FacturaScripts\Core\Lib\ExtendedController\EditController;
+use FacturaScripts\Core\Model\Base\ModelCore;
 use FacturaScripts\Dinamic\Model\Variante;
 use FacturaScripts\Plugins\StockAvanzado\Lib\StockRebuild;
 use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
@@ -34,7 +35,6 @@ use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
  */
 class EditConteoStock extends EditController
 {
-
     public function getModelClassName(): string
     {
         return 'ConteoStock';
@@ -70,7 +70,9 @@ class EditConteoStock extends EditController
         }
 
         $variante = new Variante();
-        $where = empty($barcode) ? [new DataBaseWhere('referencia', $ref)] : [new DataBaseWhere('codbarras', $barcode)];
+        $where = empty($barcode) ?
+            [new DataBaseWhere('referencia', $ref)] :
+            [new DataBaseWhere('codbarras', $barcode)];
         if (false === $variante->loadFromCode('', $where)) {
             $this->toolBox()->i18nLog()->warning('no-data');
             return true;
@@ -89,7 +91,7 @@ class EditConteoStock extends EditController
         }
 
         $newLine->cantidad++;
-        $newLine->fecha = \date(LineaConteoStock::DATETIME_STYLE);
+        $newLine->fecha = date(ModelCore::DATETIME_STYLE);
         $newLine->nick = $this->user->nick;
         if (false === $newLine->save()) {
             $this->toolBox()->i18nLog()->error('record-save-error');
@@ -145,7 +147,7 @@ class EditConteoStock extends EditController
         }
 
         $lineaConteo->cantidad = (float)$this->request->request->get('quantity');
-        $lineaConteo->fecha = \date(LineaConteoStock::DATETIME_STYLE);
+        $lineaConteo->fecha = date(ModelCore::DATETIME_STYLE);
         $lineaConteo->nick = $this->user->nick;
         if (false === $lineaConteo->save()) {
             $this->toolBox()->i18nLog()->error('record-save-error');
