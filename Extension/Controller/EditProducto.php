@@ -38,8 +38,58 @@ class EditProducto
     protected function createViews(): Closure
     {
         return function () {
-            $this->createViewsMovements();
+            // marcamos la columna de cantidad en el stock como no editable
             $this->views['EditStock']->disableColumn('quantity', false, 'true');
+
+            // añadimos las nuevas pestañas
+            $this->createViewsMovements();
+            $this->createViewsPedidosCliente();
+            $this->createViewsPedidosProveedor();
+        };
+    }
+
+    protected function createViewsPedidosCliente(): Closure
+    {
+        return function ($viewName = 'ListLineaPedidoCliente') {
+            $this->addListView($viewName, 'LineaPedidoCliente', 'reserved', 'fas fa-lock');
+            $this->views[$viewName]->addSearchFields(['referencia', 'descripcion']);
+            $this->views[$viewName]->addOrderBy(['referencia'], 'reference');
+            $this->views[$viewName]->addOrderBy(['cantidad'], 'quantity');
+            $this->views[$viewName]->addOrderBy(['servido'], 'quantity-served');
+            $this->views[$viewName]->addOrderBy(['descripcion'], 'description');
+            $this->views[$viewName]->addOrderBy(['pvptotal'], 'amount');
+            $this->views[$viewName]->addOrderBy(['idlinea'], 'code', 2);
+
+            // ocultamos la columna product
+            $this->views[$viewName]->disableColumn('product');
+
+            // desactivamos los botones de nuevo, eliminar y checkbox
+            $this->setSettings($viewName, 'btnDelete', false);
+            $this->setSettings($viewName, 'btnNew', false);
+            $this->setSettings($viewName, 'checkBoxes', false);
+        };
+    }
+
+    protected function createViewsPedidosProveedor(): Closure
+    {
+        return function ($viewName = 'ListLineaPedidoProveedor') {
+            $this->addListView($viewName, 'LineaPedidoProveedor', 'pending-reception', 'fas fa-ship');
+            $this->views[$viewName]->addSearchFields(['referencia', 'descripcion']);
+            $this->views[$viewName]->addOrderBy(['referencia'], 'reference');
+            $this->views[$viewName]->addOrderBy(['cantidad'], 'quantity');
+            $this->views[$viewName]->addOrderBy(['servido'], 'quantity-served');
+            $this->views[$viewName]->addOrderBy(['descripcion'], 'description');
+            $this->views[$viewName]->addOrderBy(['pvptotal'], 'amount');
+            $this->views[$viewName]->addOrderBy(['idlinea'], 'code', 2);
+
+
+            // ocultamos la columna product
+            $this->views[$viewName]->disableColumn('product');
+
+            // desactivamos los botones de nuevo, eliminar y checkbox
+            $this->setSettings($viewName, 'btnDelete', false);
+            $this->setSettings($viewName, 'btnNew', false);
+            $this->setSettings($viewName, 'checkBoxes', false);
         };
     }
 
@@ -51,22 +101,22 @@ class EditProducto
             $this->views[$viewName]->addOrderBy(['cantidad'], 'quantity');
             $this->views[$viewName]->searchFields = ['documento', 'referencia'];
 
-            // filters
+            // filtros
             $this->views[$viewName]->addFilterPeriod('fecha', 'date', 'fecha');
             $this->views[$viewName]->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=');
             $this->views[$viewName]->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=');
 
-            // disable product column
+            // desactivamos la columna de producto
             $this->views[$viewName]->disableColumn('product');
 
-            // disable warehouse column or add warehouse filter
+            // desactivamos la columna de almacén si solo hay uno
             if (Almacenes::codeModel(false) <= 1) {
                 $this->views[$viewName]->disableColumn('warehouse');
             } else {
                 $this->views[$viewName]->addFilterSelect('codalmacen', 'warehouse', 'codalmacen', Almacenes::codeModel());
             }
 
-            // disable buttons
+            // desactivamos los botones de nuevo, eliminar y checkbox
             $this->setSettings($viewName, 'btnDelete', false);
             $this->setSettings($viewName, 'btnNew', false);
             $this->setSettings($viewName, 'checkBoxes', false);
@@ -86,14 +136,33 @@ class EditProducto
     protected function loadData(): Closure
     {
         return function ($viewName, $view) {
-            if ($viewName !== 'ListMovimientoStock') {
-                return;
-            }
+            $id = $this->getViewModelValue('EditProducto', 'idproducto');
 
-            $idproducto = $this->getViewModelValue('EditProducto', 'idproducto');
-            $where = [new DataBaseWhere('idproducto', $idproducto)];
-            $view->loadData('', $where);
-            $this->setSettings($viewName, 'active', $view->model->count($where) > 0);
+            switch ($viewName) {
+                case 'ListMovimientoStock':
+                    $where = [new DataBaseWhere('idproducto', $id)];
+                    $view->loadData('', $where);
+                    $this->setSettings($viewName, 'active', $view->model->count($where) > 0);
+                    break;
+
+                case 'ListLineaPedidoCliente':
+                    $where = [
+                        new DataBaseWhere('idproducto', $id),
+                        new DataBaseWhere('actualizastock', -2)
+                    ];
+                    $view->loadData('', $where);
+                    $this->setSettings($viewName, 'active', $view->model->count($where) > 0);
+                    break;
+
+                case 'ListLineaPedidoProveedor':
+                    $where = [
+                        new DataBaseWhere('idproducto', $id),
+                        new DataBaseWhere('actualizastock', 2)
+                    ];
+                    $view->loadData('', $where);
+                    $this->setSettings($viewName, 'active', $view->model->count($where) > 0);
+                    break;
+            }
         };
     }
 
