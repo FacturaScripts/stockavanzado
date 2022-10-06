@@ -22,6 +22,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Model;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base;
 use FacturaScripts\Dinamic\Model\Almacen;
+use FacturaScripts\Dinamic\Model\Stock;
 
 /**
  * Description of ConteoStock
@@ -99,6 +100,45 @@ class ConteoStock extends Base\ModelClass
     public static function primaryColumn(): string
     {
         return 'idconteo';
+    }
+
+    public function recalculateStock(): bool
+    {
+        self::$dataBase->beginTransaction();
+        foreach ($this->getLines() as $line) {
+            $stockData = [
+                'cantidad' => $line->cantidad,
+                'codalmacen' => $this->codalmacen,
+                'pterecibir' => 0,
+                'referencia' => $line->referencia,
+                'reservada' => 0
+            ];
+
+            $stock = new Stock();
+            $where = [
+                new DataBaseWhere('codalmacen', $stockData['codalmacen']),
+                new DataBaseWhere('referencia', $stockData['referencia'])
+            ];
+            if ($stock->loadFromCode('', $where)) {
+                // el stock ya existe
+                $stock->loadFromData($stockData);
+                if (false === $stock->save()) {
+                    self::$dataBase->rollback();
+                    return false;
+                }
+                continue;
+            }
+
+            // creamos y guardamos el stock
+            $newStock = new Stock($stockData);
+            if (false === $newStock->save()) {
+                self::$dataBase->rollback();
+                return false;
+            }
+        }
+
+        self::$dataBase->commit();
+        return true;
     }
 
     public static function tableName(): string
