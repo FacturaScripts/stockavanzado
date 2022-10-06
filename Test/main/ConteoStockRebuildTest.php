@@ -19,9 +19,7 @@
 
 namespace FacturaScripts\Test\Plugins;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Core\Model\Base\ModelCore;
-use FacturaScripts\Core\Model\Stock;
+use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
 use FacturaScripts\Test\Core\LogErrorsTrait;
@@ -54,8 +52,6 @@ final class ConteoStockRebuildTest extends TestCase
         // creamos un conteo de stock
         $conteo = new ConteoStock();
         $conteo->codalmacen = $almacen->codalmacen;
-        $conteo->fechainicio = date(ModelCore::DATE_STYLE);
-        $conteo->fechafin = date(ModelCore::DATE_STYLE);
         $conteo->observaciones = 'Test';
         $this->assertTrue($conteo->save(), 'stock-count-can-not-be-saved');
 
@@ -67,19 +63,28 @@ final class ConteoStockRebuildTest extends TestCase
         $linea->cantidad = 50;
         $this->assertTrue($linea->save(), 'stock-count-line-can-not-be-saved');
 
-        // actualizamos stock según el conteo
-        $this->assertTrue($conteo->recalculateStock(), 'stock-count-not-recalculate');
+        // comprobamos que el stock sigue siendo 100
+        $stock->loadFromCode($stock->primaryColumnValue());
+        $this->assertEquals(100, $stock->cantidad, 'stock-quantity-is-not-100');
 
-        // comprobamos la cantidad del stock del producto sea igual a la cantidad del conteo
-        $stock = new Stock();
-        $where = [new DataBaseWhere('referencia', $product->referencia)];
-        $stock->loadFromCode('', $where);
-        $this->assertTrue($stock->exists(), 'stock-product-not-exists');
-        $this->assertEquals($linea->cantidad, $stock->cantidad, 'stock-quantity-does-not-match');
+        // actualizamos stock según el conteo
+        $this->assertTrue($conteo->updateStock(), 'stock-count-not-recalculate');
+
+        // comprobamos que ahora el stock sea 50
+        $stock->loadFromCode($stock->primaryColumnValue());
+        $this->assertEquals(50, $stock->cantidad, 'stock-quantity-is-not-50');
+
+        // eliminamos el conteo
+        $this->assertTrue($conteo->delete(), 'stock-count-can-not-be-deleted');
+
+        // comprobamos que la línea ya no existe
+        $this->assertFalse($linea->exists(), 'stock-count-line-still-exists');
+
+        // comprobamos que el stock sigue siendo 50
+        $stock->loadFromCode($stock->primaryColumnValue());
+        $this->assertEquals(50, $stock->cantidad, 'stock-quantity-is-not-50');
 
         // eliminamos
-        $this->assertTrue($linea->delete(), 'stock-count-line-can-not-be-deleted');
-        $this->assertTrue($conteo->delete(), 'stock-count-can-not-be-deleted');
         $this->assertTrue($stock->delete(), 'stock-can-not-be-deleted');
         $this->assertTrue($product->delete(), 'product-can-not-be-deleted');
         $this->assertTrue($almacen->delete(), 'warehouse-can-not-be-deleted');

@@ -31,37 +31,24 @@ use FacturaScripts\Dinamic\Model\Stock;
  */
 class ConteoStock extends Base\ModelClass
 {
-
     use Base\ModelTrait;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $codalmacen;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $fechafin;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $fechainicio;
 
-    /**
-     * @var int
-     */
+    /** @var int */
     public $idconteo;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $nick;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $observaciones;
 
     public function clear()
@@ -102,9 +89,21 @@ class ConteoStock extends Base\ModelClass
         return 'idconteo';
     }
 
-    public function recalculateStock(): bool
+    public static function tableName(): string
+    {
+        return 'stocks_conteos';
+    }
+
+    public function test(): bool
+    {
+        $this->observaciones = $this->toolBox()->utils()->noHtml($this->observaciones);
+        return parent::test();
+    }
+
+    public function updateStock(): bool
     {
         self::$dataBase->beginTransaction();
+
         foreach ($this->getLines() as $line) {
             $stockData = [
                 'cantidad' => $line->cantidad,
@@ -139,17 +138,6 @@ class ConteoStock extends Base\ModelClass
 
         self::$dataBase->commit();
         return true;
-    }
-
-    public static function tableName(): string
-    {
-        return 'stocks_conteos';
-    }
-
-    public function test(): bool
-    {
-        $this->observaciones = $this->toolBox()->utils()->noHtml($this->observaciones);
-        return parent::test();
     }
 
     public function url(string $type = 'auto', string $list = 'ListAlmacen?activetab=List'): string
