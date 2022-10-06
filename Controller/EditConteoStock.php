@@ -213,8 +213,18 @@ class EditConteoStock extends EditController
 
     protected function rebuildStockAction(): bool
     {
-        StockRebuild::rebuild();
-        $this->toolBox()->i18nLog()->notice('record-updated-correctly');
+        $model = $this->getModel();
+        if (false === $model->loadFromCode($this->request->get('code'))) {
+            $this->toolBox()->i18nLog()->warning('record-not-found');
+            return true;
+        }
+
+        if (false === $model->recalculateStock()) {
+            $this->toolBox()->i18nLog()->error('record-save-error');
+            return true;
+        }
+
+        $this->toolBox()->i18nLog()->notice('rebuilt-stock');
         return true;
     }
 }
