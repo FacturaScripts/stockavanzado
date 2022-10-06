@@ -49,8 +49,6 @@ class ListProducto
         return function ($action) {
             if ($action === 'rebuild-stock') {
                 StockRebuild::rebuild();
-                $this->toolBox()->i18nLog()->notice('rebuilt-stock');
-                $this->toolBox()->i18nLog('audit')->warning('rebuilt-stock');
             }
         };
     }
