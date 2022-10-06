@@ -234,7 +234,8 @@ class EditConteoStock extends EditController
             return true;
         }
 
-        $this->toolBox()->i18nLog()->notice('rebuilt-stock');
+        $this->toolBox()->i18nLog()->notice('record-updated-correctly');
+        $this->toolBox()->i18nLog('audit')->info('applied-stock-count', ['%code%' => $model->primaryColumnValue()]);
         return true;
     }
 }

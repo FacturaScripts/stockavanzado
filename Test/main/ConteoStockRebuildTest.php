@@ -43,10 +43,12 @@ final class ConteoStockRebuildTest extends TestCase
 
         // añadimos stock del producto al almacén
         $stock = new Stock();
-        $stock->idproducto = $product->idproducto;
-        $stock->referencia = $product->referencia;
-        $stock->codalmacen = $almacen->codalmacen;
         $stock->cantidad = 100;
+        $stock->codalmacen = $almacen->codalmacen;
+        $stock->idproducto = $product->idproducto;
+        $stock->pterecibir = 4;
+        $stock->referencia = $product->referencia;
+        $stock->reservada = 2;
         $this->assertTrue($stock->save(), 'stock-can-not-be-saved');
 
         // creamos un conteo de stock
@@ -63,16 +65,20 @@ final class ConteoStockRebuildTest extends TestCase
         $linea->cantidad = 50;
         $this->assertTrue($linea->save(), 'stock-count-line-can-not-be-saved');
 
-        // comprobamos que el stock sigue siendo 100
+        // comprobamos que el stock sigue siendo 100, ptereceibir 4 y reservada 2
         $stock->loadFromCode($stock->primaryColumnValue());
         $this->assertEquals(100, $stock->cantidad, 'stock-quantity-is-not-100');
+        $this->assertEquals(4, $stock->pterecibir, 'stock-pterecibir-is-not-4');
+        $this->assertEquals(2, $stock->reservada, 'stock-reservada-is-not-2');
 
         // actualizamos stock según el conteo
         $this->assertTrue($conteo->updateStock(), 'stock-count-not-recalculate');
 
-        // comprobamos que ahora el stock sea 50
+        // comprobamos que ahora el stock sea 50, pero ptereceibir 4 y reservada 2
         $stock->loadFromCode($stock->primaryColumnValue());
         $this->assertEquals(50, $stock->cantidad, 'stock-quantity-is-not-50');
+        $this->assertEquals(4, $stock->pterecibir, 'stock-pterecibir-is-not-4');
+        $this->assertEquals(2, $stock->reservada, 'stock-reservada-is-not-2');
 
         // eliminamos el conteo
         $this->assertTrue($conteo->delete(), 'stock-count-can-not-be-deleted');
@@ -80,9 +86,11 @@ final class ConteoStockRebuildTest extends TestCase
         // comprobamos que la línea ya no existe
         $this->assertFalse($linea->exists(), 'stock-count-line-still-exists');
 
-        // comprobamos que el stock sigue siendo 50
+        // comprobamos que el stock sigue siendo 50, ptrecibir 4 y reservada 2
         $stock->loadFromCode($stock->primaryColumnValue());
         $this->assertEquals(50, $stock->cantidad, 'stock-quantity-is-not-50');
+        $this->assertEquals(4, $stock->pterecibir, 'stock-pterecibir-is-not-4');
+        $this->assertEquals(2, $stock->reservada, 'stock-reservada-is-not-2');
 
         // eliminamos
         $this->assertTrue($stock->delete(), 'stock-can-not-be-deleted');

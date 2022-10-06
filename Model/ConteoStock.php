@@ -105,32 +105,19 @@ class ConteoStock extends Base\ModelClass
         self::$dataBase->beginTransaction();
 
         foreach ($this->getLines() as $line) {
-            $stockData = [
-                'cantidad' => $line->cantidad,
-                'codalmacen' => $this->codalmacen,
-                'pterecibir' => 0,
-                'referencia' => $line->referencia,
-                'reservada' => 0
-            ];
-
             $stock = new Stock();
             $where = [
-                new DataBaseWhere('codalmacen', $stockData['codalmacen']),
-                new DataBaseWhere('referencia', $stockData['referencia'])
+                new DataBaseWhere('codalmacen', $this->codalmacen),
+                new DataBaseWhere('referencia', $line->referencia)
             ];
-            if ($stock->loadFromCode('', $where)) {
-                // el stock ya existe
-                $stock->loadFromData($stockData);
-                if (false === $stock->save()) {
-                    self::$dataBase->rollback();
-                    return false;
-                }
-                continue;
+            if (false === $stock->loadFromCode('', $where)) {
+                // el stock no existe, lo creamos
+                $stock->codalmacen = $this->codalmacen;
+                $stock->referencia = $line->referencia;
             }
 
-            // creamos y guardamos el stock
-            $newStock = new Stock($stockData);
-            if (false === $newStock->save()) {
+            $stock->cantidad = $line->cantidad;
+            if (false === $stock->save()) {
                 self::$dataBase->rollback();
                 return false;
             }
