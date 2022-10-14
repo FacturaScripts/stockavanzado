@@ -23,8 +23,8 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Stock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaTransferenciaStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
-use FacturaScripts\Test\Core\LogErrorsTrait;
-use FacturaScripts\Test\Core\RandomDataTrait;
+use FacturaScripts\Test\Traits\LogErrorsTrait;
+use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
 
 final class ModelTransferenciaStockTest extends TestCase

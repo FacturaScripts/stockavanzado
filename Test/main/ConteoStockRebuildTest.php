@@ -22,8 +22,8 @@ namespace FacturaScripts\Test\Plugins;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
-use FacturaScripts\Test\Core\LogErrorsTrait;
-use FacturaScripts\Test\Core\RandomDataTrait;
+use FacturaScripts\Test\Traits\LogErrorsTrait;
+use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
 
 final class ConteoStockRebuildTest extends TestCase

@@ -1,6 +1,6 @@
 {
     "TransferenciaStock": "Stock Transferentzia",
-    "applied-stock-count": "Aplicado el stock del conteo %code%",
+    "applied-stock-count": "%code% zenbaketaren stocka aplikatu da",
     "movements": "Mugimenduak",
     "new-quantity": "Kopuru berria",
     "new-quantity-description": "Sartu zenbatekoa",
