@@ -24,7 +24,6 @@ use FacturaScripts\Core\Lib\ExtendedController\BaseView;
 use FacturaScripts\Core\Lib\ExtendedController\EditController;
 use FacturaScripts\Core\Model\Base\ModelCore;
 use FacturaScripts\Dinamic\Model\Variante;
-use FacturaScripts\Plugins\StockAvanzado\Lib\StockRebuild;
 use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
 
@@ -52,11 +51,13 @@ class EditConteoStock extends EditController
 
     protected function addLineAction(): bool
     {
+        // permisos
         if (false === $this->permissions->allowUpdate) {
             $this->toolBox()->i18nLog()->warning('not-allowed-update');
             return true;
         }
 
+        // obtenemos datos del formulario
         $code = $this->request->get('code');
         $barcode = $this->request->request->get('codbarras');
         $ref = $this->request->request->get('referencia');
@@ -64,11 +65,13 @@ class EditConteoStock extends EditController
             return true;
         }
 
+        // cargamos el conteo
         $conteo = new ConteoStock();
         if (false === $conteo->loadFromCode($code)) {
             return true;
         }
 
+        // buscamos la referencia
         $variante = new Variante();
         $where = empty($barcode) ?
             [new DataBaseWhere('referencia', $ref)] :
@@ -78,6 +81,7 @@ class EditConteoStock extends EditController
             return true;
         }
 
+        // comprobamos si ya existe la línea
         $newLine = new LineaConteoStock();
         $where2 = [
             new DataBaseWhere('idconteo', $conteo->idconteo),
@@ -90,6 +94,7 @@ class EditConteoStock extends EditController
             $newLine->referencia = $variante->referencia;
         }
 
+        // guardamos la línea
         $newLine->cantidad++;
         $newLine->fecha = date(ModelCore::DATETIME_STYLE);
         $newLine->nick = $this->user->nick;
@@ -175,8 +180,8 @@ class EditConteoStock extends EditController
             case 'edit-line':
                 return $this->editLineAction();
 
-            case 'rebuild-stock':
-                return $this->rebuildStockAction();
+            case 'update-stock':
+                return $this->updateStockAction();
 
             default:
                 return parent::execPreviousAction($action);
@@ -211,20 +216,26 @@ class EditConteoStock extends EditController
         }
     }
 
-    protected function rebuildStockAction(): bool
+    protected function updateStockAction(): bool
     {
+        if (false === $this->permissions->allowUpdate) {
+            $this->toolBox()->i18nLog()->warning('not-allowed-update');
+            return true;
+        }
+
         $model = $this->getModel();
         if (false === $model->loadFromCode($this->request->get('code'))) {
             $this->toolBox()->i18nLog()->warning('record-not-found');
             return true;
         }
 
-        if (false === $model->recalculateStock()) {
+        if (false === $model->updateStock()) {
             $this->toolBox()->i18nLog()->error('record-save-error');
             return true;
         }
 
-        $this->toolBox()->i18nLog()->notice('rebuilt-stock');
+        $this->toolBox()->i18nLog()->notice('record-updated-correctly');
+        $this->toolBox()->i18nLog('audit')->info('applied-stock-count', ['%code%' => $model->primaryColumnValue()]);
         return true;
     }
 }

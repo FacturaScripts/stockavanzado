@@ -1,5 +1,6 @@
 {
     "TransferenciaStock": "Transferencia de stock",
+    "applied-stock-count": "Aplicado o stock do conteo %code%",
     "movements": "Movementos",
     "new-quantity": "Nova cantidade",
     "new-quantity-description": "Introduza a cantidade",

@@ -31,37 +31,24 @@ use FacturaScripts\Dinamic\Model\Stock;
  */
 class ConteoStock extends Base\ModelClass
 {
-
     use Base\ModelTrait;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $codalmacen;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $fechafin;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $fechainicio;
 
-    /**
-     * @var int
-     */
+    /** @var int */
     public $idconteo;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $nick;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $observaciones;
 
     public function clear()
@@ -102,45 +89,6 @@ class ConteoStock extends Base\ModelClass
         return 'idconteo';
     }
 
-    public function recalculateStock(): bool
-    {
-        self::$dataBase->beginTransaction();
-        foreach ($this->getLines() as $line) {
-            $stockData = [
-                'cantidad' => $line->cantidad,
-                'codalmacen' => $this->codalmacen,
-                'pterecibir' => 0,
-                'referencia' => $line->referencia,
-                'reservada' => 0
-            ];
-
-            $stock = new Stock();
-            $where = [
-                new DataBaseWhere('codalmacen', $stockData['codalmacen']),
-                new DataBaseWhere('referencia', $stockData['referencia'])
-            ];
-            if ($stock->loadFromCode('', $where)) {
-                // el stock ya existe
-                $stock->loadFromData($stockData);
-                if (false === $stock->save()) {
-                    self::$dataBase->rollback();
-                    return false;
-                }
-                continue;
-            }
-
-            // creamos y guardamos el stock
-            $newStock = new Stock($stockData);
-            if (false === $newStock->save()) {
-                self::$dataBase->rollback();
-                return false;
-            }
-        }
-
-        self::$dataBase->commit();
-        return true;
-    }
-
     public static function tableName(): string
     {
         return 'stocks_conteos';
@@ -150,6 +98,33 @@ class ConteoStock extends Base\ModelClass
     {
         $this->observaciones = $this->toolBox()->utils()->noHtml($this->observaciones);
         return parent::test();
+    }
+
+    public function updateStock(): bool
+    {
+        self::$dataBase->beginTransaction();
+
+        foreach ($this->getLines() as $line) {
+            $stock = new Stock();
+            $where = [
+                new DataBaseWhere('codalmacen', $this->codalmacen),
+                new DataBaseWhere('referencia', $line->referencia)
+            ];
+            if (false === $stock->loadFromCode('', $where)) {
+                // el stock no existe, lo creamos
+                $stock->codalmacen = $this->codalmacen;
+                $stock->referencia = $line->referencia;
+            }
+
+            $stock->cantidad = $line->cantidad;
+            if (false === $stock->save()) {
+                self::$dataBase->rollback();
+                return false;
+            }
+        }
+
+        self::$dataBase->commit();
+        return true;
     }
 
     public function url(string $type = 'auto', string $list = 'ListAlmacen?activetab=List'): string
