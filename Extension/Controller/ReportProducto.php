@@ -38,7 +38,7 @@ class ReportProducto
         return function ($viewName = 'ListMovimientoProducto') {
             $this->addView($viewName, 'Join\MovimientoProducto', 'movements', 'fas fa-truck-loading');
             $this->addOrderBy($viewName, ['cantidad'], 'quantity');
-            $this->addSearchFields($viewName, ['sm.referencia']);
+            $this->addSearchFields($viewName, ['sm.referencia', 'p.descripcion']);
 
             // Filters
             $this->addFilterPeriod($viewName, 'fecha', 'date', 'sm.fecha');
