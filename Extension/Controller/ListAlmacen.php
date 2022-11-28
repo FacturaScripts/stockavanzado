@@ -20,6 +20,7 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
+use FacturaScripts\Core\DataSrc\Almacenes;
 
 /**
  * Description of ListAlmacen
@@ -46,8 +47,12 @@ class ListAlmacen
 
             // Filters
             $this->addFilterPeriod($viewName, 'fechainicio', 'date', 'fechainicio');
-            $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
-            $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
+
+            $warehouses = Almacenes::codeModel();
+            if (count($warehouses) > 2) {
+                $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
+            }
+
             $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
         };
     }
@@ -65,8 +70,10 @@ class ListAlmacen
             $this->addFilterNumber($viewName, 'cantidadgt', 'quantity', 'cantidad', '>=');
             $this->addFilterNumber($viewName, 'cantidadlt', 'quantity', 'cantidad', '<=');
 
-            $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
-            $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
+            $warehouses = Almacenes::codeModel();
+            if (count($warehouses) > 2) {
+                $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
+            }
 
             // disable buttons
             $this->setSettings($viewName, 'btnDelete', false);
@@ -84,9 +91,13 @@ class ListAlmacen
 
             // Filters
             $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
-            $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
-            $this->addFilterSelect($viewName, 'codalmacenorigen', 'origin-warehouse', 'codalmacenorigen', $warehouses);
-            $this->addFilterSelect($viewName, 'codalmacendestino', 'destination-warehouse', 'codalmacendestino', $warehouses);
+
+            $warehouses = Almacenes::codeModel();
+            if (count($warehouses) > 2) {
+                $this->addFilterSelect($viewName, 'codalmacenorigen', 'origin-warehouse', 'codalmacenorigen', $warehouses);
+                $this->addFilterSelect($viewName, 'codalmacendestino', 'destination-warehouse', 'codalmacendestino', $warehouses);
+            }
+
             $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
         };
     }

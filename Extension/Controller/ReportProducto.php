@@ -20,6 +20,8 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
+use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Core\DataSrc\Almacenes;
 
 /**
  * @author Daniel Fernández Giménez <hola@danielfg.es>
@@ -45,8 +47,17 @@ class ReportProducto
             $this->addFilterNumber($viewName, 'cantidadgt', 'quantity', 'cantidad', '>=');
             $this->addFilterNumber($viewName, 'cantidadlt', 'quantity', 'cantidad', '<=');
 
-            $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
-            $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'sm.codalmacen', $warehouses);
+            $i18n = $this->toolBox()->i18n();
+            $this->addFilterSelectWhere($viewName, 'type', [
+                ['label' => $i18n->trans('all'), 'where' => []],
+                ['label' => $i18n->trans('purchases'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '>')]],
+                ['label' => $i18n->trans('sales'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '<')]],
+            ]);
+
+            $warehouses = Almacenes::codeModel();
+            if (count($warehouses) > 2) {
+                $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'sm.codalmacen', $warehouses);
+            }
 
             // disable buttons
             $this->setSettings($viewName, 'btnDelete', false);

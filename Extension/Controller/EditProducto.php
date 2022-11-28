@@ -110,7 +110,7 @@ class EditProducto
             $this->views[$viewName]->disableColumn('product');
 
             // desactivamos la columna de almacén si solo hay uno
-            if (Almacenes::codeModel(false) <= 1) {
+            if (count(Almacenes::codeModel(false)) <= 1) {
                 $this->views[$viewName]->disableColumn('warehouse');
             } else {
                 $this->views[$viewName]->addFilterSelect('codalmacen', 'warehouse', 'codalmacen', Almacenes::codeModel());
