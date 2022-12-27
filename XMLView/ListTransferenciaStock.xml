@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2017-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -26,22 +26,22 @@
         </column>
         <column name="codwarehouseorigin" title="origin-warehouse" order="110">
             <widget type="select" fieldname="codalmacenorigen" required="true">
-                <values source="almacenes" fieldcode="codalmacen" fieldtitle="nombre" />
+                <values source="almacenes" fieldcode="codalmacen" fieldtitle="nombre"/>
             </widget>
         </column>
         <column name="codwarehousedestination" title="destination-warehouse" order="120">
             <widget type="select" fieldname="codalmacendestino" required="true">
-                <values source="almacenes" fieldcode="codalmacen" fieldtitle="nombre" />
+                <values source="almacenes" fieldcode="codalmacen" fieldtitle="nombre"/>
             </widget>
         </column>
         <column name="observations" order="130">
-            <widget type="text" fieldname="observaciones" />
+            <widget type="text" fieldname="observaciones"/>
         </column>
         <column name="user" order="140">
-            <widget type="text" fieldname="nick" />
+            <widget type="text" fieldname="nick"/>
         </column>
         <column name="date" display="right" order="150">
-            <widget type="datetime" fieldname="fecha" />
+            <widget type="datetime" fieldname="fecha"/>
         </column>
     </columns>
 </view>
