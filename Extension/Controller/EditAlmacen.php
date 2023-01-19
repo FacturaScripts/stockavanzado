@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -42,7 +42,7 @@ class EditAlmacen
         return function ($viewName = 'ListConteoStock') {
             $this->addListView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll');
             $this->views[$viewName]->addOrderBy(['fechainicio'], 'date', 2);
-            $this->views[$viewName]->searchFields = ['observaiones'];
+            $this->views[$viewName]->searchFields = ['observaciones'];
 
             // disable column
             $this->views[$viewName]->disableColumn('warehouse');
