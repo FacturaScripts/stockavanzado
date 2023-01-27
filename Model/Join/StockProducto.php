@@ -42,12 +42,13 @@ class StockProducto extends JoinModel
     }
 
     /**
-     * 
+     *
      * @return array
      */
     protected function getFields(): array
     {
         return [
+            'bloqueado' => 'productos.bloqueado',
             'cantidad' => 'stocks.cantidad',
             'codalmacen' => 'stocks.codalmacen',
             'codfabricante' => 'productos.codfabricante',
@@ -57,6 +58,7 @@ class StockProducto extends JoinModel
             'disponible' => 'stocks.disponible',
             'idproducto' => 'stocks.idproducto',
             'idstock' => 'stocks.idstock',
+            'nostock' => 'productos.nostock',
             'precio' => 'variantes.precio',
             'pterecibir' => 'stocks.pterecibir',
             'referencia' => 'stocks.referencia',
@@ -68,7 +70,7 @@ class StockProducto extends JoinModel
     }
 
     /**
-     * 
+     *
      * @return string
      */
     protected function getGroupFields(): string
@@ -77,7 +79,7 @@ class StockProducto extends JoinModel
     }
 
     /**
-     * 
+     *
      * @return string
      */
     protected function getSQLFrom(): string
@@ -88,7 +90,7 @@ class StockProducto extends JoinModel
     }
 
     /**
-     * 
+     *
      * @return array
      */
     protected function getTables(): array
