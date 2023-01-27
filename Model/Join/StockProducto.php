@@ -42,7 +42,7 @@ class StockProducto extends JoinModel
     }
 
     /**
-     * 
+     *
      * @return array
      */
     protected function getFields(): array
@@ -55,6 +55,7 @@ class StockProducto extends JoinModel
             'coste' => 'variantes.coste',
             'descripcion' => 'productos.descripcion',
             'disponible' => 'stocks.disponible',
+            'falta_sobra' => 'stocks.pterecibir + stocks.cantidad - stocks.reservada',
             'idproducto' => 'stocks.idproducto',
             'idstock' => 'stocks.idstock',
             'precio' => 'variantes.precio',
@@ -68,7 +69,7 @@ class StockProducto extends JoinModel
     }
 
     /**
-     * 
+     *
      * @return string
      */
     protected function getGroupFields(): string
@@ -77,7 +78,7 @@ class StockProducto extends JoinModel
     }
 
     /**
-     * 
+     *
      * @return string
      */
     protected function getSQLFrom(): string
@@ -88,7 +89,7 @@ class StockProducto extends JoinModel
     }
 
     /**
-     * 
+     *
      * @return array
      */
     protected function getTables(): array
