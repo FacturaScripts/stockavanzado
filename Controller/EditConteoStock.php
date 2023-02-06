@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -114,9 +114,10 @@ class EditConteoStock extends EditController
         $this->createViewsLines();
     }
 
-    protected function createViewsLines(string $viewName = 'lines')
+    protected function createViewsLines(string $viewName = 'ListLineaConteoStock')
     {
-        $this->addHtmlView($viewName, 'EditConteoStockLines', 'LineaConteoStock', 'lines', 'fas fa-list');
+        $this->addListView($viewName, 'LineaConteoStock', 'lines', 'fas fa-list');
+        $this->views[$viewName]->template = 'EditConteoStockLines.html.twig';
     }
 
     protected function deleteLineAction(): bool
@@ -197,10 +198,9 @@ class EditConteoStock extends EditController
         $mvn = $this->getMainViewName();
 
         switch ($viewName) {
-            case 'lines':
+            case 'ListLineaConteoStock':
                 $where = [new DataBaseWhere('idconteo', $this->getViewModelValue($mvn, 'idconteo'))];
-                $view->cursor = $view->model->all($where, ['fecha' => 'DESC'], 0, 0);
-                $view->count = $view->model->count($where);
+                $view->loadData('', $where, ['referencia' => 'ASC']);
                 break;
 
             case $mvn:

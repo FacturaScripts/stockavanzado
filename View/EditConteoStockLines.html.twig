@@ -6,7 +6,7 @@
         </h2>
         <p>{{ i18n.trans('stock-count-line-p') }}</p>
         <form method="post">
-            <input type="hidden" name="action" value="add-line" />
+            <input type="hidden" name="action" value="add-line"/>
             <div class="form-row">
                 <div class="col-sm-3">
                     <div class="form-group">
@@ -16,7 +16,8 @@
                                     <i class="fas fa-barcode"></i>
                                 </span>
                             </div>
-                            <input type="text" name="codbarras" class="form-control" placeholder="{{ i18n.trans('barcode') }}" />
+                            <input type="text" name="codbarras" class="form-control"
+                                   placeholder="{{ i18n.trans('barcode') }}"/>
                         </div>
                     </div>
                 </div>
@@ -28,7 +29,8 @@
                                     <i class="fas fa-hashtag"></i>
                                 </span>
                             </div>
-                            <input type="text" name="referencia" class="form-control" placeholder="{{ i18n.trans('reference') }}" />
+                            <input type="text" name="referencia" class="form-control"
+                                   placeholder="{{ i18n.trans('reference') }}"/>
                         </div>
                     </div>
                 </div>
@@ -37,7 +39,7 @@
                         {{ i18n.trans('add') }}
                     </button>
                 </div>
-                <div class="col-sm text-right">
+                <div class="col-sm-auto">
                     <a href="{{ fsc.getModel().url() }}&action=update-stock" class="btn btn-warning">
                         {{ i18n.trans('update-stock') }}
                     </a>
@@ -48,28 +50,28 @@
     <div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead>
-                <tr>
-                    <th>{{ i18n.trans('reference') }}</th>
-                    <th class="text-right">{{ i18n.trans('quantity') }}</th>
-                    <th></th>
-                    <th>{{ i18n.trans('user') }}</th>
-                    <th class="text-right">{{ i18n.trans('date') }}</th>
-                </tr>
+            <tr>
+                <th>{{ i18n.trans('reference') }}</th>
+                <th class="text-right">{{ i18n.trans('quantity') }}</th>
+                <th></th>
+                <th class="text-right">{{ i18n.trans('user') }}</th>
+                <th class="text-right">{{ i18n.trans('date') }}</th>
+            </tr>
             </thead>
             <tbody>
-                {% for line in fsc.getCurrentView().cursor %}
-                    <tr>
-                        <td>{{ line.referencia }}</td>
-                        <td class="text-right">{{ line.cantidad }}</td>
-                        <td>{{ _self.editCountLine(i18n, line) }}</td>
-                        <td>{{ line.nick }}</td>
-                        <td class="text-right">{{ line.fecha }}</td>
-                    </tr>
-                {% else %}
-                    <tr class="table-warning">
-                        <td colspan="5">{{ i18n.trans('no-data') }}</td>
-                    </tr>
-                {% endfor %}
+            {% for line in fsc.getCurrentView().cursor %}
+                <tr>
+                    <td>{{ line.referencia }}</td>
+                    <td class="text-right">{{ line.cantidad }}</td>
+                    <td>{{ _self.editCountLine(i18n, line) }}</td>
+                    <td class="text-right">{{ line.nick }}</td>
+                    <td class="text-right">{{ line.fecha }}</td>
+                </tr>
+            {% else %}
+                <tr class="table-warning">
+                    <td colspan="5">{{ i18n.trans('no-data') }}</td>
+                </tr>
+            {% endfor %}
             </tbody>
         </table>
     </div>
@@ -80,8 +82,8 @@
         <i class="fas fa-edit"></i>
     </a>
     <form method="post">
-        <input type="hidden" name="action" value="edit-line" />
-        <input type="hidden" name="idlinea" value="{{ line.idlinea }}" />
+        <input type="hidden" name="action" value="edit-line"/>
+        <input type="hidden" name="idlinea" value="{{ line.idlinea }}"/>
         <div class="modal fade" id="modalCountLine{{ line.idlinea }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -93,16 +95,17 @@
                     </div>
                     <div class="modal-body">
                         <div class="form-group">
-                            <input type="number" name="quantity" min="0" steap="any" value="{{ line.cantidad }}" class="form-control" required="" />
+                            <input type="number" name="quantity" min="0" step="any" value="{{ line.cantidad }}"
+                                   class="form-control" required autofocus/>
                         </div>
                         <div class="form-row">
                             <div class="col">
-                                <button type="button" class="btn btn-outline-danger" onclick="this.form.action.value = 'delete-line';
+                                <button type="button" class="btn btn-danger" onclick="this.form.action.value='delete-line';
                                         this.form.submit();">
                                     {{ i18n.trans('delete') }}
                                 </button>
                             </div>
-                            <div class="col text-right">
+                            <div class="col-auto">
                                 <button type="submit" class="btn btn-primary">{{ i18n.trans('save') }}</button>
                             </div>
                         </div>
