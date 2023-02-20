@@ -57,4 +57,10 @@
             <widget type="money" fieldname="precio" />
         </column>
     </columns>
+    <rows>
+        <row type="status">
+            <option color="danger" title="locked" fieldname="bloqueado">1</option>
+            <option color="info" title="no-stock" fieldname="nostock">1</option>
+        </row>
+    </rows>
 </view>
