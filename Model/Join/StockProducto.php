@@ -56,6 +56,7 @@ class StockProducto extends JoinModel
             'coste' => 'variantes.coste',
             'descripcion' => 'productos.descripcion',
             'disponible' => 'stocks.disponible',
+            'falta_sobra' => 'stocks.pterecibir + stocks.cantidad - stocks.reservada',
             'idproducto' => 'stocks.idproducto',
             'idstock' => 'stocks.idstock',
             'nostock' => 'productos.nostock',

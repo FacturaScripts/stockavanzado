@@ -41,11 +41,23 @@
                 <values source="familias" fieldcode="codfamilia" fieldtitle="descripcion" />
             </widget>
         </column>
+        <column name="purchases" display="none" order="145">
+            <widget type="number" fieldname="pterecibir" />
+        </column>
+        <column name="reserved" display="none" order="147">
+            <widget type="number" fieldname="reservada" />
+        </column>
         <column name="available" display="right" order="150">
             <widget type="number" fieldname="disponible" />
         </column>
         <column name="quantity" display="right" order="160">
             <widget type="number" fieldname="cantidad" />
+        </column>
+        <column name="difference" display="none" order="165">
+            <widget type="number" fieldname="falta_sobra">
+                <option color="success">gt::0</option>
+                <option color="warning">lte::0</option>
+            </widget>
         </column>
         <column name="cost-price" display="right" order="170">
             <widget type="money" fieldname="coste" />
