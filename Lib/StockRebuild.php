@@ -118,7 +118,9 @@ class StockRebuild
             return;
         }
 
-        $sql = "SELECT referencia, SUM(l.cantidad) as pte FROM lineaspedidosprov l"
+        $sql = "SELECT l.referencia,"
+            .        " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as pte"
+            . " FROM lineaspedidosprov l"
             . " LEFT JOIN pedidosprov p ON l.idpedido = p.idpedido"
             . " WHERE l.referencia IS NOT NULL"
             . " AND l.actualizastock = '2'"
@@ -146,7 +148,7 @@ class StockRebuild
             return;
         }
 
-        $sql = "SELECT referencia,"
+        $sql = "SELECT l.referencia,"
             .        " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as reservada"
             . " FROM lineaspedidoscli l"
             . " LEFT JOIN pedidoscli p ON l.idpedido = p.idpedido"
