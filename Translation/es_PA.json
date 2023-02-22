@@ -1,0 +1,14 @@
+{
+    "TransferenciaStock": "Transferencia de stock",
+    "applied-stock-count": "Aplicado el stock del conteo %code%",
+    "movements": "Movimientos",
+    "new-quantity": "Nueva cantidad",
+    "new-quantity-description": "Introduzca la cantidad",
+    "reason-for-change": "Motivo del cambio",
+    "rebuild-movements": "Reconstruir movimientos",
+    "rebuilt-stock": "Stock reconstruido",
+    "reconstructed-movements": "Movimientos de stock reconstruidos",
+    "stock-count": "Conteo de stock",
+    "stock-count-line-p": "Añade líneas a este listado escribiendo\/escaneando un código de barras o referencia. Si el producto ya estaba, se incrementa la cantidad.",
+    "stock-counts": "Conteos"
+}
