@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<view>
+    <columns>
+        <group name="data" numcolumns="12">
+            <column name="valued-stock-cost" order="200">
+                <widget type="money" fieldname="stock_valorado_coste" readonly="true"/>
+            </column>
+            <column name="valued-stock-price" order="210">
+                <widget type="money" fieldname="stock_valorado_precio" readonly="true"/>
+            </column>
+        </group>
+    </columns>
+</view>

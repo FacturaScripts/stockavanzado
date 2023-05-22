@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<table>
+    <column>
+        <name>stock_valorado_coste</name>
+        <type>double precision</type>
+    </column>
+    <column>
+        <name>stock_valorado_precio</name>
+        <type>double precision</type>
+    </column>
+</table>
