@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -90,21 +90,29 @@ class ReportStock extends ListController
         $this->addSearchFields($viewName, ['productos.descripcion', 'stocks.referencia']);
 
         // filters
+        $i18n = $this->toolBox()->i18n();
         $values = [
             [
-                'label' => $this->toolBox()->i18n()->trans('all'),
+                'label' => $i18n->trans('all'),
                 'where' => []
             ],
             [
-                'label' => $this->toolBox()->i18n()->trans('under-minimums'),
+                'label' => $i18n->trans('under-minimums'),
                 'where' => [new DataBaseWhere('disponible', 'field:stockmin', '<')]
             ],
             [
-                'label' => $this->toolBox()->i18n()->trans('excess'),
+                'label' => $i18n->trans('excess'),
                 'where' => [new DataBaseWhere('disponible', 'field:stockmax', '>')]
             ]
         ];
         $this->addFilterSelectWhere($viewName, 'type', $values);
+
+        $this->addFilterSelectWhere($viewName, 'status', [
+            ['label' => $i18n->trans('all'), 'where' => []],
+            ['label' => $i18n->trans('only-active'), 'where' => [new DataBaseWhere('productos.bloqueado', false)]],
+            ['label' => $i18n->trans('blocked'), 'where' => [new DataBaseWhere('productos.bloqueado', true)]],
+            ['label' => $i18n->trans('public'), 'where' => [new DataBaseWhere('productos.publico', true)]],
+        ]);
 
         $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
         $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
@@ -114,6 +122,8 @@ class ReportStock extends ListController
 
         $families = $this->codeModel->all('familias', 'codfamilia', 'descripcion');
         $this->addFilterSelect($viewName, 'codfamilia', 'family', 'codfamilia', $families);
+
+        $this->addFilterCheckbox($viewName, 'secompra', 'for-purchase', 'productos.secompra');
 
         // disable buttons
         $this->setSettings($viewName, 'btnDelete', false);
