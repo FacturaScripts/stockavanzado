@@ -10,5 +10,7 @@
     "reconstructed-movements": "reconstructed-movements",
     "stock-count": "stock-count",
     "stock-count-line-p": "stock-count-line-p",
-    "stock-counts": "stock-counts"
+    "stock-counts": "stock-counts",
+    "valued-stock-cost": "Stock valorado a coste",
+    "valued-stock-price": "Stock valorado a precio"
 }

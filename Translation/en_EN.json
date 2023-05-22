@@ -10,5 +10,7 @@
     "reconstructed-movements": "Reconstructed movements",
     "stock-count": "Stock count",
     "stock-count-line-p": "Add lines to this count by typing\/scanning a barcode or reference. If the product was already in the list, the quantity increases",
-    "stock-counts": "Stock counts"
+    "stock-counts": "Stock counts",
+    "valued-stock-cost": "Stock valorado a coste",
+    "valued-stock-price": "Stock valorado a precio"
 }
