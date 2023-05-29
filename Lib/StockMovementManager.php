@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -44,6 +44,8 @@ use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
  */
 class StockMovementManager
 {
+    const JOB_NAME = 'rebuild-movements';
+    const JOB_PERIOD = '1 month';
 
     /**
      * @var array

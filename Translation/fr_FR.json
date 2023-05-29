@@ -10,5 +10,7 @@
     "reconstructed-movements": "Mouvements reconstruits",
     "stock-count": "Inventaire",
     "stock-count-line-p": "Ajoutez des lignes à cet inventaire en tapant\/numérisant un code-barres ou une référence. Si le produit se trouve déjà dans la liste, la quantité augmentera.",
-    "stock-counts": "Inventaires"
+    "stock-counts": "Inventaires",
+    "valued-stock-cost": "Stock valorado a coste",
+    "valued-stock-price": "Stock valorado a precio"
 }
