@@ -11,6 +11,6 @@
     "stock-count": "Stock count",
     "stock-count-line-p": "Add lines to this count by typing\/scanning a barcode or reference. If the product was already in the list, the quantity increases",
     "stock-counts": "Stock counts",
-    "valued-stock-cost": "Stock valorado a coste",
-    "valued-stock-price": "Stock valorado a precio"
+    "valued-stock-cost": "Stock valued at cost",
+    "valued-stock-price": "Stock valued at price"
 }
