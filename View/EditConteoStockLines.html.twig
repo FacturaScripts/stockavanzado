@@ -59,7 +59,7 @@
             </tr>
             </thead>
             <tbody>
-            {% for line in fsc.getCurrentView().cursor %}
+            {% for line in fsc.getCurrentView().model.all({},{},0,0) %}
                 <tr>
                     <td>{{ line.referencia }}</td>
                     <td class="text-right">{{ line.cantidad }}</td>
