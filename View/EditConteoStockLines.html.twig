@@ -1,11 +1,12 @@
 <div class="card shadow mb-3">
     <div class="card-body">
         <h2 class="h5 card-title">
-            {{ i18n.trans('lines') }}
+            {{ trans('lines') }}
             <span class="badge badge-secondary">{{ fsc.getCurrentView().count }}</span>
         </h2>
-        <p>{{ i18n.trans('stock-count-line-p') }}</p>
+        <p>{{ trans('stock-count-line-p') }}</p>
         <form method="post">
+            {{ formToken() }}
             <input type="hidden" name="action" value="add-line"/>
             <div class="form-row">
                 <div class="col-sm-3">
@@ -17,7 +18,7 @@
                                 </span>
                             </div>
                             <input type="text" name="codbarras" class="form-control"
-                                   placeholder="{{ i18n.trans('barcode') }}"/>
+                                   placeholder="{{ trans('barcode') }}"/>
                         </div>
                     </div>
                 </div>
@@ -30,18 +31,18 @@
                                 </span>
                             </div>
                             <input type="text" name="referencia" class="form-control"
-                                   placeholder="{{ i18n.trans('reference') }}"/>
+                                   placeholder="{{ trans('reference') }}"/>
                         </div>
                     </div>
                 </div>
                 <div class="col-sm">
                     <button type="submit" class="btn btn-success">
-                        {{ i18n.trans('add') }}
+                        {{ trans('add') }}
                     </button>
                 </div>
                 <div class="col-sm-auto">
                     <a href="{{ fsc.getModel().url() }}&action=update-stock" class="btn btn-warning">
-                        {{ i18n.trans('update-stock') }}
+                        {{ trans('update-stock') }}
                     </a>
                 </div>
             </div>
@@ -51,15 +52,15 @@
         <table class="table table-hover mb-0">
             <thead>
             <tr>
-                <th>{{ i18n.trans('reference') }}</th>
-                <th class="text-right">{{ i18n.trans('quantity') }}</th>
+                <th>{{ trans('reference') }}</th>
+                <th class="text-right">{{ trans('quantity') }}</th>
                 <th></th>
-                <th class="text-right">{{ i18n.trans('user') }}</th>
-                <th class="text-right">{{ i18n.trans('date') }}</th>
+                <th class="text-right">{{ trans('user') }}</th>
+                <th class="text-right">{{ trans('date') }}</th>
             </tr>
             </thead>
             <tbody>
-            {% for line in fsc.getCurrentView().model.all({},{},0,0) %}
+            {% for line in fsc.getCurrentView().model.all({},{'referencia' => 'ASC'},0,0) %}
                 <tr>
                     <td>{{ line.referencia }}</td>
                     <td class="text-right">{{ line.cantidad }}</td>
@@ -69,7 +70,7 @@
                 </tr>
             {% else %}
                 <tr class="table-warning">
-                    <td colspan="5">{{ i18n.trans('no-data') }}</td>
+                    <td colspan="5">{{ trans('no-data') }}</td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -82,13 +83,14 @@
         <i class="fas fa-edit"></i>
     </a>
     <form method="post">
+        {{ formToken() }}
         <input type="hidden" name="action" value="edit-line"/>
         <input type="hidden" name="idlinea" value="{{ line.idlinea }}"/>
         <div class="modal fade" id="modalCountLine{{ line.idlinea }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">{{ i18n.trans('quantity') }}</h5>
+                        <h5 class="modal-title">{{ trans('quantity') }}</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
@@ -102,11 +104,11 @@
                             <div class="col">
                                 <button type="button" class="btn btn-danger" onclick="this.form.action.value='delete-line';
                                         this.form.submit();">
-                                    {{ i18n.trans('delete') }}
+                                    {{ trans('delete') }}
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="submit" class="btn btn-primary">{{ i18n.trans('save') }}</button>
+                                <button type="submit" class="btn btn-primary">{{ trans('save') }}</button>
                             </div>
                         </div>
                     </div>
