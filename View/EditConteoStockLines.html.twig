@@ -60,7 +60,9 @@
             </tr>
             </thead>
             <tbody>
-            {% for line in fsc.getCurrentView().model.all({},{'referencia' => 'ASC'},0,0) %}
+            {% set whereConteo = fsc.getCurrentView().where %}
+            {% set orderByConteo = {'referencia': 'ASC'} %}
+            {% for line in fsc.getCurrentView().model.all(whereConteo, orderByConteo, 0, 0) %}
                 <tr>
                     <td>{{ line.referencia }}</td>
                     <td class="text-right">{{ line.cantidad }}</td>
