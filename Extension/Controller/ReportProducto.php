@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2022-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -42,24 +42,28 @@ class ReportProducto
             $this->addOrderBy($viewName, ['cantidad'], 'quantity');
             $this->addSearchFields($viewName, ['sm.referencia', 'p.descripcion']);
 
-            // Filters
+            // filtros
             $this->addFilterPeriod($viewName, 'fecha', 'date', 'sm.fecha');
-            $this->addFilterNumber($viewName, 'cantidadgt', 'quantity', 'cantidad', '>=');
-            $this->addFilterNumber($viewName, 'cantidadlt', 'quantity', 'cantidad', '<=');
-
-            $i18n = $this->toolBox()->i18n();
-            $this->addFilterSelectWhere($viewName, 'type', [
-                ['label' => $i18n->trans('all'), 'where' => []],
-                ['label' => $i18n->trans('purchases'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '>')]],
-                ['label' => $i18n->trans('sales'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '<')]],
-            ]);
 
             $warehouses = Almacenes::codeModel();
             if (count($warehouses) > 2) {
                 $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'sm.codalmacen', $warehouses);
             }
 
-            // disable buttons
+            $i18n = $this->toolBox()->i18n();
+            $this->addFilterSelectWhere($viewName, 'type', [
+                ['label' => $i18n->trans('all'), 'where' => []],
+                ['label' => '------', 'where' => []],
+                ['label' => $i18n->trans('purchases'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '>')]],
+                ['label' => $i18n->trans('sales'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '<')]],
+            ]);
+
+            $this->addFilterNumber($viewName, 'cantidadgt', 'quantity', 'cantidad', '>=');
+            $this->addFilterNumber($viewName, 'cantidadlt', 'quantity', 'cantidad', '<=');
+
+            $this->addFilterCheckbox($viewName, 'ex-conteo', 'without-stock-count', 'sm.docmodel', '!=', 'ConteoStock');
+
+            // desactivamos los botones nuevo y eliminar
             $this->setSettings($viewName, 'btnDelete', false);
             $this->setSettings($viewName, 'btnNew', false);
             $this->setSettings($viewName, 'checkBoxes', false);

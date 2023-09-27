@@ -1,5 +1,4 @@
 {
-    "TransferenciaStock": "Stock Transferentzia",
     "applied-stock-count": "%code% zenbaketaren stocka aplikatu da",
     "new-quantity": "Kopuru berria",
     "new-quantity-description": "Sartu zenbatekoa",
@@ -10,6 +9,8 @@
     "stock-count": "Stock kopurua",
     "stock-count-line-p": "Zerrenda honi lerroak gehitu barra kode edo erreferentzi bat idatziz\/eskaneatuz. Produktua lehendik bertan bazegoen, kantitatea handitu egingo da.",
     "stock-counts": "Zenbaketak",
+    "TransferenciaStock": "Stock Transferentzia",
     "valued-stock-cost": "Kostura estimatutako stocka",
-    "valued-stock-price": "Preziora estimatutako stocka"
+    "valued-stock-price": "Preziora estimatutako stocka",
+    "without-stock-count": "Excluir conteos"
 }

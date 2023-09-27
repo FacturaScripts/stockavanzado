@@ -1,5 +1,4 @@
 {
-    "TransferenciaStock": "Stock transference",
     "applied-stock-count": "Applied the stock of the count %code%",
     "new-quantity": "New quantity",
     "new-quantity-description": "Enter quantity",
@@ -10,6 +9,8 @@
     "stock-count": "Stock count",
     "stock-count-line-p": "Add lines to this count by typing\/scanning a barcode or reference. If the product was already in the list, the quantity increases",
     "stock-counts": "Stock counts",
+    "TransferenciaStock": "Stock transference",
     "valued-stock-cost": "Stock valued at cost",
-    "valued-stock-price": "Stock valued at price"
+    "valued-stock-price": "Stock valued at price",
+    "without-stock-count": "Excluir conteos"
 }

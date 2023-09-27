@@ -1,5 +1,4 @@
 {
-    "TransferenciaStock": "Transfert de Stock",
     "applied-stock-count": "Aplicado el stock del conteo %code%",
     "new-quantity": "Nueva cantidad",
     "new-quantity-description": "Introduzca la cantidad",
@@ -10,6 +9,8 @@
     "stock-count": "Inventaire",
     "stock-count-line-p": "Ajoutez des lignes à cet inventaire en tapant\/numérisant un code-barres ou une référence. Si le produit se trouve déjà dans la liste, la quantité augmentera.",
     "stock-counts": "Inventaires",
+    "TransferenciaStock": "Transfert de Stock",
     "valued-stock-cost": "Stock valorado a coste",
-    "valued-stock-price": "Stock valorado a precio"
+    "valued-stock-price": "Stock valorado a precio",
+    "without-stock-count": "Excluir conteos"
 }

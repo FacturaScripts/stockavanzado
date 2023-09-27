@@ -1,5 +1,4 @@
 {
-    "TransferenciaStock": "Transferència d'Estoc",
     "applied-stock-count": "Aplicado el stock del conteo %code%",
     "new-quantity": "Nueva cantidad",
     "new-quantity-description": "Introduzca la cantidad",
@@ -10,6 +9,8 @@
     "stock-count": "stock-count",
     "stock-count-line-p": "stock-count-line-p",
     "stock-counts": "stock-counts",
+    "TransferenciaStock": "Transferència d'Estoc",
     "valued-stock-cost": "Stock valorado a coste",
-    "valued-stock-price": "Stock valorado a precio"
+    "valued-stock-price": "Stock valorado a precio",
+    "without-stock-count": "Excluir conteos"
 }

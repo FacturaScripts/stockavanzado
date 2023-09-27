@@ -1,5 +1,4 @@
 {
-    "TransferenciaStock": "Převoznost zásob",
     "applied-stock-count": "Aplicado el stock del conteo %code%",
     "new-quantity": "Nueva cantidad",
     "new-quantity-description": "Introduzca la cantidad",
@@ -10,6 +9,8 @@
     "stock-count": "Conteo de stock",
     "stock-count-line-p": "Añade líneas a este listado escribiendo\/escaneando un código de barras o referencia. Si el producto ya estaba, se incrementa la cantidad.",
     "stock-counts": "Conteos",
+    "TransferenciaStock": "Převoznost zásob",
     "valued-stock-cost": "Stock valorado a coste",
-    "valued-stock-price": "Stock valorado a precio"
+    "valued-stock-price": "Stock valorado a precio",
+    "without-stock-count": "Excluir conteos"
 }
