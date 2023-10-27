@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,7 +20,10 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Model\Base;
+use FacturaScripts\Core\Session;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Stock;
 
@@ -54,8 +57,9 @@ class ConteoStock extends Base\ModelClass
     public function clear()
     {
         parent::clear();
-        $this->fechafin = date(self::DATE_STYLE);
-        $this->fechainicio = date(self::DATE_STYLE);
+        $this->fechafin = Tools::date();
+        $this->fechainicio = Tools::date();
+        $this->nick = Session::user()->nick;
     }
 
     public function delete(): bool
@@ -69,9 +73,7 @@ class ConteoStock extends Base\ModelClass
 
     public function getAlmacen(): Almacen
     {
-        $almacen = new Almacen();
-        $almacen->loadFromCode($this->codalmacen);
-        return $almacen;
+        return Almacenes::get($this->codalmacen);
     }
 
     /**
@@ -96,7 +98,8 @@ class ConteoStock extends Base\ModelClass
 
     public function test(): bool
     {
-        $this->observaciones = $this->toolBox()->utils()->noHtml($this->observaciones);
+        $this->observaciones = Tools::noHtml($this->observaciones);
+
         return parent::test();
     }
 

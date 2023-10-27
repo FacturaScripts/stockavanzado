@@ -128,8 +128,8 @@ class EditConteoStock extends EditController
         }
 
         $lineaConteo = new LineaConteoStock();
-        $idlinea = $this->request->request->get('idlinea');
-        if ($lineaConteo->loadFromCode($idlinea) && $lineaConteo->delete()) {
+        $idLinea = $this->request->request->get('idlinea');
+        if ($lineaConteo->loadFromCode($idLinea) && $lineaConteo->delete()) {
             $this->toolBox()->i18nLog()->notice('record-deleted-correctly');
             return true;
         }
@@ -146,8 +146,8 @@ class EditConteoStock extends EditController
         }
 
         $lineaConteo = new LineaConteoStock();
-        $idlinea = $this->request->request->get('idlinea');
-        if (false === $lineaConteo->loadFromCode($idlinea)) {
+        $idLinea = $this->request->request->get('idlinea');
+        if (false === $lineaConteo->loadFromCode($idLinea)) {
             $this->toolBox()->i18nLog()->notice('record-not-found');
             return true;
         }
@@ -201,13 +201,6 @@ class EditConteoStock extends EditController
             case 'ListLineaConteoStock':
                 $where = [new DataBaseWhere('idconteo', $this->getViewModelValue($mvn, 'idconteo'))];
                 $view->loadData('', $where, ['referencia' => 'ASC']);
-                break;
-
-            case $mvn:
-                parent::loadData($viewName, $view);
-                if (empty($view->model->nick)) {
-                    $view->model->nick = $this->user->nick;
-                }
                 break;
 
             default:

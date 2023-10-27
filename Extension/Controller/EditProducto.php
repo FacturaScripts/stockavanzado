@@ -181,7 +181,6 @@ class EditProducto
 
             // creamos un nuevo conteo
             $conteo = new ConteoStock();
-            $conteo->nick = $this->user->nick;
             $conteo->codalmacen = $stock->codalmacen;
             $conteo->observaciones = $data['mov-description'];
             if (false === $conteo->save()) {

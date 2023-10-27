@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2013-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2013-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,6 +21,8 @@ namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base;
+use FacturaScripts\Core\Session;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\Almacen;
 
 /**
@@ -31,7 +33,6 @@ use FacturaScripts\Dinamic\Model\Almacen;
  */
 class TransferenciaStock extends Base\ModelClass
 {
-
     use Base\ModelTrait;
 
     /**
@@ -56,7 +57,7 @@ class TransferenciaStock extends Base\ModelClass
     public $fecha;
 
     /**
-     * Primary key autoincremental.
+     * Primary key autoincrement.
      *
      * @var int
      */
@@ -77,7 +78,8 @@ class TransferenciaStock extends Base\ModelClass
     public function clear()
     {
         parent::clear();
-        $this->fecha = date(self::DATETIME_STYLE);
+        $this->fecha = Tools::dateTime();
+        $this->nick = Session::user()->nick;
     }
 
     public function delete(): bool
@@ -125,15 +127,15 @@ class TransferenciaStock extends Base\ModelClass
 
     public function test(): bool
     {
-        $this->observaciones = $this->toolBox()->utils()->noHtml($this->observaciones);
+        $this->observaciones = Tools::noHtml($this->observaciones);
 
         if ($this->codalmacenorigen == $this->codalmacendestino) {
-            $this->toolBox()->i18nLog()->warning('warehouse-cant-be-same');
+            Tools::log()->warning('warehouse-cant-be-same');
             return false;
         }
 
         if ($this->getIdempresa($this->codalmacendestino) !== $this->getIdempresa($this->codalmacenorigen)) {
-            $this->toolBox()->i18nLog()->warning('warehouse-must-be-same-business');
+            Tools::log()->warning('warehouse-must-be-same-business');
             return false;
         }
 

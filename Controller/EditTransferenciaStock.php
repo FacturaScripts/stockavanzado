@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2017-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -31,7 +31,6 @@ use FacturaScripts\Core\Lib\ExtendedController\EditController;
  */
 class EditTransferenciaStock extends EditController
 {
-
     public function getModelClassName(): string
     {
         return 'TransferenciaStock';
@@ -54,7 +53,13 @@ class EditTransferenciaStock extends EditController
         parent::createViews();
         $this->setTabsPosition('bottom');
 
-        $this->addEditListView('EditLineaTransferenciaStock', 'LineaTransferenciaStock', 'lines');
+        $this->createViewsLines();
+    }
+
+    protected function createViewsLines(string $viewName = 'EditLineaTransferenciaStock'): void
+    {
+        $this->addEditListView($viewName, 'LineaTransferenciaStock', 'lines');
+        $this->views[$viewName]->setInline(true);
     }
 
     /**
@@ -65,17 +70,16 @@ class EditTransferenciaStock extends EditController
      */
     protected function loadData($viewName, $view)
     {
+        $mvn = $this->getMainViewName();
+
         switch ($viewName) {
-            case 'EditTransferenciaStock':
+            case $mvn:
                 parent::loadData($viewName, $view);
-                if (empty($view->model->nick)) {
-                    $view->model->nick = $this->user->nick;
-                }
                 break;
 
             case 'EditLineaTransferenciaStock':
-                $idtransferencia = $this->getViewModelValue('EditTransferenciaStock', 'idtrans');
-                $where = [new DataBaseWhere('idtrans', $idtransferencia)];
+                $id = $this->getViewModelValue($mvn, 'idtrans');
+                $where = [new DataBaseWhere('idtrans', $id)];
                 $view->loadData('', $where, ['idlinea' => 'DESC']);
                 break;
         }

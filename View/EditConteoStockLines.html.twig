@@ -1,5 +1,5 @@
 <div class="card shadow mb-3">
-    <div class="card-body">
+    <div class="card-body pl-3 pt-3 pr-3 pb-0">
         <h2 class="h5 card-title">
             {{ trans('lines') }}
             <span class="badge badge-secondary">{{ fsc.getCurrentView().count }}</span>
@@ -10,35 +10,28 @@
             <input type="hidden" name="action" value="add-line"/>
             <div class="form-row">
                 <div class="col-sm-3">
-                    <div class="form-group">
-                        <div class="input-group mb-3">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text">
-                                    <i class="fas fa-barcode"></i>
-                                </span>
-                            </div>
-                            <input type="text" name="codbarras" class="form-control"
-                                   placeholder="{{ trans('barcode') }}"/>
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">
+                                <i class="fas fa-barcode"></i>
+                            </span>
                         </div>
+                        <input type="text" name="codbarras" class="form-control" placeholder="{{ trans('barcode') }}"/>
                     </div>
                 </div>
                 <div class="col-sm-3">
-                    <div class="form-group">
-                        <div class="input-group mb-3">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text">
-                                    <i class="fas fa-hashtag"></i>
-                                </span>
-                            </div>
-                            <input type="text" name="referencia" class="form-control"
-                                   placeholder="{{ trans('reference') }}"/>
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">
+                                <i class="fas fa-hashtag"></i>
+                            </span>
                         </div>
+                        <input type="text" name="referencia" class="form-control"
+                               placeholder="{{ trans('reference') }}"/>
                     </div>
                 </div>
                 <div class="col-sm">
-                    <button type="submit" class="btn btn-success">
-                        {{ trans('add') }}
-                    </button>
+                    <button type="submit" class="btn btn-success">{{ trans('add') }}</button>
                 </div>
                 <div class="col-sm-auto">
                     <a href="{{ fsc.getModel().url() }}&action=update-stock" class="btn btn-warning">
@@ -66,7 +59,7 @@
                 <tr>
                     <td>{{ line.referencia }}</td>
                     <td class="text-right">{{ line.cantidad }}</td>
-                    <td>{{ _self.editCountLine(i18n, line) }}</td>
+                    <td>{{ _self.editCountLine(line) }}</td>
                     <td class="text-right">{{ line.nick }}</td>
                     <td class="text-right">{{ line.fecha }}</td>
                 </tr>
@@ -80,7 +73,7 @@
     </div>
 </div>
 
-{% macro editCountLine(i18n, line) %}
+{% macro editCountLine(line) %}
     <a href="#" data-toggle="modal" data-target="#modalCountLine{{ line.idlinea }}">
         <i class="fas fa-edit"></i>
     </a>
@@ -89,24 +82,23 @@
         <input type="hidden" name="action" value="edit-line"/>
         <input type="hidden" name="idlinea" value="{{ line.idlinea }}"/>
         <div class="modal fade" id="modalCountLine{{ line.idlinea }}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
+            <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">{{ trans('quantity') }}</h5>
+                        <h5 class="modal-title">
+                            <i class="fas fa-edit"></i> {{ trans('quantity') }}
+                        </h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body">
-                        <div class="form-group">
-                            <input type="number" name="quantity" min="0" step="any" value="{{ line.cantidad }}"
-                                   class="form-control" required autofocus/>
-                        </div>
+                        <input type="number" name="quantity" min="0" step="any" value="{{ line.cantidad }}"
+                               class="form-control mb-3" required autofocus/>
                         <div class="form-row">
                             <div class="col">
-                                <button type="button" class="btn btn-danger" onclick="this.form.action.value='delete-line';
-                                        this.form.submit();">
-                                    {{ trans('delete') }}
+                                <button type="button" class="btn btn-danger"
+                                        onclick="this.form.action.value='delete-line'; this.form.submit();">{{ trans('delete') }}
                                 </button>
                             </div>
                             <div class="col-auto">
@@ -116,6 +108,7 @@
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     </form>
 {% endmacro %}

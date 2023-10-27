@@ -26,7 +26,7 @@ use FacturaScripts\Core\Model\Almacen;
 class StockValue
 {
     const JOB_NAME = 'stock-value';
-    const JOB_PERIOD = '1 day';
+    const JOB_PERIOD = '1 hour';
 
     /** @var DataBase */
     private static $dataBase;

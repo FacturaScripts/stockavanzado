@@ -21,6 +21,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base;
+use FacturaScripts\Core\Session;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
@@ -76,6 +77,7 @@ class LineaConteoStock extends Base\ModelClass
         parent::clear();
         $this->cantidad = 1.0;
         $this->fecha = date(self::DATETIME_STYLE);
+        $this->nick = Session::user()->nick;
     }
 
     public function delete(): bool

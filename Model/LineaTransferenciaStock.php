@@ -21,6 +21,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
 use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
@@ -33,12 +34,11 @@ use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
  */
 class LineaTransferenciaStock extends Base\ModelOnChangeClass
 {
-
     use Base\ModelTrait;
     use Base\ProductRelationTrait;
 
     /**
-     * Quantity of product transfered
+     * Quantity of product transferred
      *
      * @var float|int
      */
@@ -50,7 +50,7 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
     private static $disableUpdateStock = false;
 
     /**
-     * Primary key of line transfer stock. Autoincremental
+     * Primary key of line transfer stock. Autoincrement
      *
      * @var int
      */
@@ -110,7 +110,8 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
 
     public function test(): bool
     {
-        $this->referencia = $this->toolBox()->utils()->noHtml($this->referencia);
+        $this->referencia = Tools::noHtml($this->referencia);
+
         if (empty($this->idproducto)) {
             $variant = $this->getVariant();
             $this->idproducto = $variant->idproducto;
@@ -125,7 +126,7 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
     }
 
     /**
-     * This methos is called before save (update) when some field value has changes.
+     * This method is called before save (update) when some field value has changes.
      *
      * @param string $field
      *
@@ -151,13 +152,23 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
 
     protected function saveInsert(array $values = []): bool
     {
+        // comprobamos si la referencia ya se encuentra en la transferencia
+        $where = [
+            new DataBaseWhere('idtrans', $this->idtrans),
+            new DataBaseWhere('referencia', $this->referencia)
+        ];
+        if ($this->count($where) > 0) {
+            Tools::log()->warning('duplicated-reference', ['%reference%' => $this->referencia]);
+            return false;
+        }
+
         return $this->updateStock($this->cantidad) && parent::saveInsert($values);
     }
 
     protected function setPreviousData(array $fields = [])
     {
         $more = ['cantidad'];
-        parent::setPreviousData(\array_merge($more, $fields));
+        parent::setPreviousData(array_merge($more, $fields));
     }
 
     protected function updateStock(float $quantity): bool
@@ -173,7 +184,7 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
             new DataBaseWhere('referencia', $this->referencia)
         ];
         if (false === $stock->loadFromCode('', $where) || $stock->cantidad < $quantity) {
-            $this->toolBox()->i18nLog()->warning('not-enough-stock', ['%reference%' => $this->referencia]);
+            Tools::log()->warning('not-enough-stock', ['%reference%' => $this->referencia]);
             return false;
         }
 
