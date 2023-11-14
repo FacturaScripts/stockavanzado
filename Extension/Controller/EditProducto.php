@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -43,53 +43,6 @@ class EditProducto
 
             // añadimos las nuevas pestañas
             $this->createViewsMovements();
-            $this->createViewsPedidosCliente();
-            $this->createViewsPedidosProveedor();
-        };
-    }
-
-    protected function createViewsPedidosCliente(): Closure
-    {
-        return function ($viewName = 'ListLineaPedidoCliente') {
-            $this->addListView($viewName, 'LineaPedidoCliente', 'reserved', 'fas fa-lock');
-            $this->views[$viewName]->addSearchFields(['referencia', 'descripcion']);
-            $this->views[$viewName]->addOrderBy(['referencia'], 'reference');
-            $this->views[$viewName]->addOrderBy(['cantidad'], 'quantity');
-            $this->views[$viewName]->addOrderBy(['servido'], 'quantity-served');
-            $this->views[$viewName]->addOrderBy(['descripcion'], 'description');
-            $this->views[$viewName]->addOrderBy(['pvptotal'], 'amount');
-            $this->views[$viewName]->addOrderBy(['idlinea'], 'code', 2);
-
-            // ocultamos la columna product
-            $this->views[$viewName]->disableColumn('product');
-
-            // desactivamos los botones de nuevo, eliminar y checkbox
-            $this->setSettings($viewName, 'btnDelete', false);
-            $this->setSettings($viewName, 'btnNew', false);
-            $this->setSettings($viewName, 'checkBoxes', false);
-        };
-    }
-
-    protected function createViewsPedidosProveedor(): Closure
-    {
-        return function ($viewName = 'ListLineaPedidoProveedor') {
-            $this->addListView($viewName, 'LineaPedidoProveedor', 'pending-reception', 'fas fa-ship');
-            $this->views[$viewName]->addSearchFields(['referencia', 'descripcion']);
-            $this->views[$viewName]->addOrderBy(['referencia'], 'reference');
-            $this->views[$viewName]->addOrderBy(['cantidad'], 'quantity');
-            $this->views[$viewName]->addOrderBy(['servido'], 'quantity-served');
-            $this->views[$viewName]->addOrderBy(['descripcion'], 'description');
-            $this->views[$viewName]->addOrderBy(['pvptotal'], 'amount');
-            $this->views[$viewName]->addOrderBy(['idlinea'], 'code', 2);
-
-
-            // ocultamos la columna product
-            $this->views[$viewName]->disableColumn('product');
-
-            // desactivamos los botones de nuevo, eliminar y checkbox
-            $this->setSettings($viewName, 'btnDelete', false);
-            $this->setSettings($viewName, 'btnNew', false);
-            $this->setSettings($viewName, 'checkBoxes', false);
         };
     }
 
@@ -141,24 +94,6 @@ class EditProducto
             switch ($viewName) {
                 case 'ListMovimientoStock':
                     $where = [new DataBaseWhere('idproducto', $id)];
-                    $view->loadData('', $where);
-                    $this->setSettings($viewName, 'active', $view->model->count($where) > 0);
-                    break;
-
-                case 'ListLineaPedidoCliente':
-                    $where = [
-                        new DataBaseWhere('idproducto', $id),
-                        new DataBaseWhere('actualizastock', -2)
-                    ];
-                    $view->loadData('', $where);
-                    $this->setSettings($viewName, 'active', $view->model->count($where) > 0);
-                    break;
-
-                case 'ListLineaPedidoProveedor':
-                    $where = [
-                        new DataBaseWhere('idproducto', $id),
-                        new DataBaseWhere('actualizastock', 2)
-                    ];
                     $view->loadData('', $where);
                     $this->setSettings($viewName, 'active', $view->model->count($where) > 0);
                     break;
