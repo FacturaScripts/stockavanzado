@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,7 +21,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 
 use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Core\Base\ToolBox;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Stock;
 
@@ -60,8 +60,8 @@ class StockRebuild
             }
         }
 
-        ToolBox::i18nLog()->notice('rebuilt-stock');
-        ToolBox::i18nLog('audit')->warning('rebuilt-stock');
+        Tools::log()->notice('rebuilt-stock');
+        Tools::log('audit')->warning('rebuilt-stock');
 
         self::dataBase()->commit();
         return true;
@@ -119,7 +119,7 @@ class StockRebuild
         }
 
         $sql = "SELECT l.referencia,"
-            .        " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as pte"
+            . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as pte"
             . " FROM lineaspedidosprov l"
             . " LEFT JOIN pedidosprov p ON l.idpedido = p.idpedido"
             . " WHERE l.referencia IS NOT NULL"
@@ -149,7 +149,7 @@ class StockRebuild
         }
 
         $sql = "SELECT l.referencia,"
-            .        " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as reservada"
+            . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as reservada"
             . " FROM lineaspedidoscli l"
             . " LEFT JOIN pedidoscli p ON l.idpedido = p.idpedido"
             . " WHERE l.referencia IS NOT NULL"

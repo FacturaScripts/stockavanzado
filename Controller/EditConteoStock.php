@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -22,7 +22,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\BaseView;
 use FacturaScripts\Core\Lib\ExtendedController\EditController;
-use FacturaScripts\Core\Model\Base\ModelCore;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\Variante;
 use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
@@ -53,7 +53,7 @@ class EditConteoStock extends EditController
     {
         // permisos
         if (false === $this->permissions->allowUpdate) {
-            $this->toolBox()->i18nLog()->warning('not-allowed-update');
+            Tools::log()->warning('not-allowed-update');
             return true;
         }
 
@@ -77,7 +77,7 @@ class EditConteoStock extends EditController
             [new DataBaseWhere('referencia', $ref)] :
             [new DataBaseWhere('codbarras', $barcode)];
         if (false === $variante->loadFromCode('', $where)) {
-            $this->toolBox()->i18nLog()->warning('no-data');
+            Tools::log()->warning('no-data');
             return true;
         }
 
@@ -96,14 +96,14 @@ class EditConteoStock extends EditController
 
         // guardamos la línea
         $newLine->cantidad++;
-        $newLine->fecha = date(ModelCore::DATETIME_STYLE);
+        $newLine->fecha = Tools::dateTime();
         $newLine->nick = $this->user->nick;
         if (false === $newLine->save()) {
-            $this->toolBox()->i18nLog()->error('record-save-error');
+            Tools::log()->error('record-save-error');
             return true;
         }
 
-        $this->toolBox()->i18nLog()->notice('record-updated-correctly');
+        Tools::log()->notice('record-updated-correctly');
         return true;
     }
 
@@ -123,44 +123,44 @@ class EditConteoStock extends EditController
     protected function deleteLineAction(): bool
     {
         if (false === $this->permissions->allowDelete) {
-            $this->toolBox()->i18nLog()->warning('not-allowed-delete');
+            Tools::log()->warning('not-allowed-delete');
             return true;
         }
 
         $lineaConteo = new LineaConteoStock();
         $idLinea = $this->request->request->get('idlinea');
         if ($lineaConteo->loadFromCode($idLinea) && $lineaConteo->delete()) {
-            $this->toolBox()->i18nLog()->notice('record-deleted-correctly');
+            Tools::log()->notice('record-deleted-correctly');
             return true;
         }
 
-        $this->toolBox()->i18nLog()->error('record-deleted-error');
+        Tools::log()->error('record-deleted-error');
         return true;
     }
 
     protected function editLineAction(): bool
     {
         if (false === $this->permissions->allowUpdate) {
-            $this->toolBox()->i18nLog()->warning('not-allowed-update');
+            Tools::log()->warning('not-allowed-update');
             return true;
         }
 
         $lineaConteo = new LineaConteoStock();
         $idLinea = $this->request->request->get('idlinea');
         if (false === $lineaConteo->loadFromCode($idLinea)) {
-            $this->toolBox()->i18nLog()->notice('record-not-found');
+            Tools::log()->notice('record-not-found');
             return true;
         }
 
         $lineaConteo->cantidad = (float)$this->request->request->get('quantity');
-        $lineaConteo->fecha = date(ModelCore::DATETIME_STYLE);
+        $lineaConteo->fecha = Tools::dateTime();
         $lineaConteo->nick = $this->user->nick;
         if (false === $lineaConteo->save()) {
-            $this->toolBox()->i18nLog()->error('record-save-error');
+            Tools::log()->error('record-save-error');
             return true;
         }
 
-        $this->toolBox()->i18nLog()->notice('record-updated-correctly');
+        Tools::log()->notice('record-updated-correctly');
         return true;
     }
 
@@ -212,23 +212,23 @@ class EditConteoStock extends EditController
     protected function updateStockAction(): bool
     {
         if (false === $this->permissions->allowUpdate) {
-            $this->toolBox()->i18nLog()->warning('not-allowed-update');
+            Tools::log()->warning('not-allowed-update');
             return true;
         }
 
         $model = $this->getModel();
         if (false === $model->loadFromCode($this->request->get('code'))) {
-            $this->toolBox()->i18nLog()->warning('record-not-found');
+            Tools::log()->warning('record-not-found');
             return true;
         }
 
         if (false === $model->updateStock()) {
-            $this->toolBox()->i18nLog()->error('record-save-error');
+            Tools::log()->error('record-save-error');
             return true;
         }
 
-        $this->toolBox()->i18nLog()->notice('record-updated-correctly');
-        $this->toolBox()->i18nLog('audit')->info('applied-stock-count', ['%code%' => $model->primaryColumnValue()]);
+        Tools::log()->notice('record-updated-correctly');
+        Tools::log('audit')->info('applied-stock-count', ['%code%' => $model->primaryColumnValue()]);
         return true;
     }
 }

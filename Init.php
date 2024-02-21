@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -52,7 +52,7 @@ class Init extends InitClass
         $this->migrateData();
     }
 
-    private function createRoleForPlugin()
+    private function createRoleForPlugin(): void
     {
         $dataBase = new DataBase();
         $dataBase->beginTransaction();
@@ -62,7 +62,7 @@ class Init extends InitClass
         if (false === $role->loadFromCode(self::ROLE_NAME)) {
             $role->codrole = $role->descripcion = self::ROLE_NAME;
             if (false === $role->save()) {
-                /// exit and rollback on fail
+                // exit and rollback on fail
                 $dataBase->rollback();
                 return;
             }
@@ -87,7 +87,7 @@ class Init extends InitClass
             $roleAccess->pagename = $controllerName;
             $roleAccess->onlyownerdata = false;
             if (false === $roleAccess->save()) {
-                /// exit and rollback on fail
+                // exit and rollback on fail
                 $dataBase->rollback();
                 return;
             }
@@ -97,7 +97,7 @@ class Init extends InitClass
         $dataBase->commit();
     }
 
-    private function migrateData()
+    private function migrateData(): void
     {
         $database = new DataBase();
         if (false === $database->tableExists('transferenciasstock')) {

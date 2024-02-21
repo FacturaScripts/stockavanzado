@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -23,6 +23,7 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Base\ToolBox;
 use FacturaScripts\Core\Model\Base\BusinessDocumentLine;
 use FacturaScripts\Core\Model\Base\TransformerDocument;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\AlbaranCliente;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\FacturaCliente;
@@ -45,7 +46,7 @@ use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
 class StockMovementManager
 {
     const JOB_NAME = 'rebuild-movements';
-    const JOB_PERIOD = '1 month';
+    const JOB_PERIOD = '99 years';
 
     /**
      * @var array
@@ -156,7 +157,7 @@ class StockMovementManager
 
         $movement->cantidad -= $prevData['actualizastock'] * $prevData['cantidad'];
         $movement->cantidad += $line->actualizastock * $line->cantidad;
-        $movement->documento = static::toolBox()->i18n()->trans($doc->modelClassName()) . ' ' . $doc->codigo;
+        $movement->documento = Tools::lang()->trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
         empty($movement->cantidad) ? $movement->delete() : $movement->save();
@@ -191,9 +192,9 @@ class StockMovementManager
         }
 
         $movement->cantidad = $cantidad;
-        $movement->documento = static::toolBox()->i18n()->trans($stockCount->modelClassName()) . ' ' . $stockCount->primaryColumnValue();
-        $movement->fecha = date(MovimientoStock::DATE_STYLE, strtotime($line->fecha));
-        $movement->hora = date(MovimientoStock::HOUR_STYLE, strtotime($line->fecha));
+        $movement->documento = Tools::lang()->trans($stockCount->modelClassName()) . ' ' . $stockCount->primaryColumnValue();
+        $movement->fecha = Tools::date($line->fecha);
+        $movement->hora = Tools::hour($line->fecha);
         return empty($movement->cantidad) ? $movement->delete() : $movement->save();
     }
 
@@ -252,7 +253,7 @@ class StockMovementManager
     {
         $sum = 0.0;
         $movement = new MovimientoStock();
-        $date = date(MovimientoStock::DATE_STYLE, strtotime($datetime));
+        $date = Tools::date($datetime);
         $where = [
             new DataBaseWhere('codalmacen', $codalmacen),
             new DataBaseWhere('fecha', $date, '<='),
@@ -356,16 +357,17 @@ class StockMovementManager
         }
 
         $movement->cantidad = $cantidad;
-        $movement->documento = static::toolBox()->i18n()->trans($transfer->modelClassName()) . ' ' . $transfer->primaryColumnValue();
-        $movement->fecha = date(MovimientoStock::DATE_STYLE, strtotime($transfer->fecha));
-        $movement->hora = date(MovimientoStock::HOUR_STYLE, strtotime($transfer->fecha));
+        $movement->documento = Tools::lang()->trans($transfer->modelClassName()) . ' ' . $transfer->primaryColumnValue();
+        $movement->fecha = Tools::date($transfer->fecha);
+        $movement->hora = Tools::hour($transfer->fecha);
         return empty($movement->cantidad) ? $movement->delete() : $movement->save();
     }
 
     /**
      * @return ToolBox
+     * @deprecated since 2024-01-01
      */
-    protected static function toolBox()
+    protected static function toolBox(): ToolBox
     {
         return new ToolBox();
     }

@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,6 +21,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\ListController;
+use FacturaScripts\Core\Tools;
 
 /**
  * Description of ReportStock
@@ -90,7 +91,7 @@ class ReportStock extends ListController
         $this->addSearchFields($viewName, ['productos.descripcion', 'stocks.referencia']);
 
         // filters
-        $i18n = $this->toolBox()->i18n();
+        $i18n = Tools::lang();
         $values = [
             [
                 'label' => $i18n->trans('all'),
@@ -125,7 +126,7 @@ class ReportStock extends ListController
 
         $this->addFilterNumber($viewName, 'max-stock', 'quantity', 'cantidad', '>=');
         $this->addFilterNumber($viewName, 'min-stock', 'quantity', 'cantidad', '<=');
-        
+
         $this->addFilterCheckbox($viewName, 'secompra', 'for-purchase', 'productos.secompra');
 
         // disable buttons

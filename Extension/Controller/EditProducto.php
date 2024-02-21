@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,8 +21,8 @@ namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Core\Base\ToolBox;
 use FacturaScripts\Core\DataSrc\Almacenes;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
@@ -108,7 +108,7 @@ class EditProducto
 
             $stock = new Stock();
             if (empty($data['code']) || false === $stock->loadFromCode($data['code'])) {
-                ToolBox::i18nLog()->warning('record-not-found');
+                Tools::log()->warning('record-not-found');
                 return true;
             }
 
@@ -120,7 +120,7 @@ class EditProducto
             $conteo->observaciones = $data['mov-description'];
             if (false === $conteo->save()) {
                 $this->dataBase->rollback();
-                ToolBox::i18nLog()->warning('record-save-error');
+                Tools::log()->warning('record-save-error');
                 return true;
             }
 
@@ -132,7 +132,7 @@ class EditProducto
             $line->cantidad = (float)$data['mov-quantity'];
             if (false === $line->save()) {
                 $this->dataBase->rollback();
-                ToolBox::i18nLog()->warning('record-save-error');
+                Tools::log()->warning('record-save-error');
                 return true;
             }
 
@@ -140,12 +140,12 @@ class EditProducto
             $stock->cantidad = (float)$data['mov-quantity'];
             if (false === $stock->save()) {
                 $this->dataBase->rollback();
-                ToolBox::i18nLog()->warning('record-save-error');
+                Tools::log()->warning('record-save-error');
                 return true;
             }
 
             $this->dataBase->commit();
-            ToolBox::i18nLog()->notice('record-updated-correctly');
+            Tools::log()->notice('record-updated-correctly');
             return true;
         };
     }

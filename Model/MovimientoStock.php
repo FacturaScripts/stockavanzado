@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -19,7 +19,9 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
+use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Variante;
 
@@ -30,7 +32,6 @@ use FacturaScripts\Dinamic\Model\Variante;
  */
 class MovimientoStock extends Base\ModelClass
 {
-
     use Base\ModelTrait;
 
     /**
@@ -87,8 +88,8 @@ class MovimientoStock extends Base\ModelClass
     {
         parent::clear();
         $this->cantidad = 0.0;
-        $this->fecha = date(self::DATE_STYLE);
-        $this->hora = date(self::HOUR_STYLE);
+        $this->fecha = Tools::date();
+        $this->hora = Tools::hour();
     }
 
     public function deleteAll(): bool
@@ -123,7 +124,7 @@ class MovimientoStock extends Base\ModelClass
 
     public function test(): bool
     {
-        $this->documento = $this->toolBox()->utils()->noHtml($this->documento);
+        $this->documento = Tools::noHtml($this->documento);
         return parent::test();
     }
 

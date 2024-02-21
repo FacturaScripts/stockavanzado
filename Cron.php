@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -19,25 +19,26 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado;
 
-use FacturaScripts\Core\Base\CronClass;
+use FacturaScripts\Core\Template\CronClass;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockValue;
 
-class Cron extends CronClass
+final class Cron extends CronClass
 {
-    public function run()
+    public function run(): void
     {
         // añadimos este proceso al cron para no tener que hacerlo durante la instalación del plugin
-        if ($this->isTimeForJob(StockMovementManager::JOB_NAME, StockMovementManager::JOB_PERIOD)) {
-            StockMovementManager::rebuild();
-            $this->jobDone(StockMovementManager::JOB_NAME);
-        }
+        $this->job(StockMovementManager::JOB_NAME)
+            ->every(StockMovementManager::JOB_PERIOD)
+            ->run(function () {
+                StockMovementManager::rebuild();
+            });
 
         // con este proceso recalculamos el valor del stock de cada almacén
-        if($this->isTimeForJob(StockValue::JOB_NAME, StockValue::JOB_PERIOD)) {
-            StockValue::updateAll();
-            $this->jobDone(StockValue::JOB_NAME);
-        }
+        $this->job(StockValue::JOB_NAME)
+            ->every(StockValue::JOB_PERIOD)
+            ->run(function () {
+                StockValue::updateAll();
+            });
     }
 }
-
