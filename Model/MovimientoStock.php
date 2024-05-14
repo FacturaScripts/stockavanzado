@@ -34,54 +34,34 @@ class MovimientoStock extends Base\ModelClass
 {
     use Base\ModelTrait;
 
-    /**
-     * @var float
-     */
+    /** @var float */
     public $cantidad;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $codalmacen;
 
-    /**
-     * @var int
-     */
+    /** @var int */
     public $docid;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $docmodel;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $documento;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $fecha;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $hora;
 
-    /**
-     * @var int
-     */
+    /** @var int */
     public $id;
 
-    /**
-     * @var int
-     */
+    /** @var int */
     public $idproducto;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $referencia;
 
     public function clear()
@@ -92,8 +72,12 @@ class MovimientoStock extends Base\ModelClass
         $this->hora = Tools::hour();
     }
 
-    public function deleteAll(): bool
+    public function deleteAll(?int $idproducto = null): bool
     {
+        if (null !== $idproducto) {
+            return self::$dataBase->exec('DELETE FROM ' . static::tableName() . ' WHERE idproducto = ' . self::$dataBase->var2str($idproducto) . ';');
+        }
+
         return self::$dataBase->exec('DELETE FROM ' . static::tableName() . ';');
     }
 

@@ -48,24 +48,19 @@ class StockMovementManager
     const JOB_NAME = 'rebuild-movements';
     const JOB_PERIOD = '99 years';
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private static $docStates = [];
 
-    /**
-     * @var StockMovementModInterface[]
-     */
+    /** @var int|null */
+    private static $idproducto = null;
+
+    /** @var StockMovementModInterface[] */
     private static $mods = [];
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private static $products = [];
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private static $variants = [];
 
     public static function addMod(StockMovementModInterface $mod): void
@@ -73,11 +68,13 @@ class StockMovementManager
         self::$mods[] = $mod;
     }
 
-    public static function rebuild()
+    public static function rebuild(?int $idproducto = null): void
     {
+        static::$idproducto = $idproducto;
+
         // removes all movements
         $movement = new MovimientoStock();
-        $movement->deleteAll();
+        $movement->deleteAll(static::$idproducto);
 
         // saves movements from business documents
         static::rebuildMovements();
@@ -91,6 +88,14 @@ class StockMovementManager
         $transferenciaStock = new TransferenciaStock();
         foreach ($transferenciaStock->all([], [], 0, 0) as $transfer) {
             foreach ($transfer->getLines() as $line) {
+                $variant = $line->getVariant();
+                $product = $variant->getProducto();
+
+                // omitimos el producto si no es el que buscamos
+                if (null !== static::$idproducto && $product->idproducto !== static::$idproducto) {
+                    continue;
+                }
+
                 static::updateLineTransfer($line, $transfer);
             }
         }
@@ -99,6 +104,13 @@ class StockMovementManager
         $conteoStock = new ConteoStock();
         foreach ($conteoStock->all([], [], 0, 0) as $conteo) {
             foreach ($conteo->getLines() as $line) {
+                $product = $line->getProducto();
+
+                // omitimos el producto si no es el que buscamos
+                if (null !== static::$idproducto && $product->idproducto !== static::$idproducto) {
+                    continue;
+                }
+
                 static::updateLineCount($line, $conteo);
             }
         }
@@ -313,6 +325,11 @@ class StockMovementManager
                         // skip missing product or products without stock management
                         $product = static::getProduct($line->referencia);
                         if (empty($product->idproducto) || $product->nostock) {
+                            continue;
+                        }
+
+                        // omitimos el producto si no es el que buscamos
+                        if (null !== static::$idproducto && $product->idproducto !== static::$idproducto) {
                             continue;
                         }
 
