@@ -101,7 +101,7 @@ class StockRebuild
             . " WHERE codalmacen = " . self::dataBase()->var2str($codalmacen);
 
         if (null !== static::$idproducto) {
-            $sql .= " AND idproducto = " . self::dataBase()->var2str(static::$idproducto);
+            $sql .= " AND idproducto = " . static::$idproducto;
         }
 
         $sql .= " GROUP BY 1";
@@ -139,11 +139,12 @@ class StockRebuild
         $sql = "SELECT l.referencia,"
             . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as pte"
             . " FROM lineaspedidosprov l"
-            . " LEFT JOIN pedidosprov p ON l.idpedido = p.idpedido"
+            . " JOIN pedidosprov p ON l.idpedido = p.idpedido"
+            . " JOIN variantes v ON v.referencia = l.referencia"
             . " WHERE l.referencia IS NOT NULL";
 
         if (null !== static::$idproducto) {
-            $sql .= " AND l.idproducto = " . self::dataBase()->var2str(static::$idproducto);
+            $sql .= " AND l.idproducto = " . static::$idproducto;
         }
 
         $sql .= " AND l.actualizastock = '2'"
@@ -174,11 +175,12 @@ class StockRebuild
         $sql = "SELECT l.referencia,"
             . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as reservada"
             . " FROM lineaspedidoscli l"
-            . " LEFT JOIN pedidoscli p ON l.idpedido = p.idpedido"
+            . " JOIN pedidoscli p ON l.idpedido = p.idpedido"
+            . " JOIN variantes v ON v.referencia = l.referencia"
             . " WHERE l.referencia IS NOT NULL";
 
         if (null !== static::$idproducto) {
-            $sql .= " AND l.idproducto = " . self::dataBase()->var2str(static::$idproducto);
+            $sql .= " AND l.idproducto = " . static::$idproducto;
         }
 
         $sql .= " AND l.actualizastock = '-2'"

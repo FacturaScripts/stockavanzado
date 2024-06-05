@@ -116,13 +116,7 @@ class StockMovementManager
         }
     }
 
-    /**
-     * @param BusinessDocumentLine $line
-     * @param TransformerDocument $doc
-     * @param string $fromCodalmacen
-     * @param string $toCodalmacen
-     */
-    public static function transferLine($line, $doc, $fromCodalmacen, $toCodalmacen)
+    public static function transferLine(BusinessDocumentLine $line, TransformerDocument $doc, string $fromCodalmacen, string $toCodalmacen): void
     {
         $movement = new MovimientoStock();
         $where = [
@@ -137,12 +131,7 @@ class StockMovementManager
         }
     }
 
-    /**
-     * @param BusinessDocumentLine $line
-     * @param array $prevData
-     * @param TransformerDocument $doc
-     */
-    public static function updateLine($line, $prevData, $doc)
+    public static function updateLine(BusinessDocumentLine $line, array $prevData, TransformerDocument $doc): void
     {
         if (false === in_array($line->actualizastock, [1, -1], true) &&
             false === in_array($prevData['actualizastock'], [1, -1], true)) {
@@ -179,7 +168,7 @@ class StockMovementManager
      * @param LineaConteoStock $line
      * @param ConteoStock $stockCount
      */
-    public static function updateLineCount($line, $stockCount)
+    public static function updateLineCount(LineaConteoStock $line, ConteoStock $stockCount): bool
     {
         $docid = $stockCount->primaryColumnValue();
         $docmodel = $stockCount->modelClassName();
@@ -210,11 +199,7 @@ class StockMovementManager
         return empty($movement->cantidad) ? $movement->delete() : $movement->save();
     }
 
-    /**
-     * @param LineaTransferenciaStock $line
-     * @param TransferenciaStock $transfer
-     */
-    public static function updateLineTransfer($line, $transfer)
+    public static function updateLineTransfer(LineaTransferenciaStock $line, TransferenciaStock $transfer): void
     {
         static::updateLineTransferMovement($transfer->codalmacenorigen, $line->cantidad * -1, $transfer, $line);
         static::updateLineTransferMovement($transfer->codalmacendestino, $line->cantidad, $transfer, $line);
@@ -252,16 +237,7 @@ class StockMovementManager
         return self::$variants[$referencia];
     }
 
-    /**
-     * @param string $reference
-     * @param string $codalmacen
-     * @param int $docid
-     * @param string $docmodel
-     * @param string $datetime
-     *
-     * @return float
-     */
-    protected static function getStockSum($reference, $codalmacen, $docid, $docmodel, $datetime)
+    protected static function getStockSum(string $reference, string $codalmacen, int $docid, string $docmodel, string $datetime): float
     {
         $sum = 0.0;
         $movement = new MovimientoStock();
@@ -285,12 +261,7 @@ class StockMovementManager
         return $sum;
     }
 
-    /**
-     * @param TransformerDocument $doc
-     *
-     * @return bool
-     */
-    protected static function ignoredState($doc): bool
+    protected static function ignoredState(TransformerDocument $doc): bool
     {
         // check or add the status to the list
         if (!isset(self::$docStates[$doc->idestado])) {
@@ -301,7 +272,7 @@ class StockMovementManager
         return empty(self::$docStates[$doc->idestado]->actualizastock);
     }
 
-    protected static function rebuildMovements()
+    protected static function rebuildMovements(): void
     {
         $limit = 1000;
         $models = [new AlbaranProveedor(), new FacturaProveedor(), new AlbaranCliente(), new FacturaCliente()];
@@ -345,15 +316,7 @@ class StockMovementManager
         }
     }
 
-    /**
-     * @param string $codalmacen
-     * @param float $cantidad
-     * @param TransferenciaStock $transfer
-     * @param LineaTransferenciaStock $line
-     *
-     * @return bool
-     */
-    protected static function updateLineTransferMovement($codalmacen, $cantidad, $transfer, $line)
+    protected static function updateLineTransferMovement(string $codalmacen, float $cantidad, TransferenciaStock $transfer, LineaTransferenciaStock $line): bool
     {
         $movement = new MovimientoStock();
         $where = [

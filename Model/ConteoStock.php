@@ -65,7 +65,9 @@ class ConteoStock extends Base\ModelClass
     public function delete(): bool
     {
         foreach ($this->getLines() as $line) {
-            $line->delete();
+            if (false === $line->delete()) {
+                return false;
+            }
         }
 
         return parent::delete();

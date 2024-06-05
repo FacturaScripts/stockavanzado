@@ -27,6 +27,7 @@ use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
 use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
+use FacturaScripts\Dinamic\Lib\StockRebuild;
 
 /**
  * Description of LineaConteoStock
@@ -37,39 +38,25 @@ class LineaConteoStock extends Base\ModelClass
 {
     use Base\ModelTrait;
 
-    /**
-     * @var float
-     */
+    /** @var float */
     public $cantidad;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $fecha;
 
-    /**
-     * @var int
-     */
+    /** @var int */
     public $idlinea;
 
-    /**
-     * @var int
-     */
+    /** @var int */
     public $idproducto;
 
-    /**
-     * @var int
-     */
+    /** @var int */
     public $idconteo;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $nick;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     public $referencia;
 
     public function clear()
@@ -82,13 +69,31 @@ class LineaConteoStock extends Base\ModelClass
 
     public function delete(): bool
     {
-        if (parent::delete()) {
-            $this->cantidad = 0.0;
-            StockMovementManager::updateLineCount($this, $this->getConteo());
-            return true;
+        // buscamos el movimiento de stock asociado a la línea
+        $conteo = $this->getConteo();
+        $movement = new MovimientoStock();
+        $where = [
+            new DataBaseWhere('codalmacen', $conteo->codalmacen),
+            new DataBaseWhere('docid', $conteo->primaryColumnValue()),
+            new DataBaseWhere('docmodel', $conteo->modelClassName()),
+            new DataBaseWhere('referencia', $this->referencia)
+        ];
+
+        // si no existe el movimiento, eliminamos la línea
+        if (false === $movement->loadFromCode('', $where)) {
+            return parent::delete();
         }
 
-        return false;
+        // si no se puede eliminar el movimiento, terminamos
+        if (false === $movement->delete()) {
+            return false;
+        }
+
+        // reconstruimos el stock del producto
+        StockRebuild::rebuild($movement->idproducto);
+
+        // finalmente eliminamos la línea
+        return parent::delete();
     }
 
     public function getConteo(): ConteoStock
