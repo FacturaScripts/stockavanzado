@@ -32,10 +32,20 @@ use FacturaScripts\Dinamic\Model\Stock;
  */
 class StockRebuild
 {
+    /** @var DataBase */
     private static $database;
 
-    public static function rebuild(): bool
+    /** @var int|null */
+    private static $idproducto = null;
+
+    public static function rebuild(?int $idproducto = null): bool
     {
+        if (false === self::dataBase()->tableExists('stocks_movimientos')) {
+            return false;
+        }
+
+        static::$idproducto = $idproducto;
+
         self::dataBase()->beginTransaction();
         static::clear();
 
@@ -67,26 +77,34 @@ class StockRebuild
         return true;
     }
 
-    protected static function clear(): bool
+    protected static function clear(): void
     {
-        if (self::dataBase()->tableExists('stocks')) {
-            $sql = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0';";
-            return self::dataBase()->exec($sql);
+        if (false === self::dataBase()->tableExists('stocks')) {
+            return;
         }
 
-        return true;
+        if (null !== static::$idproducto) {
+            $sql = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0'"
+                . " WHERE idproducto = " . self::dataBase()->var2str(static::$idproducto) . ";";
+        } else {
+            $sql = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0';";
+        }
+
+        self::dataBase()->exec($sql);
     }
 
     protected static function calculateStockData(string $codalmacen): array
     {
-        if (false === self::dataBase()->tableExists('stocks_movimientos')) {
-            return [];
+        $stockData = [];
+        $sql = "SELECT referencia, SUM(cantidad) as sum"
+            . " FROM stocks_movimientos"
+            . " WHERE codalmacen = " . self::dataBase()->var2str($codalmacen);
+
+        if (null !== static::$idproducto) {
+            $sql .= " AND idproducto = " . self::dataBase()->var2str(static::$idproducto);
         }
 
-        $stockData = [];
-        $sql = "SELECT referencia, SUM(cantidad) as sum FROM stocks_movimientos"
-            . " WHERE codalmacen = " . self::dataBase()->var2str($codalmacen)
-            . " GROUP BY 1";
+        $sql .= " GROUP BY 1";
         foreach (self::dataBase()->select($sql) as $row) {
             $ref = trim($row['referencia']);
             $stockData[$ref] = [
@@ -122,8 +140,13 @@ class StockRebuild
             . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as pte"
             . " FROM lineaspedidosprov l"
             . " LEFT JOIN pedidosprov p ON l.idpedido = p.idpedido"
-            . " WHERE l.referencia IS NOT NULL"
-            . " AND l.actualizastock = '2'"
+            . " WHERE l.referencia IS NOT NULL";
+
+        if (null !== static::$idproducto) {
+            $sql .= " AND l.idproducto = " . self::dataBase()->var2str(static::$idproducto);
+        }
+
+        $sql .= " AND l.actualizastock = '2'"
             . " AND p.codalmacen = " . self::dataBase()->var2str($codalmacen)
             . " GROUP BY 1;";
         foreach (self::dataBase()->select($sql) as $row) {
@@ -152,8 +175,13 @@ class StockRebuild
             . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as reservada"
             . " FROM lineaspedidoscli l"
             . " LEFT JOIN pedidoscli p ON l.idpedido = p.idpedido"
-            . " WHERE l.referencia IS NOT NULL"
-            . " AND l.actualizastock = '-2'"
+            . " WHERE l.referencia IS NOT NULL";
+
+        if (null !== static::$idproducto) {
+            $sql .= " AND l.idproducto = " . self::dataBase()->var2str(static::$idproducto);
+        }
+
+        $sql .= " AND l.actualizastock = '-2'"
             . " AND p.codalmacen = " . self::dataBase()->var2str($codalmacen)
             . " GROUP BY 1;";
         foreach (self::dataBase()->select($sql) as $row) {
