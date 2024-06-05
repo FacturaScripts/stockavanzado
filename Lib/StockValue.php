@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2023 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2023-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -40,7 +40,7 @@ class StockValue
         // calculamos el stock valorado
         $sql = 'SELECT s.referencia, s.cantidad, v.coste, v.precio'
             . ' FROM stocks AS s'
-            . ' LEFT JOIN variantes AS v ON v.referencia = s.referencia'
+            . ' JOIN variantes AS v ON v.referencia = s.referencia'
             . ' WHERE s.codalmacen = ' . self::db()->var2str($warehouse->codalmacen)
             . ' AND s.cantidad > 0';
         $limit = 1000;
