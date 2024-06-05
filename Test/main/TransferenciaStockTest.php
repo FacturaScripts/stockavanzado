@@ -27,12 +27,12 @@ use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
 
-final class ModelTransferenciaStockTest extends TestCase
+final class TransferenciaStockTest extends TestCase
 {
     use LogErrorsTrait;
     use RandomDataTrait;
 
-    public function testCreate()
+    public function testCreate(): void
     {
         // creamos un almacén
         $almacen = $this->getRandomWarehouse();
@@ -81,6 +81,18 @@ final class ModelTransferenciaStockTest extends TestCase
         $this->assertTrue($stock2->loadFromCode('', $where), 'stock-can-not-be-loaded');
         $this->assertEquals(10, $stock2->cantidad);
 
+        // modificamos la línea
+        $linea->cantidad = 5;
+        $this->assertTrue($linea->save(), 'linea-can-not-be-saved');
+
+        // comprobamos que el stock del almacén 1 es 95
+        $stock->loadFromCode($stock->idstock);
+        $this->assertEquals(95, $stock->cantidad);
+
+        // comprobamos que el stock del almacén 2 es 5
+        $stock2->loadFromCode($stock2->idstock);
+        $this->assertEquals(5, $stock2->cantidad);
+
         // eliminamos la transferencia
         $this->assertTrue($transferencia->delete(), 'transferencia-can-not-be-deleted');
 
@@ -96,12 +108,28 @@ final class ModelTransferenciaStockTest extends TestCase
         $this->assertEquals(0, $stock2->cantidad);
 
         // eliminamos
-        $this->assertTrue($almacen2->delete(), 'almacen-can-not-be-deleted');
-        $this->assertTrue($almacen->delete(), 'almacen-can-not-be-deleted');
-        $this->assertTrue($product->delete(), 'product-can-not-be-deleted');
+        $this->assertTrue($almacen2->delete());
+        $this->assertTrue($almacen->delete());
+        $this->assertTrue($product->delete());
     }
 
-    public function testHtmlOnFields()
+    public function testCantTransferToSameWarehouse(): void
+    {
+        // creamos un almacén
+        $almacen = $this->getRandomWarehouse();
+        $this->assertTrue($almacen->save(), 'almacen-can-not-be-saved');
+
+        // creamos una transferencia de stock con el mismo almacén de origen y destino
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $almacen->codalmacen;
+        $transferencia->codalmacendestino = $almacen->codalmacen;
+        $this->assertFalse($transferencia->save(), 'transferencia-can-not-be-saved');
+
+        // eliminamos
+        $this->assertTrue($almacen->delete());
+    }
+
+    public function testHtmlOnFields(): void
     {
         // creamos un almacén
         $almacen = $this->getRandomWarehouse();
@@ -122,8 +150,9 @@ final class ModelTransferenciaStockTest extends TestCase
         $this->assertEquals('&lt;test&gt;', $transferencia->observaciones);
 
         // eliminamos
-        $this->assertTrue($transferencia->delete(), 'transferencia-can-not-be-deleted');
-        $this->assertTrue($almacen->delete(), 'almacen-can-not-be-deleted');
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($almacen->delete());
+        $this->assertTrue($almacen2->delete());
     }
 
     protected function tearDown(): void

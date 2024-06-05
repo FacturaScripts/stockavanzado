@@ -50,6 +50,7 @@ class Init extends InitClass
     {
         $this->createRoleForPlugin();
         $this->migrateData();
+        $this->unlinkUsers();
     }
 
     private function createRoleForPlugin(): void
@@ -126,5 +127,21 @@ class Init extends InitClass
 
         $database->exec('DROP TABLE lineastransferenciasstock;');
         $database->exec('DROP TABLE transferenciasstock;');
+    }
+
+    private function unlinkUsers(): void
+    {
+        $database = new DataBase();
+
+        $tables = ['stocks_conteos', 'stocks_lineasconteos', 'stocks_transferencias'];
+        foreach ($tables as $table) {
+            if (false === $database->tableExists($table)) {
+                continue;
+            }
+
+            $sqlUnlink = 'update ' . $table . ' set nick = null'
+                . ' where nick is not null and nick not in (select nick from users)';
+            $database->exec($sqlUnlink);
+        }
     }
 }

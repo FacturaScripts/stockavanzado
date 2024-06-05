@@ -74,11 +74,12 @@ class MovimientoStock extends Base\ModelClass
 
     public function deleteAll(?int $idproducto = null): bool
     {
-        if (null !== $idproducto) {
-            return self::$dataBase->exec('DELETE FROM ' . static::tableName() . ' WHERE idproducto = ' . self::$dataBase->var2str($idproducto) . ';');
+        $sql = 'DELETE FROM ' . static::tableName();
+        if (!is_null($idproducto)) {
+            $sql .= ' WHERE idproducto = ' . self::$dataBase->var2str($idproducto);
         }
 
-        return self::$dataBase->exec('DELETE FROM ' . static::tableName() . ';');
+        return self::$dataBase->exec($sql);
     }
 
     public function getVariant(): Variante

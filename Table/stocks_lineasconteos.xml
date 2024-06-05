@@ -55,4 +55,8 @@
         <name>ca_stocks_lineasconteos_variantes</name>
         <type>FOREIGN KEY (referencia) REFERENCES variantes (referencia) ON DELETE CASCADE ON UPDATE CASCADE</type>
     </constraint>
+    <constraint>
+        <name>ca_stocks_lineasconteos_users</name>
+        <type>FOREIGN KEY (nick) REFERENCES users (nick) ON DELETE SET NULL ON UPDATE CASCADE</type>
+    </constraint>
 </table>

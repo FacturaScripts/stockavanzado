@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2022-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -19,19 +19,21 @@
 
 namespace FacturaScripts\Test\Plugins;
 
+use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
+use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
 
-final class ConteoStockRebuildTest extends TestCase
+final class ConteoStockTest extends TestCase
 {
     use LogErrorsTrait;
     use RandomDataTrait;
 
-    public function testCreate()
+    public function testCreate(): void
     {
         // creamos un almacén
         $almacen = $this->getRandomWarehouse();
@@ -80,22 +82,76 @@ final class ConteoStockRebuildTest extends TestCase
         $this->assertEquals(4, $stock->pterecibir, 'stock-pterecibir-is-not-4');
         $this->assertEquals(2, $stock->reservada, 'stock-reservada-is-not-2');
 
+        // modificamos el conteo
+        $linea->cantidad = 40;
+        $this->assertTrue($linea->save(), 'stock-count-line-can-not-be-saved');
+        $this->assertTrue($conteo->updateStock(), 'stock-count-not-recalculate');
+
+        // comprobamos que ahora el stock sea 40, pero ptereceibir 4 y reservada 2
+        $stock->loadFromCode($stock->primaryColumnValue());
+        $this->assertEquals(40, $stock->cantidad, 'stock-quantity-is-not-40');
+        $this->assertEquals(4, $stock->pterecibir, 'stock-pterecibir-is-not-4');
+        $this->assertEquals(2, $stock->reservada, 'stock-reservada-is-not-2');
+
         // eliminamos el conteo
         $this->assertTrue($conteo->delete(), 'stock-count-can-not-be-deleted');
 
         // comprobamos que la línea ya no existe
         $this->assertFalse($linea->exists(), 'stock-count-line-still-exists');
 
-        // comprobamos que el stock sigue siendo 50, ptrecibir 4 y reservada 2
+        // comprobamos que el stock sigue siendo 40, ptrecibir 4 y reservada 2
         $stock->loadFromCode($stock->primaryColumnValue());
-        $this->assertEquals(50, $stock->cantidad, 'stock-quantity-is-not-50');
+        $this->assertEquals(40, $stock->cantidad, 'stock-quantity-is-not-40');
         $this->assertEquals(4, $stock->pterecibir, 'stock-pterecibir-is-not-4');
         $this->assertEquals(2, $stock->reservada, 'stock-reservada-is-not-2');
 
+        // comprobamos que no hay movimientos de stock
+        $movement = new MovimientoStock();
+        $whereRef = [new DataBaseWhere('referencia', $product->referencia)];
+        $this->assertFalse($movement->loadFromCode('', $whereRef), 'stock-movement-exists');
+
         // eliminamos
-        $this->assertTrue($stock->delete(), 'stock-can-not-be-deleted');
-        $this->assertTrue($product->delete(), 'product-can-not-be-deleted');
-        $this->assertTrue($almacen->delete(), 'warehouse-can-not-be-deleted');
+        $this->assertTrue($stock->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($almacen->delete());
+    }
+
+    public function testCantCreateWithoutWarehouse(): void
+    {
+        // intentamos crear un conteo sin almacén
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = null;
+        $conteo->observaciones = 'Test';
+        $this->assertFalse($conteo->save(), 'stock-count-can-be-saved-without-warehouse');
+    }
+
+    public function testCantCreateOnInvalidWarehouse(): void
+    {
+        // intentamos crear un conteo en un almacén inexistente
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = 'invalid';
+        $conteo->observaciones = 'Test';
+        $this->assertFalse($conteo->save(), 'stock-count-can-be-saved-with-invalid-warehouse');
+    }
+
+    public function testEscapeHtml(): void
+    {
+        // creamos un almacén
+        $almacen = $this->getRandomWarehouse();
+        $this->assertTrue($almacen->save(), 'almacen-can-not-be-saved');
+
+        // creamos un conteo con html en las observaciones
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $almacen->codalmacen;
+        $conteo->observaciones = '<script>alert("XSS")</script>';
+        $this->assertTrue($conteo->save(), 'stock-count-can-not-be-saved');
+
+        // comprobamos que se ha escapado el html
+        $this->assertEquals('&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;', $conteo->observaciones, 'html-not-escaped');
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($almacen->delete());
     }
 
     protected function tearDown(): void

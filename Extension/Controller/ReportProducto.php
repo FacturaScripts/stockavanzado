@@ -39,9 +39,12 @@ class ReportProducto
     protected function createViewsMovements(): Closure
     {
         return function ($viewName = 'ListMovimientoProducto') {
-            $this->addView($viewName, 'Join\MovimientoProducto', 'movements', 'fas fa-truck-loading');
-            $this->addOrderBy($viewName, ['cantidad'], 'quantity');
-            $this->addSearchFields($viewName, ['sm.referencia', 'p.descripcion']);
+            $this->addView($viewName, 'Join\MovimientoProducto', 'movements', 'fas fa-truck-loading')
+                ->addOrderBy(['cantidad'], 'quantity')
+                ->addSearchFields(['sm.referencia', 'p.descripcion'])
+                ->setSettings('btnDelete', false)
+                ->setSettings('btnNew', false)
+                ->setSettings('checkBoxes', false);
 
             // filtros
             $this->addFilterPeriod($viewName, 'fecha', 'date', 'sm.fecha');
@@ -63,11 +66,6 @@ class ReportProducto
             $this->addFilterNumber($viewName, 'cantidadlt', 'quantity', 'cantidad', '<=');
 
             $this->addFilterCheckbox($viewName, 'ex-conteo', 'without-stock-count', 'sm.docmodel', '!=', 'ConteoStock');
-
-            // desactivamos los botones nuevo y eliminar
-            $this->setSettings($viewName, 'btnDelete', false);
-            $this->setSettings($viewName, 'btnNew', false);
-            $this->setSettings($viewName, 'checkBoxes', false);
         };
     }
 }

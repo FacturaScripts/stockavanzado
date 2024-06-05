@@ -20,7 +20,9 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Lib\StockRebuild;
+use FacturaScripts\Dinamic\Model\MovimientoStock;
 
 /**
  * Description of ListProducto
@@ -37,7 +39,7 @@ class ListProducto
                     'action' => 'rebuild-stock',
                     'color' => 'warning',
                     'confirm' => true,
-                    'icon' => 'fas fa-magic',
+                    'icon' => 'fa-solid fa-wand-magic-sparkles',
                     'label' => 'rebuild-stock'
                 ]);
             }
@@ -47,9 +49,18 @@ class ListProducto
     protected function execPreviousAction(): Closure
     {
         return function ($action) {
-            if ($action === 'rebuild-stock') {
-                StockRebuild::rebuild();
+            if ($action != 'rebuild-stock') {
+                return;
             }
+
+            // si no hay movimientos, no hacemos nada
+            $movimiento = new MovimientoStock();
+            if ($movimiento->count() === 0) {
+                Tools::log()->warning('no-movements-to-rebuild-stock');
+                return;
+            }
+
+            StockRebuild::rebuild();
         };
     }
 }

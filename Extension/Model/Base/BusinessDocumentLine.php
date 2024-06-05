@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,7 +20,7 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Model\Base;
 
 use Closure;
-use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
+use FacturaScripts\Dinamic\Lib\StockMovementManager;
 
 /**
  * Description of BusinessDocumentLine

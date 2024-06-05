@@ -36,16 +36,16 @@ class ListAlmacen
         return function () {
             $this->createViewsMovements();
             $this->createViewsTransfers();
-            $this->createViewsCountings();
+            $this->createViewsCounting();
         };
     }
 
-    protected function createViewsCountings(): Closure
+    protected function createViewsCounting(): Closure
     {
         return function ($viewName = 'ListConteoStock') {
-            $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll');
-            $this->addOrderBy($viewName, ['fechainicio'], 'date', 2);
-            $this->addSearchFields($viewName, ['idconteo', 'observaciones']);
+            $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll')
+                ->addOrderBy(['fechainicio'], 'date', 2)
+                ->addSearchFields(['idconteo', 'observaciones']);
 
             // Filters
             $this->addFilterPeriod($viewName, 'fechainicio', 'date', 'fechainicio');
@@ -62,10 +62,13 @@ class ListAlmacen
     protected function createViewsMovements(): Closure
     {
         return function ($viewName = 'ListMovimientoStock') {
-            $this->addView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
-            $this->addOrderBy($viewName, ['fecha', 'hora', 'id'], 'date', 2);
-            $this->addOrderBy($viewName, ['cantidad'], 'quantity');
-            $this->addSearchFields($viewName, ['documento', 'referencia']);
+            $this->addView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading')
+                ->addOrderBy(['fecha', 'hora', 'id'], 'date', 2)
+                ->addOrderBy(['cantidad'], 'quantity')
+                ->addSearchFields(['documento', 'referencia'])
+                ->setSettings('btnDelete', false)
+                ->setSettings('btnNew', false)
+                ->setSettings('checkBoxes', false);
 
             // Filters
             $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
@@ -76,11 +79,6 @@ class ListAlmacen
             if (count($warehouses) > 2) {
                 $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
             }
-
-            // disable buttons
-            $this->setSettings($viewName, 'btnDelete', false);
-            $this->setSettings($viewName, 'btnNew', false);
-            $this->setSettings($viewName, 'checkBoxes', false);
 
             if ($this->user->admin) {
                 $this->addButton($viewName, [
@@ -97,9 +95,9 @@ class ListAlmacen
     protected function createViewsTransfers(): Closure
     {
         return function ($viewName = 'ListTransferenciaStock') {
-            $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt');
-            $this->addOrderBy($viewName, ['fecha'], 'date', 2);
-            $this->addSearchFields($viewName, ['idtrans', 'observaciones']);
+            $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt')
+                ->addOrderBy(['fecha'], 'date', 2)
+                ->addSearchFields(['idtrans', 'observaciones']);
 
             // Filters
             $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');

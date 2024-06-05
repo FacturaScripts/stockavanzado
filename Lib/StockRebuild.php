@@ -36,7 +36,7 @@ class StockRebuild
     private static $database;
 
     /** @var int|null */
-    private static $idproducto = null;
+    protected static $idproducto = null;
 
     public static function rebuild(?int $idproducto = null): bool
     {
@@ -83,11 +83,9 @@ class StockRebuild
             return;
         }
 
+        $sql = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0'";
         if (null !== static::$idproducto) {
-            $sql = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0'"
-                . " WHERE idproducto = " . self::dataBase()->var2str(static::$idproducto) . ";";
-        } else {
-            $sql = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0';";
+            $sql .= " WHERE idproducto = " . self::dataBase()->var2str(static::$idproducto) . ";";
         }
 
         self::dataBase()->exec($sql);
@@ -101,7 +99,7 @@ class StockRebuild
             . " WHERE codalmacen = " . self::dataBase()->var2str($codalmacen);
 
         if (null !== static::$idproducto) {
-            $sql .= " AND idproducto = " . static::$idproducto;
+            $sql .= " AND idproducto = " . self::dataBase()->var2str(static::$idproducto);
         }
 
         $sql .= " GROUP BY 1";
@@ -144,7 +142,7 @@ class StockRebuild
             . " WHERE l.referencia IS NOT NULL";
 
         if (null !== static::$idproducto) {
-            $sql .= " AND l.idproducto = " . static::$idproducto;
+            $sql .= " AND l.idproducto = " . self::dataBase()->var2str(static::$idproducto);
         }
 
         $sql .= " AND l.actualizastock = '2'"
@@ -156,7 +154,6 @@ class StockRebuild
                 $stockData[$ref] = [
                     'cantidad' => 0,
                     'codalmacen' => $codalmacen,
-                    'pterecibir' => 0,
                     'referencia' => $ref,
                     'reservada' => 0
                 ];
@@ -180,7 +177,7 @@ class StockRebuild
             . " WHERE l.referencia IS NOT NULL";
 
         if (null !== static::$idproducto) {
-            $sql .= " AND l.idproducto = " . static::$idproducto;
+            $sql .= " AND l.idproducto = " . self::dataBase()->var2str(static::$idproducto);
         }
 
         $sql .= " AND l.actualizastock = '-2'"
@@ -193,8 +190,7 @@ class StockRebuild
                     'cantidad' => 0,
                     'codalmacen' => $codalmacen,
                     'pterecibir' => 0,
-                    'referencia' => $ref,
-                    'reservada' => 0
+                    'referencia' => $ref
                 ];
             }
 

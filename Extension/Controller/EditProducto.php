@@ -25,9 +25,9 @@ use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuild;
-use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
+use FacturaScripts\Dinamic\Model\Stock;
 
 /**
  * Description of EditProducto
@@ -90,17 +90,7 @@ class EditProducto
     {
         return function () {
             // marcamos la columna de cantidad en el stock como no editable
-            $this->views['EditStock']->disableColumn('quantity', false, 'true');
-
-            if ($this->user->admin) {
-                $this->addButton('EditProducto', [
-                    'action' => 'rebuild-stock',
-                    'color' => 'warning',
-                    'confirm' => true,
-                    'icon' => 'fas fa-magic',
-                    'label' => 'rebuild-stock'
-                ]);
-            }
+            $this->tab('EditStock')->disableColumn('quantity', false, 'true');
 
             // añadimos las nuevas pestañas
             $this->createViewsMovements();
@@ -110,38 +100,45 @@ class EditProducto
     protected function createViewsMovements(): Closure
     {
         return function ($viewName = 'ListMovimientoStock') {
-            $this->addListView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
-            $this->views[$viewName]->addOrderBy(['fecha', 'hora', 'id'], 'date', 2);
-            $this->views[$viewName]->addOrderBy(['cantidad'], 'quantity');
-            $this->views[$viewName]->searchFields = ['documento', 'referencia'];
+            $this->addListView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading')
+                ->addOrderBy(['fecha', 'hora', 'id'], 'date', 2)
+                ->addOrderBy(['cantidad'], 'quantity')
+                ->addSearchFields(['documento', 'referencia'])
+                ->disableColumn('product')
+                ->setSettings('btnDelete', false)
+                ->setSettings('btnNew', false)
+                ->setSettings('checkBoxes', false);
 
             // filtros
-            $this->views[$viewName]->addFilterPeriod('fecha', 'date', 'fecha');
-            $this->views[$viewName]->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=');
-            $this->views[$viewName]->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=');
-
-            // desactivamos la columna de producto
-            $this->views[$viewName]->disableColumn('product');
+            $this->listView($viewName)->addFilterPeriod('fecha', 'date', 'fecha')
+                ->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=')
+                ->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=');
 
             // desactivamos la columna de almacén si solo hay uno
             if (count(Almacenes::codeModel(false)) <= 1) {
-                $this->views[$viewName]->disableColumn('warehouse');
+                $this->listView($viewName)->disableColumn('warehouse');
             } else {
-                $this->views[$viewName]->addFilterSelect('codalmacen', 'warehouse', 'codalmacen', Almacenes::codeModel());
+                $this->listView($viewName)->addFilterSelect('codalmacen', 'warehouse', 'codalmacen', Almacenes::codeModel());
             }
 
             // desactivamos los botones de nuevo, eliminar y checkbox
-            $this->setSettings($viewName, 'btnDelete', false);
-            $this->setSettings($viewName, 'btnNew', false);
-            $this->setSettings($viewName, 'checkBoxes', false);
+
 
             if ($this->user->admin) {
                 $this->addButton($viewName, [
                     'action' => 'rebuild-movements',
                     'color' => 'warning',
                     'confirm' => true,
-                    'icon' => 'fas fa-magic',
+                    'icon' => 'fa-solid fa-repeat',
                     'label' => 'rebuild-movements'
+                ]);
+
+                $this->addButton($viewName, [
+                    'action' => 'rebuild-stock',
+                    'color' => 'warning',
+                    'confirm' => true,
+                    'icon' => 'fa-solid fa-dolly',
+                    'label' => 'rebuild-stock'
                 ]);
             }
         };
@@ -150,12 +147,18 @@ class EditProducto
     protected function execPreviousAction(): Closure
     {
         return function ($action) {
-            if ($action === 'change-stock') {
-                $this->changeStockAction();
-            } elseif ($action === 'rebuild-movements') {
-                $this->rebuildMovementsAction();
-            } elseif ($action === 'rebuild-stock') {
-                $this->rebuildStockAction();
+            switch ($action) {
+                case 'change-stock':
+                    $this->changeStockAction();
+                    break;
+
+                case 'rebuild-movements':
+                    $this->rebuildMovementsAction();
+                    break;
+
+                case 'rebuild-stock':
+                    $this->rebuildStockAction();
+                    break;
             }
         };
     }
@@ -169,7 +172,7 @@ class EditProducto
                 case 'ListMovimientoStock':
                     $where = [new DataBaseWhere('idproducto', $id)];
                     $view->loadData('', $where);
-                    $this->setSettings($viewName, 'active', $view->model->count($where) > 0);
+                    $view->setSettings('active', $view->model->count($where) > 0);
                     break;
             }
         };

@@ -68,6 +68,29 @@ class StockMovementManager
         self::$mods[] = $mod;
     }
 
+    /**
+     * @param LineaConteoStock $line
+     * @param ConteoStock $stockCount
+     */
+    public static function deleteLineCount(LineaConteoStock $line, ConteoStock $stockCount): bool
+    {
+        $docid = $stockCount->primaryColumnValue();
+        $docmodel = $stockCount->modelClassName();
+
+        $movement = new MovimientoStock();
+        $where = [
+            new DataBaseWhere('codalmacen', $stockCount->codalmacen),
+            new DataBaseWhere('docid', $docid),
+            new DataBaseWhere('docmodel', $docmodel),
+            new DataBaseWhere('referencia', $line->referencia)
+        ];
+        if (false === $movement->loadFromCode('', $where)) {
+            return true;
+        }
+
+        return $movement->delete();
+    }
+
     public static function rebuild(?int $idproducto = null): void
     {
         static::$idproducto = $idproducto;

@@ -58,8 +58,8 @@ class EditTransferenciaStock extends EditController
 
     protected function createViewsLines(string $viewName = 'EditLineaTransferenciaStock'): void
     {
-        $this->addEditListView($viewName, 'LineaTransferenciaStock', 'lines');
-        $this->views[$viewName]->setInline(true);
+        $this->addEditListView($viewName, 'LineaTransferenciaStock', 'lines')
+            ->setInline(true);
     }
 
     /**

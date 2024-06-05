@@ -30,7 +30,6 @@ use FacturaScripts\Core\Tools;
  */
 class ReportStock extends ListController
 {
-
     public function getPageData(): array
     {
         $data = parent::getPageData();
@@ -45,14 +44,14 @@ class ReportStock extends ListController
         $this->createViewsStock();
         $this->createViewsMovements();
         $this->createViewsTransfers();
-        $this->createViewsCountings();
+        $this->createViewsCounting();
     }
 
-    protected function createViewsCountings(string $viewName = 'ListConteoStock')
+    protected function createViewsCounting(string $viewName = 'ListConteoStock'): void
     {
-        $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll');
-        $this->addOrderBy($viewName, ['fechainicio'], 'date', 2);
-        $this->addSearchFields($viewName, ['idconteo', 'observaciones']);
+        $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll')
+            ->addOrderBy(['fechainicio'], 'date', 2)
+            ->addSearchFields(['idconteo', 'observaciones']);
 
         // Filters
         $this->addFilterPeriod($viewName, 'fechainicio', 'date', 'fechainicio');
@@ -61,12 +60,12 @@ class ReportStock extends ListController
         $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
     }
 
-    protected function createViewsMovements(string $viewName = 'ListMovimientoStock')
+    protected function createViewsMovements(string $viewName = 'ListMovimientoStock'): void
     {
-        $this->addView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
-        $this->addOrderBy($viewName, ['fecha', 'hora', 'id'], 'date', 2);
-        $this->addOrderBy($viewName, ['cantidad'], 'quantity');
-        $this->addSearchFields($viewName, ['documento', 'referencia']);
+        $this->addView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading')
+            ->addOrderBy(['fecha', 'hora', 'id'], 'date', 2)
+            ->addOrderBy(['cantidad'], 'quantity')
+            ->addSearchFields(['documento', 'referencia']);
 
         // Filters
         $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
@@ -80,15 +79,15 @@ class ReportStock extends ListController
         $this->setSettings($viewName, 'checkBoxes', false);
     }
 
-    protected function createViewsStock(string $viewName = 'StockProducto')
+    protected function createViewsStock(string $viewName = 'StockProducto'): void
     {
-        $this->addView($viewName, 'Join\StockProducto', 'stock', 'fas fa-dolly');
-        $this->addOrderBy($viewName, ['referencia', 'codalmacen'], 'reference');
-        $this->addOrderBy($viewName, ['disponible'], 'available');
-        $this->addOrderBy($viewName, ['cantidad'], 'quantity', 2);
-        $this->addOrderBy($viewName, ['coste'], 'cost-price');
-        $this->addOrderBy($viewName, ['total'], 'total');
-        $this->addSearchFields($viewName, ['productos.descripcion', 'stocks.referencia']);
+        $this->addView($viewName, 'Join\StockProducto', 'stock', 'fas fa-dolly')
+            ->addOrderBy(['referencia', 'codalmacen'], 'reference')
+            ->addOrderBy(['disponible'], 'available')
+            ->addOrderBy(['cantidad'], 'quantity', 2)
+            ->addOrderBy(['coste'], 'cost-price')
+            ->addOrderBy(['total'], 'total')
+            ->addSearchFields(['productos.descripcion', 'stocks.referencia']);
 
         // filters
         $i18n = Tools::lang();
@@ -136,11 +135,11 @@ class ReportStock extends ListController
         $this->setSettings($viewName, 'clickable', false);
     }
 
-    protected function createViewsTransfers(string $viewName = 'ListTransferenciaStock')
+    protected function createViewsTransfers(string $viewName = 'ListTransferenciaStock'): void
     {
-        $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt');
-        $this->addOrderBy($viewName, ['fecha'], 'date', 2);
-        $this->addSearchFields($viewName, ['idtrans', 'observaciones']);
+        $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt')
+            ->addOrderBy(['fecha'], 'date', 2)
+            ->addSearchFields(['idtrans', 'observaciones']);
 
         // Filters
         $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');

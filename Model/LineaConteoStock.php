@@ -23,11 +23,10 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base;
 use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
-use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
-use FacturaScripts\Dinamic\Lib\StockRebuild;
 
 /**
  * Description of LineaConteoStock
@@ -69,31 +68,14 @@ class LineaConteoStock extends Base\ModelClass
 
     public function delete(): bool
     {
-        // buscamos el movimiento de stock asociado a la línea
-        $conteo = $this->getConteo();
-        $movement = new MovimientoStock();
-        $where = [
-            new DataBaseWhere('codalmacen', $conteo->codalmacen),
-            new DataBaseWhere('docid', $conteo->primaryColumnValue()),
-            new DataBaseWhere('docmodel', $conteo->modelClassName()),
-            new DataBaseWhere('referencia', $this->referencia)
-        ];
-
-        // si no existe el movimiento, eliminamos la línea
-        if (false === $movement->loadFromCode('', $where)) {
-            return parent::delete();
-        }
-
-        // si no se puede eliminar el movimiento, terminamos
-        if (false === $movement->delete()) {
+        if (false === parent::delete()) {
             return false;
         }
 
-        // reconstruimos el stock del producto
-        StockRebuild::rebuild($movement->idproducto);
+        // eliminamos el movimiento de stock
+        StockMovementManager::deleteLineCount($this, $this->getConteo());
 
-        // finalmente eliminamos la línea
-        return parent::delete();
+        return true;
     }
 
     public function getConteo(): ConteoStock
@@ -136,12 +118,12 @@ class LineaConteoStock extends Base\ModelClass
 
     public function save(): bool
     {
-        if (parent::save()) {
-            StockMovementManager::updateLineCount($this, $this->getConteo());
-            return true;
+        if (false === parent::save()) {
+            return false;
         }
 
-        return false;
+        StockMovementManager::updateLineCount($this, $this->getConteo());
+        return true;
     }
 
     public static function tableName(): string

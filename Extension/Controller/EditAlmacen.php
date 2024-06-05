@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -40,39 +40,31 @@ class EditAlmacen
     protected function createViewsCounts(): Closure
     {
         return function ($viewName = 'ListConteoStock') {
-            $this->addListView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll');
-            $this->views[$viewName]->addOrderBy(['fechainicio'], 'date', 2);
-            $this->views[$viewName]->searchFields = ['observaciones'];
-
-            // disable column
-            $this->views[$viewName]->disableColumn('warehouse');
-
-            // disable buttons
-            $this->setSettings($viewName, 'btnDelete', false);
-            $this->setSettings($viewName, 'checkBoxes', false);
+            $this->addListView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll')
+                ->addOrderBy(['fechainicio'], 'date', 2)
+                ->addSearchFields(['observaciones'])
+                ->disableColumn('warehouse')
+                ->setSettings('btnDelete', false)
+                ->setSettings('checkBoxes', false);
         };
     }
 
     protected function createViewsMovements(): Closure
     {
         return function ($viewName = 'ListMovimientoStock') {
-            $this->addListView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading');
-            $this->views[$viewName]->addOrderBy(['fecha', 'hora', 'id'], 'date', 2);
-            $this->views[$viewName]->addOrderBy(['cantidad'], 'quantity');
-            $this->views[$viewName]->searchFields = ['documento', 'referencia'];
+            $this->addListView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading')
+                ->addOrderBy(['fecha', 'hora', 'id'], 'date', 2)
+                ->addOrderBy(['cantidad'], 'quantity')
+                ->addSearchFields(['documento', 'referencia'])
+                ->disableColumn('warehouse')
+                ->setSettings('btnDelete', false)
+                ->setSettings('btnNew', false)
+                ->setSettings('checkBoxes', false);
 
             // filters
-            $this->views[$viewName]->addFilterPeriod('fecha', 'date', 'fecha');
-            $this->views[$viewName]->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=');
-            $this->views[$viewName]->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=');
-
-            // disable column
-            $this->views[$viewName]->disableColumn('warehouse');
-
-            // disable buttons
-            $this->setSettings($viewName, 'btnDelete', false);
-            $this->setSettings($viewName, 'btnNew', false);
-            $this->setSettings($viewName, 'checkBoxes', false);
+            $this->listView($viewName)->addFilterPeriod('fecha', 'date', 'fecha')
+                ->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=')
+                ->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=');
         };
     }
 

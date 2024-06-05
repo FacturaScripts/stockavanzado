@@ -45,7 +45,6 @@ class EditConteoStock extends EditController
         $data['menu'] = 'warehouse';
         $data['title'] = 'stock-count';
         $data['icon'] = 'fas fa-scroll';
-        $data['showonmenu'] = false;
         return $data;
     }
 
