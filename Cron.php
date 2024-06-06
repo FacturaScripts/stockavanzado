@@ -20,6 +20,7 @@
 namespace FacturaScripts\Plugins\StockAvanzado;
 
 use FacturaScripts\Core\Template\CronClass;
+use FacturaScripts\Dinamic\Lib\InitialStockMovement;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockValue;
 
@@ -39,6 +40,13 @@ final class Cron extends CronClass
             ->every(StockValue::JOB_PERIOD)
             ->run(function () {
                 StockValue::updateAll();
+            });
+
+        // con este proceso añadimos un conteo inicial a los productos que no tengan movimientos
+        $this->job(InitialStockMovement::JOB_NAME)
+            ->every(InitialStockMovement::JOB_PERIOD)
+            ->run(function () {
+                InitialStockMovement::run();
             });
     }
 }
