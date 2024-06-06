@@ -2,6 +2,7 @@
     "applied-stock-count": "Aplicado el stock del conteo %code%",
     "new-quantity": "Nova quantitat",
     "new-quantity-description": "Introduïu la quantitat",
+    "no-movements-to-rebuild-stock": "No hay movimientos de stock para poder reconstruirlo",
     "reason-for-change": "Motiu del canvi",
     "rebuild-movements": "Reconstruir moviments",
     "rebuilt-stock": "Stock reconstruït",

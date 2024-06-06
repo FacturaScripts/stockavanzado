@@ -2,6 +2,7 @@
     "applied-stock-count": "%code% zenbaketaren stocka aplikatu da",
     "new-quantity": "Kopuru berria",
     "new-quantity-description": "Sartu zenbatekoa",
+    "no-movements-to-rebuild-stock": "No hay movimientos de stock para poder reconstruirlo",
     "reason-for-change": "Aldaketaren arrazoia",
     "rebuild-movements": "Mugimenduak berritu",
     "rebuilt-stock": "Berritutako stocka",

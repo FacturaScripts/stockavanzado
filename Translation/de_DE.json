@@ -2,6 +2,7 @@
     "applied-stock-count": "Bestand des Zählens %code% angewendet",
     "new-quantity": "Nueva cantidad",
     "new-quantity-description": "Introduzca la cantidad",
+    "no-movements-to-rebuild-stock": "No hay movimientos de stock para poder reconstruirlo",
     "reason-for-change": "Motivo del cambio",
     "rebuild-movements": "rebuild-movements",
     "rebuilt-stock": "rebuilt-stock",

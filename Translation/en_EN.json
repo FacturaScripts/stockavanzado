@@ -2,6 +2,7 @@
     "applied-stock-count": "Applied the stock of the count %code%",
     "new-quantity": "New quantity",
     "new-quantity-description": "Enter quantity",
+    "no-movements-to-rebuild-stock": "There are no stock movements to rebuild",
     "reason-for-change": "Reason for change",
     "rebuild-movements": "Rebuild movements",
     "rebuilt-stock": "Rebuilt stock",
