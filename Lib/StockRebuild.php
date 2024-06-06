@@ -83,12 +83,18 @@ class StockRebuild
             return;
         }
 
-        $sql = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0'";
+        $sqlStock = "UPDATE stocks SET cantidad = '0', disponible = '0', pterecibir = '0', reservada = '0'";
+        $sqlVariante = "UPDATE variantes SET stockfis = '0'";
+        $sqlProducto = "UPDATE productos SET stockfis = '0'";
         if (null !== static::$idproducto) {
-            $sql .= " WHERE idproducto = " . self::dataBase()->var2str(static::$idproducto) . ";";
+            $sqlStock .= " WHERE idproducto = " . self::dataBase()->var2str(static::$idproducto) . ";";
+            $sqlVariante .= " WHERE idproducto = " . self::dataBase()->var2str(static::$idproducto) . ";";
+            $sqlProducto .= " WHERE idproducto = " . self::dataBase()->var2str(static::$idproducto) . ";";
         }
 
-        self::dataBase()->exec($sql);
+        self::dataBase()->exec($sqlStock);
+        self::dataBase()->exec($sqlVariante);
+        self::dataBase()->exec($sqlProducto);
     }
 
     protected static function calculateStockData(string $codalmacen): array
