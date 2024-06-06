@@ -1,5 +1,6 @@
 {
     "applied-stock-count": "Aplicado el stock del conteo %code%",
+    "initial-stock-movements": "Conteo inicial automático",
     "new-quantity": "Nova quantitat",
     "new-quantity-description": "Introduïu la quantitat",
     "no-movements-to-rebuild-stock": "No hay movimientos de stock para poder reconstruirlo",

@@ -1,5 +1,6 @@
 {
     "applied-stock-count": "Bestand des Zählens %code% angewendet",
+    "initial-stock-movements": "Conteo inicial automático",
     "new-quantity": "Nueva cantidad",
     "new-quantity-description": "Introduzca la cantidad",
     "no-movements-to-rebuild-stock": "No hay movimientos de stock para poder reconstruirlo",

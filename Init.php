@@ -24,8 +24,8 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Base\InitClass;
 use FacturaScripts\Core\Model\Role;
 use FacturaScripts\Core\Model\RoleAccess;
-use FacturaScripts\Dinamic\Model\Join\MovimientoProducto;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
+use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\TransferenciaStock;
 
 /**
@@ -49,7 +49,7 @@ class Init extends InitClass
 
     public function update()
     {
-        new MovimientoProducto();
+        new MovimientoStock();
 
         $this->createRoleForPlugin();
         $this->migrateData();

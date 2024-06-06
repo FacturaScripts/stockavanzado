@@ -35,18 +35,18 @@ final class Cron extends CronClass
                 StockMovementManager::rebuild();
             });
 
-        // con este proceso recalculamos el valor del stock de cada almacén
-        $this->job(StockValue::JOB_NAME)
-            ->every(StockValue::JOB_PERIOD)
-            ->run(function () {
-                StockValue::updateAll();
-            });
-
         // con este proceso añadimos un conteo inicial a los productos que no tengan movimientos
         $this->job(InitialStockMovement::JOB_NAME)
             ->every(InitialStockMovement::JOB_PERIOD)
             ->run(function () {
                 InitialStockMovement::run();
+            });
+
+        // con este proceso recalculamos el valor del stock de cada almacén
+        $this->job(StockValue::JOB_NAME)
+            ->every(StockValue::JOB_PERIOD)
+            ->run(function () {
+                StockValue::updateAll();
             });
     }
 }
