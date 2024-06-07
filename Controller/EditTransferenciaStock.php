@@ -108,10 +108,11 @@ class EditTransferenciaStock extends EditController
             $newLine->idtrans = $transferencia->idtrans;
             $newLine->idproducto = $variante->idproducto;
             $newLine->referencia = $variante->referencia;
+        } else {
+            $newLine->cantidad++;
         }
 
         // guardamos la línea
-        $newLine->cantidad++;
         if (false === $newLine->save()) {
             Tools::log()->error('record-save-error');
             return ['addLine' => false];
