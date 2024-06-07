@@ -66,7 +66,10 @@ class StockProducto extends JoinModel
             'reservada' => 'stocks.reservada',
             'stockmax' => 'stocks.stockmax',
             'stockmin' => 'stocks.stockmin',
-            'total' => 'sum(stocks.cantidad*variantes.coste)'
+            'total_coste' => 'sum(stocks.cantidad*variantes.coste)',
+            'total_precio' => 'sum(stocks.cantidad*variantes.precio)',
+            'total_movimientos' => 'COALESCE(SUM(stocks_movimientos.cantidad), 0)',
+            'tipo' => 'productos.tipo',
         ];
     }
 
@@ -76,7 +79,7 @@ class StockProducto extends JoinModel
      */
     protected function getGroupFields(): string
     {
-        return 'stocks.referencia, stocks.codalmacen';
+        return 'variantes.referencia, variantes.precio, variantes.coste, productos.tipo, stocks.cantidad';
     }
 
     /**
@@ -85,8 +88,9 @@ class StockProducto extends JoinModel
      */
     protected function getSQLFrom(): string
     {
-        return 'stocks'
-            . ' LEFT JOIN variantes ON variantes.referencia = stocks.referencia'
+        return 'variantes'
+            . ' LEFT JOIN stocks_movimientos ON variantes.referencia = stocks_movimientos.referencia'
+            . ' LEFT JOIN stocks ON variantes.referencia = stocks.referencia'
             . ' LEFT JOIN productos ON productos.idproducto = variantes.idproducto';
     }
 
@@ -96,6 +100,6 @@ class StockProducto extends JoinModel
      */
     protected function getTables(): array
     {
-        return ['productos', 'stocks', 'variantes'];
+        return ['productos', 'stocks', 'variantes', 'stocks_movimientos'];
     }
 }

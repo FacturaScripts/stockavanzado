@@ -22,6 +22,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\ListController;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Dinamic\Lib\ProductType;
 
 /**
  * Description of ReportStock
@@ -58,6 +59,11 @@ class ReportStock extends ListController
         $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
         $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
         $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
+
+        // disable buttons
+        $this->setSettings($viewName, 'btnDelete', false);
+        $this->setSettings($viewName, 'btnNew', false);
+        $this->setSettings($viewName, 'checkBoxes', false);
     }
 
     protected function createViewsMovements(string $viewName = 'ListMovimientoStock'): void
@@ -85,6 +91,7 @@ class ReportStock extends ListController
             ->addOrderBy(['referencia', 'codalmacen'], 'reference')
             ->addOrderBy(['disponible'], 'available')
             ->addOrderBy(['cantidad'], 'quantity', 2)
+            ->addOrderBy(['total_movimientos'], 'movements')
             ->addOrderBy(['coste'], 'cost-price')
             ->addOrderBy(['total'], 'total')
             ->addSearchFields(['productos.descripcion', 'stocks.referencia']);
@@ -114,6 +121,12 @@ class ReportStock extends ListController
             ['label' => $i18n->trans('public'), 'where' => [new DataBaseWhere('productos.publico', true)]],
         ]);
 
+        $types = [];
+        foreach (ProductType::all() as $key => $key) {
+            $types[$key] = $i18n->trans($key);
+        }
+        $this->addFilterSelect($viewName, 'tipo', 'type', 'tipo', $types);
+
         $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
         $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
 
@@ -132,7 +145,6 @@ class ReportStock extends ListController
         $this->setSettings($viewName, 'btnDelete', false);
         $this->setSettings($viewName, 'btnNew', false);
         $this->setSettings($viewName, 'checkBoxes', false);
-        $this->setSettings($viewName, 'clickable', false);
     }
 
     protected function createViewsTransfers(string $viewName = 'ListTransferenciaStock'): void
@@ -147,5 +159,10 @@ class ReportStock extends ListController
         $this->addFilterSelect($viewName, 'codalmacenorigen', 'origin-warehouse', 'codalmacenorigen', $warehouses);
         $this->addFilterSelect($viewName, 'codalmacendestino', 'destination-warehouse', 'codalmacendestino', $warehouses);
         $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
+
+        // disable buttons
+        $this->setSettings($viewName, 'btnDelete', false);
+        $this->setSettings($viewName, 'btnNew', false);
+        $this->setSettings($viewName, 'checkBoxes', false);
     }
 }
