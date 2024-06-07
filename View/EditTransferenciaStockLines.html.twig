@@ -1,0 +1,242 @@
+<link rel="stylesheet" href="{{ asset('node_modules/jquery-ui-dist/jquery-ui.min.css') }}"/>
+<script src="{{ asset('node_modules/jquery-ui-dist/jquery-ui.min.js') }}"></script>
+
+<div class="card shadow mb-3">
+    <div class="card-body pl-3 pt-3 pr-3 pb-0">
+        <h2 class="h5 card-title">
+            {{ trans('lines') }}
+            <span id="countLines" class="badge badge-secondary">{{ fsc.getCurrentView().count }}</span>
+        </h2>
+        <p>{{ trans('stock-count-line-p') }}</p>
+        <div class="form-row">
+            <div class="col-sm-3">
+                <div class="input-group mb-3">
+                    <div class="input-group-prepend">
+                            <span class="input-group-text">
+                                <i class="fas fa-barcode"></i>
+                            </span>
+                    </div>
+                    <input type="text" name="codbarras" id="addLineBarras" class="form-control"
+                           placeholder="{{ trans('barcode') }}" autofocus/>
+                </div>
+            </div>
+            <div class="col-sm-3">
+                <div class="input-group mb-3">
+                    <div class="input-group-prepend">
+                            <span class="input-group-text">
+                                <i class="fas fa-hashtag"></i>
+                            </span>
+                    </div>
+                    <input type="text" name="referencia" id="addLineReferencia" class="form-control"
+                           placeholder="{{ trans('reference') }}"/>
+                </div>
+            </div>
+            <div class="col-sm">
+                <button type="button" class="btn btn-success" onclick="addLine();">{{ trans('add') }}</button>
+                <button type="button" class="btn btn-outline-primary" data-toggle="modal" data-target="#preloadModal">
+                    {{ trans('preload') }}
+                </button>
+                <div class="modal fade" id="preloadModal" tabindex="-1" aria-labelledby="preloadModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="preloadModalLabel">{{ trans('preload-products') }}</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    {{ trans('family') }}
+                                    <select id="preloadFamily" class="form-control">
+                                        <option value="">{{ trans('all') }}</option>
+                                        <option value="">------</option>
+                                        {% for family in fsc.getFamilySelect() %}
+                                            <option value="{{ family.value }}">{{ family.description }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="preloadRadios" id="preloadRadios1" value="one" checked>
+                                    <label class="form-check-label" for="preloadRadios1">
+                                        {{ trans('start-with-one-stock') }}
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="preloadRadios" id="preloadRadios2" value="product">
+                                    <label class="form-check-label" for="preloadRadios2">
+                                        {{ trans('start-with-product-stock') }}
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary btn-spin-action" data-dismiss="modal">{{ trans('close') }}</button>
+                                <button type="button" class="btn btn-primary btn-spin-action" onclick="preloadProduct()">{{ trans('save') }}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+            <tr>
+                <th>{{ trans('reference') }}</th>
+                <th class="text-right" style="width: 15%;">{{ trans('quantity') }}</th>
+                <th class="text-right"></th>
+            </tr>
+            </thead>
+            <tbody id="conteoLines"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        $('#addLineReferencia, #addLineBarras').keypress(function(e){
+            if(e.which === 13){
+                e.preventDefault();
+                addLine();
+            }
+        });
+
+        // al pulsar enter sobre la clase .qty-line se actualiza la línea
+        $(document).on('keypress', '.qty-line', function(e){
+            if(e.which === 13){
+                e.preventDefault();
+                let div = $(this).parent();
+                div.find('.btn-update-line').click();
+            }
+        });
+
+        $("#addLineReferencia").autocomplete({
+            source: function (request, response) {
+                $.ajax({
+                    method: "POST",
+                    url: '{{ fsc.url() }}',
+                    data: {ajax: true, action: 'autocomplete-product', term: request.term},
+                    dataType: "json",
+                    success: function (results) {
+                        let values = [];
+                        results.list.forEach(function (element) {
+                            if (element.key === null || element.key === element.value) {
+                                values.push(element);
+                            } else {
+                                values.push({key: element.key, value: element.key + " | " + element.value});
+                            }
+                        });
+                        response(values);
+                    },
+                    error: function (msg) {
+                        alert(msg.status + " " + msg.responseText);
+                    }
+                });
+            },
+            select: function (event, ui) {
+                if (ui.item.key !== null) {
+                    const value = ui.item.value.split(" | ");
+                    $('#addLineReferencia').val(value[0]);
+                    addLine();
+                }
+            }
+        });
+
+        renderLines();
+    });
+
+    function addLine() {
+        let formData = new FormData();
+        formData.append('referencia', $('#addLineReferencia').val());
+        formData.append('codbarras', $('#addLineBarras').val());
+        sendTransferenciaFormAction('addLine', formData);
+    }
+
+    function deleteLine(idlinea) {
+        let formData = new FormData();
+        formData.append('idlinea', idlinea);
+        sendTransferenciaFormAction('deleteLine', formData);
+    }
+
+    function preloadProduct() {
+        let formData = new FormData();
+        formData.append('family', $('#preloadFamily').val());
+        formData.append('option', $('input[name=preloadRadios]:checked').val());
+        sendTransferenciaFormAction('preloadProduct', formData);
+    }
+
+    function renderLines() {
+        sendTransferenciaFormAction('renderLines', new FormData());
+    }
+
+    function sendTransferenciaFormAction(action, formData) {
+        animateSpinner('add');
+        formData.append('action', action);
+        formData.append('ajax', true);
+
+        fetch(window.location, {
+            method: 'POST',
+            body: formData
+        }).then(function (response) {
+            if (response.ok) {
+                return response.json();
+            }
+            return Promise.reject(response);
+        }).then(function (data) {
+            if (data.addLine) {
+                $('#addLineReferencia').val('');
+                $('#addLineBarras').val('');
+                renderLines();
+            }
+
+            if (data.deleteLine) {
+                renderLines();
+            }
+
+            if (data.preloadProduct) {
+                $('#preloadFamily').val('');
+                $('input[name=preloadRadios]:checked').val('cero');
+                $('#preloadModal').modal('hide');
+                renderLines();
+            }
+
+            if (data.renderLines) {
+                $('#conteoLines').html(data.html);
+                $('#countLines').text(data.count);
+            }
+
+            if (data.updateLine) {
+                renderLines();
+            }
+
+            // ponemos el foco en el campo de código de barras
+            $('#addLineBarras').focus();
+
+            if (Array.isArray(data.messages)) {
+                data.messages.forEach(function (msg) {
+                    if (msg.level === 'danger') {
+                        setToast(msg.message, msg.level, '', 0);
+                    } else {
+                        setToast(msg.message, msg.level);
+                    }
+                });
+            }
+
+            animateSpinner('remove');
+        }).catch(function (error) {
+            alert('error TransferenciaStockLines');
+            console.warn(error);
+            animateSpinner('remove', false);
+        });
+
+        return false;
+    }
+
+    function updateLine(idlinea) {
+        let formData = new FormData();
+        formData.append('idlinea', idlinea);
+        formData.append('cantidad', $('#lineaCantidad' + idlinea).val());
+        sendTransferenciaFormAction('updateLine', formData);
+    }
+</script>
