@@ -20,18 +20,18 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Core\Lib\ExtendedController\BaseView;
 use FacturaScripts\Core\Lib\ExtendedController\EditController;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\Familia;
+use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\Variante;
-use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
 
 /**
  * Description of EditConteoStock
  *
- * @author Carlos Garcia Gomez <carlos@facturascripts.com>
+ * @author Carlos Garcia Gomez          <carlos@facturascripts.com>
+ * @author Daniel Fernández Giménez     <hola@danielfg.es>
  */
 class EditConteoStock extends EditController
 {
@@ -107,10 +107,11 @@ class EditConteoStock extends EditController
             $newLine->idconteo = $conteo->idconteo;
             $newLine->idproducto = $variante->idproducto;
             $newLine->referencia = $variante->referencia;
+        } else {
+            $newLine->cantidad++;
         }
 
         // guardamos la línea
-        $newLine->cantidad++;
         $newLine->fecha = Tools::dateTime();
         $newLine->nick = $this->user->nick;
         if (false === $newLine->save()) {
@@ -151,10 +152,9 @@ class EditConteoStock extends EditController
         $this->createViewsLines();
     }
 
-    protected function createViewsLines(string $viewName = 'ListLineaConteoStock')
+    protected function createViewsLines(string $viewName = 'EditConteoStockLines')
     {
-        $this->addListView($viewName, 'LineaConteoStock', 'lines', 'fas fa-list');
-        $this->views[$viewName]->template = 'EditConteoStockLines.html.twig';
+        $this->addHtmlView($viewName, $viewName, 'LineaConteoStock', 'lines', 'fas fa-list');
     }
 
     protected function deleteLineAction(): array
@@ -313,26 +313,6 @@ class EditConteoStock extends EditController
         ];
     }
 
-    /**
-     * @param string $viewName
-     * @param BaseView $view
-     */
-    protected function loadData($viewName, $view)
-    {
-        $mvn = $this->getMainViewName();
-
-        switch ($viewName) {
-            case 'ListLineaConteoStock':
-                $where = [new DataBaseWhere('idconteo', $this->getViewModelValue($mvn, 'idconteo'))];
-                $view->loadData('', $where, ['referencia' => 'ASC']);
-                break;
-
-            default:
-                parent::loadData($viewName, $view);
-                break;
-        }
-    }
-
     protected function preloadProductAction(): array
     {
         if (false === $this->permissions->allowUpdate) {
@@ -380,10 +360,11 @@ class EditConteoStock extends EditController
                 $newLine->idconteo = $conteo->idconteo;
                 $newLine->idproducto = $variant['idproducto'];
                 $newLine->referencia = $variant['referencia'];
+            } else {
+                $newLine->cantidad++;
             }
 
             // guardamos la línea
-            $newLine->cantidad++;
             $newLine->fecha = Tools::dateTime();
             $newLine->nick = $this->user->nick;
             if (false === $newLine->save()) {
