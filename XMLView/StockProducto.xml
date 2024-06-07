@@ -31,42 +31,48 @@
                 <values source="almacenes" fieldcode="codalmacen" fieldtitle="nombre" />
             </widget>
         </column>
-        <column name="manufacturer" order="130">
+        <column name="manufacturer" display="none" order="130">
             <widget type="autocomplete" fieldname="codfabricante" onclick="EditFabricante">
                 <values source="fabricantes" fieldcode="codfabricante" fieldtitle="nombre" />
             </widget>
         </column>
-        <column name="family" order="140">
+        <column name="family" display="none" order="140">
             <widget type="autocomplete" fieldname="codfamilia" onclick="EditFamilia">
                 <values source="familias" fieldcode="codfamilia" fieldtitle="descripcion" />
             </widget>
         </column>
-        <column name="purchases" display="none" order="145">
+        <column name="pending-reception" display="none" order="150">
             <widget type="number" fieldname="pterecibir" />
         </column>
-        <column name="reserved" display="none" order="147">
+        <column name="reserved" display="none" order="160">
             <widget type="number" fieldname="reservada" />
         </column>
-        <column name="available" display="right" order="150">
+        <column name="available" display="right" order="170">
             <widget type="number" fieldname="disponible" />
         </column>
-        <column name="quantity" display="right" order="160">
+        <column name="quantity" display="right" order="180">
             <widget type="number" fieldname="cantidad" />
         </column>
-        <column name="difference" display="none" order="165">
+        <column name="movements" display="right" order="190">
+            <widget type="number" fieldname="total_movimientos" />
+        </column>
+        <column name="difference" display="none" order="200">
             <widget type="number" fieldname="falta_sobra">
                 <option color="success">gt::0</option>
                 <option color="warning">lte::0</option>
             </widget>
         </column>
-        <column name="cost-price" display="right" order="170">
+        <column name="cost-price" display="right" order="210">
             <widget type="money" fieldname="coste" />
         </column>
-        <column name="total" display="right" order="180">
-            <widget type="money" fieldname="total" />
-        </column>
-        <column name="price" display="none" order="190">
+        <column name="price" order="220">
             <widget type="money" fieldname="precio" />
+        </column>
+        <column name="total-cost" display="right" order="230">
+            <widget type="money" fieldname="total_coste" />
+        </column>
+        <column name="total-price" display="right" order="240">
+            <widget type="money" fieldname="total_precio" />
         </column>
     </columns>
     <rows>
