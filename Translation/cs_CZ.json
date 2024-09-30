@@ -1,18 +1,18 @@
 {
     "applied-stock-count": "Aplicado el stock del conteo %code%",
-    "initial-stock-movements": "Conteo inicial automático",
+    "initial-stock-movements": "Automatický počáteční inventář",
     "new-quantity": "Nueva cantidad",
     "new-quantity-description": "Introduzca la cantidad",
-    "no-movements-to-rebuild-stock": "No hay movimientos de stock para poder reconstruirlo",
+    "no-movements-to-rebuild-stock": "Nejsou k dispozici žádné pohyby pro obnovení zásob",
     "reason-for-change": "Motivo del cambio",
     "rebuild-movements": "Reconstruir movimientos",
     "rebuilt-stock": "Stock reconstruido",
     "reconstructed-movements": "Movimientos de stock reconstruidos",
+    "start-with-one-stock": "Začněte s jedním skladem",
     "stock-count": "Conteo de stock",
     "stock-count-line-p": "Añade líneas a este listado escribiendo\/escaneando un código de barras o referencia. Si el producto ya estaba, se incrementa la cantidad.",
     "stock-counts": "Conteos",
-    "TransferenciaStock": "Převoznost zásob",
-    "valued-stock-cost": "Stock valorado a coste",
-    "valued-stock-price": "Stock valorado a precio",
-    "without-stock-count": "Excluir conteos"
+    "valued-stock-cost": "Oceněná zásoba za náklady",
+    "valued-stock-price": "Oceněná zásoba za cenu",
+    "without-stock-count": "Vyloučit inventář"
 }

@@ -8,10 +8,10 @@
     "rebuild-movements": "Reconstruir movimientos",
     "rebuilt-stock": "Stock reconstruido",
     "reconstructed-movements": "Movimientos de stock reconstruidos",
+    "start-with-one-stock": "Empieza con el stock a uno",
     "stock-count": "Conteo de stock",
     "stock-count-line-p": "Añade líneas a este listado escribiendo\/escaneando un código de barras o referencia. Si el producto ya estaba, se incrementa la cantidad.",
     "stock-counts": "Conteos",
-    "TransferenciaStock": "Transferencia de stock",
     "valued-stock-cost": "Stock valorado a coste",
     "valued-stock-price": "Stock valorado a precio",
     "without-stock-count": "Excluir conteos"

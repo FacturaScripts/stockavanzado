@@ -1,18 +1,18 @@
 {
     "applied-stock-count": "Aplicado el stock del conteo %code%",
-    "initial-stock-movements": "Conteo inicial automático",
+    "initial-stock-movements": "Comptatge inicial automàtic",
     "new-quantity": "Nueva cantidad",
     "new-quantity-description": "Introduzca la cantidad",
-    "no-movements-to-rebuild-stock": "No hay movimientos de stock para poder reconstruirlo",
+    "no-movements-to-rebuild-stock": "No hi ha moviments d'stock per poder reconstruir-lo",
     "reason-for-change": "Motivo del cambio",
     "rebuild-movements": "Reconstruir moviments",
     "rebuilt-stock": "Estoc reconstruït",
     "reconstructed-movements": "Moviments d'estoc reconstruïts",
+    "start-with-one-stock": "Comença amb l'estoc a un",
     "stock-count": "stock-count",
     "stock-count-line-p": "stock-count-line-p",
     "stock-counts": "stock-counts",
-    "TransferenciaStock": "Transferència d'Estoc",
-    "valued-stock-cost": "Stock valorado a coste",
-    "valued-stock-price": "Stock valorado a precio",
-    "without-stock-count": "Excluir conteos"
+    "valued-stock-cost": "S",
+    "valued-stock-price": "Estoc valorat a preu",
+    "without-stock-count": "Excloure comptatges"
 }
