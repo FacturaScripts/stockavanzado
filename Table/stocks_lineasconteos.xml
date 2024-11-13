@@ -8,7 +8,7 @@
 <table>
     <column>
         <name>cantidad</name>
-        <type>integer</type>
+        <type>float</type>
         <null>NO</null>
     </column>
     <column>
