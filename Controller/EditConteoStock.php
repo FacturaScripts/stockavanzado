@@ -297,8 +297,8 @@ class EditConteoStock extends EditController
                 . '<td class="align-middle"><a href="EditProducto?code=' . $line->idproducto . '" target="_blank">' . $line->referencia . '</a></td>'
                 . '<td class="text-right align-middle"><div class="input-group">'
                 . '<input type="number" id="lineaCantidad' . $line->idlinea . '" class="form-control text-right qty-line" value="' . $line->cantidad . '"/>'
-                . '<div class="input-group-append"><button class="btn btn-outline-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\'' . $line->idlinea .'\')" title="'
-                . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button></div></td>'
+                . '<div class="input-group-append"><button class="btn btn-outline-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
+                . $line->idlinea . '\')" title="' . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button></div></td>'
                 . '<td class="text-right align-middle">' . $line->nick . '</td>'
                 . '<td class="text-right align-middle">' . Tools::dateTime($line->fecha) . '</td>'
                 . '<td class="text-right align-middle"><button class="btn btn-danger btn-sm delete-line btn-spin-action" title="'
@@ -403,8 +403,12 @@ class EditConteoStock extends EditController
         }
 
         $lineaConteo->cantidad = (float)$this->request->request->get('cantidad');
-        $lineaConteo->fecha = Tools::dateTime();
-        $lineaConteo->nick = $this->user->nick;
+
+        if ($this->user->nick !== $lineaConteo->nick) {
+            $lineaConteo->fecha = Tools::dateTime();
+            $lineaConteo->nick = $this->user->nick;
+        }
+
         if (false === $lineaConteo->save()) {
             Tools::log()->error('record-save-error');
             return ['updateLine' => false];

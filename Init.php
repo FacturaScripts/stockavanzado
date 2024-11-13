@@ -21,9 +21,9 @@ namespace FacturaScripts\Plugins\StockAvanzado;
 
 use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Core\Base\InitClass;
 use FacturaScripts\Core\Model\Role;
 use FacturaScripts\Core\Model\RoleAccess;
+use FacturaScripts\Core\Template\InitClass;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\TransferenciaStock;
@@ -37,7 +37,7 @@ class Init extends InitClass
 {
     const ROLE_NAME = 'StockAvanzado';
 
-    public function init()
+    public function init(): void
     {
         $this->loadExtension(new Extension\Controller\EditAlmacen());
         $this->loadExtension(new Extension\Controller\EditProducto());
@@ -47,7 +47,11 @@ class Init extends InitClass
         $this->loadExtension(new Extension\Model\Base\BusinessDocumentLine());
     }
 
-    public function update()
+    public function uninstall(): void
+    {
+    }
+
+    public function update(): void
     {
         new MovimientoStock();
 

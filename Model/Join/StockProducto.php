@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 namespace FacturaScripts\Plugins\StockAvanzado\Model\Join;
 
 use FacturaScripts\Core\Model\Base\JoinModel;
@@ -28,7 +29,6 @@ use FacturaScripts\Dinamic\Model\Producto;
  */
 class StockProducto extends JoinModel
 {
-
     /**
      * Class constructor.
      * Set master model for controller actions.
@@ -41,10 +41,6 @@ class StockProducto extends JoinModel
         $this->setMasterModel(new Producto());
     }
 
-    /**
-     *
-     * @return array
-     */
     protected function getFields(): array
     {
         return [
@@ -73,19 +69,11 @@ class StockProducto extends JoinModel
         ];
     }
 
-    /**
-     *
-     * @return string
-     */
     protected function getGroupFields(): string
     {
         return 'variantes.referencia, variantes.precio, variantes.coste, productos.tipo, stocks.cantidad';
     }
 
-    /**
-     *
-     * @return string
-     */
     protected function getSQLFrom(): string
     {
         return 'variantes'
@@ -94,10 +82,6 @@ class StockProducto extends JoinModel
             . ' LEFT JOIN productos ON productos.idproducto = variantes.idproducto';
     }
 
-    /**
-     *
-     * @return array
-     */
     protected function getTables(): array
     {
         return ['productos', 'stocks', 'variantes', 'stocks_movimientos'];

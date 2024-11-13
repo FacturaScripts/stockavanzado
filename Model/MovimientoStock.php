@@ -116,7 +116,7 @@ class MovimientoStock extends Base\ModelClass
     public function url(string $type = 'auto', string $list = 'List'): string
     {
         $modelClass = '\\FacturaScripts\\Dinamic\\Model\\' . $this->docmodel;
-        if (!empty($this->docmodel) && \class_exists($modelClass)) {
+        if (!empty($this->docmodel) && class_exists($modelClass)) {
             $model = new $modelClass();
             if ($model->loadFromCode($this->docid)) {
                 return $model->url();

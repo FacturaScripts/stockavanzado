@@ -62,7 +62,8 @@ class EditAlmacen
                 ->setSettings('checkBoxes', false);
 
             // filters
-            $this->listView($viewName)->addFilterPeriod('fecha', 'date', 'fecha')
+            $this->listView($viewName)
+                ->addFilterPeriod('fecha', 'date', 'fecha')
                 ->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=')
                 ->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=');
         };

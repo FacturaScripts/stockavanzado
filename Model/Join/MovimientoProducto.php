@@ -27,7 +27,6 @@ use FacturaScripts\Dinamic\Model\Producto;
  */
 class MovimientoProducto extends JoinModel
 {
-
     public function __construct($data = [])
     {
         parent::__construct($data);
