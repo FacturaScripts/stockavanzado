@@ -31,6 +31,7 @@ final class Cron extends CronClass
         // añadimos este proceso al cron para no tener que hacerlo durante la instalación del plugin
         $this->job(StockMovementManager::JOB_NAME)
             ->every(StockMovementManager::JOB_PERIOD)
+            ->withoutOverlapping()
             ->run(function () {
                 StockMovementManager::rebuild();
             });
@@ -38,6 +39,7 @@ final class Cron extends CronClass
         // con este proceso añadimos un conteo inicial a los productos que no tengan movimientos
         $this->job(InitialStockMovement::JOB_NAME)
             ->every(InitialStockMovement::JOB_PERIOD)
+            ->withoutOverlapping()
             ->run(function () {
                 InitialStockMovement::run();
             });
@@ -45,6 +47,7 @@ final class Cron extends CronClass
         // con este proceso recalculamos el valor del stock de cada almacén
         $this->job(StockValue::JOB_NAME)
             ->every(StockValue::JOB_PERIOD)
+            ->withoutOverlapping()
             ->run(function () {
                 StockValue::updateAll();
             });
