@@ -246,15 +246,13 @@ class EditTransferenciaStock extends EditController
 
     protected function getRenderLines(): array
     {
-        $html = '';
-
         // permisos
         if (false === $this->permissions->allowUpdate) {
             Tools::log()->warning('not-allowed-update');
             return [
                 'renderLines' => false,
                 'count' => 0,
-                'html' => $html,
+                'html' => $this->getRenderLinesTable([], []),
             ];
         }
 
@@ -264,7 +262,7 @@ class EditTransferenciaStock extends EditController
             return [
                 'renderLines' => false,
                 'count' => 0,
-                'html' => $html,
+                'html' => $this->getRenderLinesTable([], []),
             ];
         }
 
@@ -273,36 +271,77 @@ class EditTransferenciaStock extends EditController
 
         // si no hay líneas, terminamos
         if (empty($lines)) {
-            $html = '<tr class="table-warning">'
-                . '<td colspan="3">' . Tools::lang()->trans('no-data') . '</td>'
-                . '</tr>';
-
             return [
                 'renderLines' => true,
                 'count' => 0,
-                'html' => $html,
+                'html' => $this->getRenderLinesTable([], []),
             ];
         }
 
+        $tableHead = [
+            '<th>' . Tools::lang()->trans('reference') . '</th>',
+            '<th class="text-right" style="width: 15%;">' . Tools::lang()->trans('quantity') . '</th>',
+        ];
+        $resultHead = $this->pipe('renderLinesTableHead', $tableHead);
+        if (is_array($resultHead)) {
+            $tableHead = $resultHead;
+        }
+        $tableHead[] = '<th class="text-right"></th>';
+
         // recorremos las líneas de la transferencia
+        $tableBody = [];
         foreach ($lines as $line) {
-            $html .= '<tr data-idlinea="' . $line->idlinea . '">'
-                . '<td class="align-middle"><a href="EditProducto?code=' . $line->idproducto . '" target="_blank">' . $line->referencia . '</a></td>'
-                . '<td class="text-right align-middle"><div class="input-group">'
-                . '<input type="number" id="lineaCantidad' . $line->idlinea . '" class="form-control text-right qty-line" value="' . $line->cantidad . '"/>'
-                . '<div class="input-group-append"><button class="btn btn-outline-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
+            $dataLine = [
+                '<td class="align-middle"><a href="EditProducto?code=' . $line->idproducto . '" target="_blank">' . $line->referencia . '</a></td>',
+                '<td class="text-right align-middle">'
+                    . '<input type="number" name="cantidad" id="lineaCantidad' . $line->idlinea . '" class="form-control text-right qty-line" value="' . $line->cantidad . '"/>'
+                    . '</td>'
+            ];
+
+            $resultDataLine = $this->pipe('renderLinesTableBodyLine', $dataLine, $line);
+            if (is_array($resultDataLine)) {
+                $dataLine = $resultDataLine;
+            }
+
+            $dataLine[] = '<td class="text-right align-middle">'
+                . '<div class="btn-group" role="group">'
+                . '<button class="btn btn-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
                 . $line->idlinea . '\')" title="'
-                . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button></div></td>'
-                . '<td class="text-right align-middle"><button class="btn btn-danger btn-sm delete-line btn-spin-action" title="'
-                . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fas fa-trash-alt"></i></button></td>'
-                . '</tr>';
+                . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button>'
+                . '<button class="btn btn-outline-danger delete-line btn-spin-action" title="'
+                . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fas fa-trash-alt"></i></button></div>'
+                . '</td>';
+
+            $tableBody[$line->idlinea] = $dataLine;
         }
 
         return [
             'renderLines' => true,
             'count' => count($lines),
-            'html' => $html,
+            'html' => $this->getRenderLinesTable($tableHead, $tableBody),
         ];
+    }
+
+    protected function getRenderLinesTable(array $tableHead, array $tableBody): string
+    {
+        if (empty($tableHead) || empty($tableBody)) {
+            return '';
+        }
+
+        $html = '<thead>'
+            . '<tr>'
+            . implode('', $tableHead)
+            . '</tr>'
+            . '</thead>'
+            . '<tbody>';
+
+        foreach ($tableBody as $idlinea => $line) {
+            $html .= '<tr data-idlinea="' . $idlinea . '">'
+                . implode('', $line)
+                . '</tr>';
+        }
+
+        return $html . '</tbody>';
     }
 
     protected function preloadProductAction(): array
@@ -391,10 +430,16 @@ class EditTransferenciaStock extends EditController
 
         if ($lineaTransferencia->idtrans !== $transferencia->idtrans) {
             Tools::log()->warning('line-not-belong-to-count');
-            return ['deleteLine' => false];
+            return ['updateLine' => false];
         }
 
         $lineaTransferencia->cantidad = (float)$this->request->request->get('cantidad');
+
+        $resultLine = $this->pipe('updateLine', $lineaTransferencia);
+        if (null !== $resultLine) {
+            $lineaTransferencia = $resultLine;
+        }
+
         if (false === $lineaTransferencia->save()) {
             Tools::log()->error('record-save-error');
             return ['updateLine' => false];

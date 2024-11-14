@@ -80,15 +80,7 @@
         </div>
     </div>
     <div class="table-responsive">
-        <table class="table table-hover mb-0">
-            <thead>
-            <tr>
-                <th>{{ trans('reference') }}</th>
-                <th class="text-right" style="width: 15%;">{{ trans('quantity') }}</th>
-                <th class="text-right"></th>
-            </tr>
-            </thead>
-            <tbody id="conteoLines"></tbody>
+        <table class="table table-hover mb-0" id="conteoLines">
         </table>
     </div>
 </div>
@@ -236,7 +228,20 @@
     function updateLine(idlinea) {
         let formData = new FormData();
         formData.append('idlinea', idlinea);
-        formData.append('cantidad', $('#lineaCantidad' + idlinea).val());
+
+        // obtenemos el tr con el data-idlinea
+        let tr = $('#conteoLines').find('tr[data-idlinea=' + idlinea + ']');
+
+        // recorremos todos los campos input y los añadimos
+        tr.find('input').each(function(){
+            formData.append($(this).attr('name'), $(this).val());
+        });
+
+        // recorremos todos los campos select y los añadimos
+        tr.find('select').each(function(){
+            formData.append($(this).attr('name'), $(this).val());
+        });
+
         sendTransferenciaFormAction('updateLine', formData);
     }
 </script>

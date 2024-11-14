@@ -24,6 +24,7 @@ use FacturaScripts\Core\Model\Base;
 use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\Almacen;
+use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
 
 /**
  * The head of transfer.
@@ -105,9 +106,6 @@ class TransferenciaStock extends Base\ModelClass
         return false;
     }
 
-    /**
-     * @return LineaTransferenciaStock[]
-     */
     public function getLines(): array
     {
         $line = new LineaTransferenciaStock();
