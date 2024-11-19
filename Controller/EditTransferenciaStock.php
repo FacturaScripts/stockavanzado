@@ -281,12 +281,13 @@ class EditTransferenciaStock extends EditController
         $tableHead = [
             '<th>' . Tools::lang()->trans('reference') . '</th>',
             '<th class="text-right" style="width: 15%;">' . Tools::lang()->trans('quantity') . '</th>',
+            '<th class="text-right"></th>'
         ];
+
         $resultHead = $this->pipe('renderLinesTableHead', $tableHead);
         if (is_array($resultHead)) {
             $tableHead = $resultHead;
         }
-        $tableHead[] = '<th class="text-right"></th>';
 
         // recorremos las líneas de la transferencia
         $tableBody = [];
@@ -295,6 +296,14 @@ class EditTransferenciaStock extends EditController
                 '<td class="align-middle"><a href="EditProducto?code=' . $line->idproducto . '" target="_blank">' . $line->referencia . '</a></td>',
                 '<td class="text-right align-middle">'
                     . '<input type="number" name="cantidad" id="lineaCantidad' . $line->idlinea . '" class="form-control text-right qty-line" value="' . $line->cantidad . '"/>'
+                    . '</td>',
+                '<td class="text-right align-middle">'
+                    . '<div class="btn-group" role="group">'
+                    . '<button class="btn btn-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
+                    . $line->idlinea . '\')" title="'
+                    . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button>'
+                    . '<button class="btn btn-outline-danger delete-line btn-spin-action" title="'
+                    . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fas fa-trash-alt"></i></button></div>'
                     . '</td>'
             ];
 
@@ -302,15 +311,6 @@ class EditTransferenciaStock extends EditController
             if (is_array($resultDataLine)) {
                 $dataLine = $resultDataLine;
             }
-
-            $dataLine[] = '<td class="text-right align-middle">'
-                . '<div class="btn-group" role="group">'
-                . '<button class="btn btn-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
-                . $line->idlinea . '\')" title="'
-                . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button>'
-                . '<button class="btn btn-outline-danger delete-line btn-spin-action" title="'
-                . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fas fa-trash-alt"></i></button></div>'
-                . '</td>';
 
             $tableBody[$line->idlinea] = $dataLine;
         }
