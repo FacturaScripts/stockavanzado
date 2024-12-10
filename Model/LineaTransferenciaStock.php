@@ -150,21 +150,6 @@ class LineaTransferenciaStock extends Base\ModelOnChangeClass
         $this->updateStock($this->previousData['cantidad'] * -1);
     }
 
-    protected function saveInsert(array $values = []): bool
-    {
-        // comprobamos si la referencia ya se encuentra en la transferencia
-        $where = [
-            new DataBaseWhere('idtrans', $this->idtrans),
-            new DataBaseWhere('referencia', $this->referencia)
-        ];
-        if ($this->count($where) > 0) {
-            Tools::log()->warning('duplicated-reference', ['%reference%' => $this->referencia]);
-            return false;
-        }
-
-        return $this->updateStock($this->cantidad) && parent::saveInsert($values);
-    }
-
     protected function setPreviousData(array $fields = [])
     {
         $more = ['cantidad'];
