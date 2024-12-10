@@ -108,7 +108,12 @@ class EditTransferenciaStock extends EditController
             $newLine->idtrans = $transferencia->idtrans;
             $newLine->idproducto = $variante->idproducto;
             $newLine->referencia = $variante->referencia;
-        } else {
+        }
+
+        $result = $this->pipe('addLine', $newLine, $transferencia, $variante);
+        if ($result && $result instanceof LineaTransferenciaStock) {
+            $newLine = $result;
+        } elseif ($newLine->exists()) {
             $newLine->cantidad++;
         }
 
