@@ -21,5 +21,5 @@ namespace FacturaScripts\Plugins\StockAvanzado\Contract;
 
 interface StockMovementModInterface
 {
-    public function run(): void;
+    public function run(?int $idproducto = null): void;
 }
