@@ -104,7 +104,7 @@ class StockMovementManager
 
         // run mods
         foreach (self::$mods as $mod) {
-            $mod->run();
+            $mod->run(static::$idproducto);
         }
 
         // save movements from transference
