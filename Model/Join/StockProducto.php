@@ -62,8 +62,8 @@ class StockProducto extends JoinModel
             'reservada' => 'stocks.reservada',
             'stockmax' => 'stocks.stockmax',
             'stockmin' => 'stocks.stockmin',
-            'total_coste' => 'sum(stocks.cantidad*variantes.coste)',
-            'total_precio' => 'sum(stocks.cantidad*variantes.precio)',
+            'total_coste' => 'stocks.cantidad*variantes.coste',
+            'total_precio' => 'stocks.cantidad*variantes.precio',
             'total_movimientos' => 'COALESCE(SUM(stocks_movimientos.cantidad), 0)',
             'tipo' => 'productos.tipo',
         ];
