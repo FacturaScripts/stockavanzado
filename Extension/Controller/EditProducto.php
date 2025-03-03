@@ -72,9 +72,8 @@ class EditProducto
                 return true;
             }
 
-            // actualizamos el stock
-            $stock->cantidad = (float)$data['mov-quantity'];
-            if (false === $stock->save()) {
+            // ejecutamos el conteo
+            if (false === $conteo->updateStock()) {
                 $this->dataBase->rollback();
                 Tools::log()->warning('record-save-error');
                 return true;

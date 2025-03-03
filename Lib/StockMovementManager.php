@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,26 +20,23 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Core\Base\ToolBox;
 use FacturaScripts\Core\Model\Base\BusinessDocumentLine;
 use FacturaScripts\Core\Model\Base\TransformerDocument;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\AlbaranCliente;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
+use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\FacturaCliente;
 use FacturaScripts\Dinamic\Model\FacturaProveedor;
+use FacturaScripts\Dinamic\Model\LineaConteoStock;
+use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
+use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Producto;
+use FacturaScripts\Dinamic\Model\TransferenciaStock;
 use FacturaScripts\Dinamic\Model\Variante;
 use FacturaScripts\Plugins\StockAvanzado\Contract\StockMovementModInterface;
-use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\LineaTransferenciaStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\TransferenciaStock;
 
 /**
- * Description of StockMovementManager
- *
  * @author       Carlos Garcia Gomez            <carlos@facturascripts.com>
  * @collaborator Jerónimo Pedro Sánchez Manzano <socger@gmail.com>
  */
@@ -68,11 +65,7 @@ class StockMovementManager
         self::$mods[] = $mod;
     }
 
-    /**
-     * @param LineaConteoStock $line
-     * @param ConteoStock $stockCount
-     */
-    public static function deleteLineCount(LineaConteoStock $line, ConteoStock $stockCount): bool
+    public static function deleteLineCounting(LineaConteoStock $line, ConteoStock $stockCount): bool
     {
         $docid = $stockCount->primaryColumnValue();
         $docmodel = $stockCount->modelClassName();
@@ -89,6 +82,32 @@ class StockMovementManager
         }
 
         return $movement->delete();
+    }
+
+    public static function deleteLineTransfer(LineaTransferenciaStock $line, TransferenciaStock $stockCount): bool
+    {
+        $movement = new MovimientoStock();
+        $where = [
+            new DataBaseWhere('codalmacen', $stockCount->codalmacenorigen),
+            new DataBaseWhere('docid', $stockCount->primaryColumnValue()),
+            new DataBaseWhere('docmodel', $stockCount->modelClassName()),
+            new DataBaseWhere('referencia', $line->referencia)
+        ];
+        if ($movement->loadFromCode('', $where) && false === $movement->delete()) {
+            return false;
+        }
+
+        $where2 = [
+            new DataBaseWhere('codalmacen', $stockCount->codalmacendestino),
+            new DataBaseWhere('docid', $stockCount->primaryColumnValue()),
+            new DataBaseWhere('docmodel', $stockCount->modelClassName()),
+            new DataBaseWhere('referencia', $line->referencia)
+        ];
+        if ($movement->loadFromCode('', $where2) && false === $movement->delete()) {
+            return false;
+        }
+
+        return true;
     }
 
     public static function rebuild(?int $idproducto = null): void
@@ -126,7 +145,7 @@ class StockMovementManager
         // save movements from stock counts
         $conteoStock = new ConteoStock();
         foreach ($conteoStock->all([], [], 0, 0) as $conteo) {
-            foreach ($conteo->getLines() as $line) {
+            foreach ($conteo->getLines(['fecha' => 'ASC']) as $line) {
                 $product = $line->getProducto();
 
                 // omitimos el producto si no es el que buscamos
@@ -134,7 +153,7 @@ class StockMovementManager
                     continue;
                 }
 
-                static::updateLineCount($line, $conteo);
+                static::updateLineCounting($line, $conteo);
             }
         }
     }
@@ -187,11 +206,7 @@ class StockMovementManager
         empty($movement->cantidad) ? $movement->delete() : $movement->save();
     }
 
-    /**
-     * @param LineaConteoStock $line
-     * @param ConteoStock $stockCount
-     */
-    public static function updateLineCount(LineaConteoStock $line, ConteoStock $stockCount): bool
+    public static function updateLineCounting(LineaConteoStock $line, ConteoStock $stockCount): bool
     {
         $docid = $stockCount->primaryColumnValue();
         $docmodel = $stockCount->modelClassName();
@@ -228,11 +243,6 @@ class StockMovementManager
         static::updateLineTransferMovement($transfer->codalmacendestino, $line->cantidad, $transfer, $line);
     }
 
-    /**
-     * @param string $reference
-     *
-     * @return Producto
-     */
     protected static function getProduct(string $reference): Producto
     {
         $variant = static::getVariant($reference);
@@ -243,11 +253,6 @@ class StockMovementManager
         return self::$products[$variant->idproducto];
     }
 
-    /**
-     * @param string $referencia
-     *
-     * @return Variante
-     */
     protected static function getVariant(string $referencia): Variante
     {
         if (!isset(self::$variants[$referencia])) {
@@ -264,13 +269,12 @@ class StockMovementManager
     {
         $sum = 0.0;
         $movement = new MovimientoStock();
-        $date = Tools::date($datetime);
         $where = [
             new DataBaseWhere('codalmacen', $codalmacen),
-            new DataBaseWhere('fecha', $date, '<='),
+            new DataBaseWhere('fecha', Tools::date($datetime), '<='),
             new DataBaseWhere('referencia', $reference)
         ];
-        foreach ($movement->all($where, [], 0, 0) as $move) {
+        foreach ($movement->all($where, ['fecha' => 'ASC'], 0, 0) as $move) {
             // exclude selected movement
             if ($move->docid == $docid && $move->docmodel == $docmodel) {
                 continue;
@@ -364,14 +368,5 @@ class StockMovementManager
         $movement->fecha = Tools::date($transfer->fecha);
         $movement->hora = Tools::hour($transfer->fecha);
         return empty($movement->cantidad) ? $movement->delete() : $movement->save();
-    }
-
-    /**
-     * @return ToolBox
-     * @deprecated since 2024-01-01
-     */
-    protected static function toolBox(): ToolBox
-    {
-        return new ToolBox();
     }
 }

@@ -12,6 +12,11 @@
         <null>NO</null>
     </column>
     <column>
+        <name>completed</name>
+        <type>boolean</type>
+        <default>true</default>
+    </column>
+    <column>
         <name>fechafin</name>
         <type>date</type>
     </column>

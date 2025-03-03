@@ -28,8 +28,6 @@ use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\Variante;
 
 /**
- * Description of EditConteoStock
- *
  * @author Carlos Garcia Gomez          <carlos@facturascripts.com>
  * @author Daniel Fernández Giménez     <hola@danielfg.es>
  */
@@ -80,13 +78,7 @@ class EditConteoStock extends EditController
             return ['addLine' => false];
         }
 
-        // cargamos el conteo
-        $conteo = new ConteoStock();
-        if (false === $conteo->loadFromCode($code)) {
-            return ['addLine' => false];
-        }
-
-        // buscamos la referencia
+        // buscamos la variante
         $variante = new Variante();
         $where = empty($barcode) ?
             [new DataBaseWhere('referencia', $ref)] :
@@ -96,25 +88,15 @@ class EditConteoStock extends EditController
             return ['addLine' => false];
         }
 
-        // comprobamos si ya existe la línea
-        $newLine = new LineaConteoStock();
-        $where2 = [
-            new DataBaseWhere('idconteo', $conteo->idconteo),
-            new DataBaseWhere('referencia', $variante->referencia)
-        ];
-        if (false === $newLine->loadFromCode('', $where2)) {
-            $newLine->cantidad = 0.0;
-            $newLine->idconteo = $conteo->idconteo;
-            $newLine->idproducto = $variante->idproducto;
-            $newLine->referencia = $variante->referencia;
-        } else {
-            $newLine->cantidad++;
+        // cargamos el conteo
+        $conteo = new ConteoStock();
+        if (false === $conteo->loadFromCode($code)) {
+            return ['addLine' => false];
         }
 
-        // guardamos la línea
-        $newLine->fecha = Tools::dateTime();
-        $newLine->nick = $this->user->nick;
-        if (false === $newLine->save()) {
+        // añadimos la línea
+        $newLine = $conteo->addLine($variante->referencia, $variante->idproducto, 1);
+        if (empty($newLine->primaryColumnValue())) {
             Tools::log()->error('record-save-error');
             return ['addLine' => false];
         }
@@ -276,7 +258,7 @@ class EditConteoStock extends EditController
         }
 
         // obtenemos las líneas
-        $lines = $conteo->getLines();
+        $lines = $conteo->getLines(['idlinea' => 'DESC']);
 
         // si no hay líneas, terminamos
         if (empty($lines)) {
@@ -293,16 +275,34 @@ class EditConteoStock extends EditController
 
         // recorremos las líneas del conteo
         foreach ($lines as $line) {
+            $product = $line->getProducto();
+
             $html .= '<tr data-idlinea="' . $line->idlinea . '">'
-                . '<td class="align-middle"><a href="EditProducto?code=' . $line->idproducto . '" target="_blank">' . $line->referencia . '</a></td>'
-                . '<td class="text-right align-middle"><div class="input-group">'
-                . '<input type="number" id="lineaCantidad' . $line->idlinea . '" class="form-control text-right qty-line" value="' . $line->cantidad . '"/>'
-                . '<div class="input-group-append"><button class="btn btn-outline-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
-                . $line->idlinea . '\')" title="' . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button></div></td>'
+                . '<td class="align-middle">'
+                . '<a href="EditProducto?code=' . $line->idproducto . '" target="_blank">' . $line->referencia . '</a>'
+                . '<div class="small">' . Tools::textBreak($product->descripcion) . '</div>'
+                . '</td>'
+                . '<td class="text-center align-middle"><div class="input-group">';
+
+            if (false === $conteo->completed) {
+                $html .= '<div class="input-group-prepend">'
+                    . '<button class="btn btn-danger delete-line btn-spin-action" title="' . Tools::lang()->trans('delete')
+                    . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fas fa-trash-alt"></i></button>'
+                    . '</div>';
+            }
+
+            $html .= '<input type="number" id="lineaCantidad' . $line->idlinea . '" class="form-control text-center qty-line" value="' . $line->cantidad . '"/>';
+
+            if (false === $conteo->completed) {
+                $html .= '<div class="input-group-append">'
+                    . '<button class="btn btn-outline-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
+                    . $line->idlinea . '\')" title="' . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button>'
+                    . '</div>';
+            }
+
+            $html .= '</div></td>'
                 . '<td class="text-right align-middle">' . $line->nick . '</td>'
                 . '<td class="text-right align-middle">' . Tools::dateTime($line->fecha) . '</td>'
-                . '<td class="text-right align-middle"><button class="btn btn-danger btn-sm delete-line btn-spin-action" title="'
-                . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fas fa-trash-alt"></i></button></td>'
                 . '</tr>';
         }
 
@@ -311,6 +311,18 @@ class EditConteoStock extends EditController
             'count' => count($lines),
             'html' => $html,
         ];
+    }
+
+    protected function loadData($viewName, $view)
+    {
+        $mvn = $this->getMainViewName();
+        parent::loadData($viewName, $view);
+
+        // si el modelo está completado, bloqueamos la edición
+        if ($viewName === $mvn && $view->model->completed) {
+            $this->setSettings($viewName, 'btnSave', false);
+            $this->setSettings($viewName, 'btnUndo', false);
+        }
     }
 
     protected function preloadProductAction(): array
@@ -349,25 +361,9 @@ class EditConteoStock extends EditController
 
         // recorremos las variantes
         foreach ($variants as $variant) {
-            // comprobamos si ya existe la línea
-            $newLine = new LineaConteoStock();
-            $where2 = [
-                new DataBaseWhere('idconteo', $conteo->idconteo),
-                new DataBaseWhere('referencia', $variant['referencia'])
-            ];
-            if (false === $newLine->loadFromCode('', $where2)) {
-                $newLine->cantidad = $option === 'cero' ? 0.0 : $variant['stockfis'];
-                $newLine->idconteo = $conteo->idconteo;
-                $newLine->idproducto = $variant['idproducto'];
-                $newLine->referencia = $variant['referencia'];
-            } else {
-                $newLine->cantidad++;
-            }
-
-            // guardamos la línea
-            $newLine->fecha = Tools::dateTime();
-            $newLine->nick = $this->user->nick;
-            if (false === $newLine->save()) {
+            $qty = $option === 'cero' ? 0.0 : $variant['stockfis'];
+            $newLine = $conteo->addLine($variant['referencia'], $variant['idproducto'], $qty);
+            if (empty($newLine->primaryColumnValue())) {
                 Tools::log()->error('record-save-error');
                 return ['preloadProduct' => false];
             }
@@ -403,12 +399,6 @@ class EditConteoStock extends EditController
         }
 
         $lineaConteo->cantidad = (float)$this->request->request->get('cantidad');
-
-        if ($this->user->nick !== $lineaConteo->nick) {
-            $lineaConteo->fecha = Tools::dateTime();
-            $lineaConteo->nick = $this->user->nick;
-        }
-
         if (false === $lineaConteo->save()) {
             Tools::log()->error('record-save-error');
             return ['updateLine' => false];
@@ -430,6 +420,8 @@ class EditConteoStock extends EditController
         $model = $this->getModel();
         if (false === $model->loadFromCode($this->request->get('code'))) {
             Tools::log()->warning('record-not-found');
+            return true;
+        } elseif ($model->completed) {
             return true;
         }
 

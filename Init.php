@@ -105,6 +105,10 @@ class Init extends InitClass
         $dataBase->commit();
     }
 
+    /**
+     * Migración de datos de la versión 2017
+     * @return void
+     */
     private function migrateData(): void
     {
         $database = new DataBase();
@@ -114,6 +118,7 @@ class Init extends InitClass
 
         foreach ($database->select('SELECT * FROM transferenciasstock') as $row) {
             $trans = new TransferenciaStock($row);
+            $trans->completed = true;
             if (false === $trans->save()) {
                 return;
             }
@@ -124,7 +129,6 @@ class Init extends InitClass
             return;
         }
 
-        LineaTransferenciaStock::setDisableUpdateStock(true);
         foreach ($database->select('SELECT * FROM lineastransferenciasstock') as $row) {
             $line = new LineaTransferenciaStock($row);
             if (false === $line->save()) {

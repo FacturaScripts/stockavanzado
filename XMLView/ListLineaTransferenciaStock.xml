@@ -34,5 +34,11 @@
         <column name="quantity" display="right" order="130">
             <widget type="number" fieldname="cantidad"/>
         </column>
+        <column name="user" order="140">
+            <widget type="text" fieldname="nick"/>
+        </column>
+        <column name="date" display="right" order="150">
+            <widget type="datetime" fieldname="fecha"/>
+        </column>
     </columns>
 </view>
