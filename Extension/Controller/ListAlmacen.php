@@ -44,7 +44,7 @@ class ListAlmacen
     {
         return function ($viewName = 'ListConteoStock') {
             $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll')
-                ->addOrderBy(['fechainicio'], 'date', 2)
+                ->addOrderBy(['fechainicio', 'idconteo'], 'date', 2)
                 ->addSearchFields(['idconteo', 'observaciones'])
                 ->addFilterPeriod('fechainicio', 'date', 'fechainicio')
                 ->addFilterCheckbox('completed', 'completed', 'completed');
@@ -95,7 +95,7 @@ class ListAlmacen
     {
         return function ($viewName = 'ListTransferenciaStock') {
             $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt')
-                ->addOrderBy(['fecha'], 'date', 2)
+                ->addOrderBy(['fecha', 'idtrans'], 'date', 2)
                 ->addSearchFields(['idtrans', 'observaciones']);
 
             // Filters

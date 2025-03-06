@@ -30,7 +30,7 @@
                 <widget type="date" fieldname="fechainicio" readonly="true"/>
             </column>
             <column name="until-date" order="120">
-                <widget type="date" fieldname="fechafin" readonly="true"/>
+                <widget type="datetime" fieldname="fechafin" readonly="true"/>
             </column>
             <column name="user" order="130">
                 <widget type="text" fieldname="nick" readonly="true"/>

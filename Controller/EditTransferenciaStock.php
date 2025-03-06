@@ -283,6 +283,7 @@ class EditTransferenciaStock extends EditController
         // recorremos las líneas de la transferencia
         $tableBody = [];
         foreach ($lines as $line) {
+            $dataLine = [];
             $product = $line->getProducto();
 
             $dataLine[] = '<td class="align-middle">'
@@ -353,6 +354,17 @@ class EditTransferenciaStock extends EditController
         }
 
         return $html . '</tbody>';
+    }
+
+    protected function loadData($viewName, $view)
+    {
+        $mvn = $this->getMainViewName();
+        parent::loadData($viewName, $view);
+
+        if ($viewName === $mvn && $view->model->completed) {
+            $this->setSettings($viewName, 'btnSave', false);
+            $this->setSettings($viewName, 'btnUndo', false);
+        }
     }
 
     protected function preloadProductAction(): array

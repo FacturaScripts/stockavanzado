@@ -61,12 +61,8 @@ class EditProducto
             }
 
             // añadimos una línea con la nueva cantidad
-            $line = new LineaConteoStock();
-            $line->idconteo = $conteo->idconteo;
-            $line->idproducto = $stock->idproducto;
-            $line->referencia = $stock->referencia;
-            $line->cantidad = (float)$data['mov-quantity'];
-            if (false === $line->save()) {
+            $line = $conteo->addLine($stock->referencia, $stock->idproducto, (float)$data['mov-quantity']);
+            if (empty($line->primaryColumnValue())) {
                 $this->dataBase->rollback();
                 Tools::log()->warning('record-save-error');
                 return true;

@@ -10,106 +10,112 @@
             <span id="countLines" class="badge badge-secondary">{{ fsc.getCurrentView().count }}</span>
         </h2>
         {% if firstView.model.completed == false %}
-        <p>{{ trans('stock-count-line-p') }}</p>
-        <div class="form-row">
-            <div class="col-sm-3">
-                <div class="input-group mb-3">
-                    <div class="input-group-prepend">
+            <p>{{ trans('stock-count-line-p') }}</p>
+            <div class="form-row">
+                <div class="col-sm-3">
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
                             <span class="input-group-text">
                                 <i class="fas fa-barcode"></i>
                             </span>
+                        </div>
+                        <input type="text" name="codbarras" id="addLineBarras" class="form-control"
+                               placeholder="{{ trans('barcode') }}" autofocus/>
                     </div>
-                    <input type="text" name="codbarras" id="addLineBarras" class="form-control"
-                           placeholder="{{ trans('barcode') }}" autofocus/>
                 </div>
-            </div>
-            <div class="col-sm-3">
-                <div class="input-group mb-3">
-                    <div class="input-group-prepend">
+                <div class="col-sm-3">
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
                             <span class="input-group-text">
                                 <i class="fas fa-hashtag"></i>
                             </span>
+                        </div>
+                        <input type="text" name="referencia" id="addLineReferencia" class="form-control"
+                               placeholder="{{ trans('reference') }}"/>
                     </div>
-                    <input type="text" name="referencia" id="addLineReferencia" class="form-control"
-                           placeholder="{{ trans('reference') }}"/>
                 </div>
-            </div>
-            <div class="col-sm">
-                <button type="button" class="btn btn-success" onclick="addLine();">{{ trans('add') }}</button>
-                <button type="button" class="btn btn-outline-primary" data-toggle="modal" data-target="#preloadModal">
-                    {{ trans('preload') }}
-                </button>
-                <div class="modal fade" id="preloadModal" tabindex="-1" aria-labelledby="preloadModalLabel" aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="preloadModalLabel">{{ trans('preload-products') }}</h5>
-                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="form-group">
-                                    {{ trans('family') }}
-                                    <select id="preloadFamily" class="form-control">
-                                        <option value="">{{ trans('all') }}</option>
-                                        <option value="">------</option>
-                                        {% for family in fsc.getFamilySelect() %}
-                                            <option value="{{ family.value }}">{{ family.description }}</option>
-                                        {% endfor %}
-                                    </select>
+                <div class="col-sm">
+                    <button type="button" class="btn btn-success" onclick="addLine();">{{ trans('add') }}</button>
+                    <button type="button" class="btn btn-outline-primary" data-toggle="modal"
+                            data-target="#preloadModal">
+                        {{ trans('preload') }}
+                    </button>
+                    <div class="modal fade" id="preloadModal" tabindex="-1" aria-labelledby="preloadModalLabel"
+                         aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="preloadModalLabel">{{ trans('preload-products') }}</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="preloadRadios" id="preloadRadios1" value="one" checked>
-                                    <label class="form-check-label" for="preloadRadios1">
-                                        {{ trans('start-with-one-stock') }}
-                                    </label>
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        {{ trans('family') }}
+                                        <select id="preloadFamily" class="form-control">
+                                            <option value="">{{ trans('all') }}</option>
+                                            <option value="">------</option>
+                                            {% for family in fsc.getFamilySelect() %}
+                                                <option value="{{ family.value }}">{{ family.description }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="preloadRadios"
+                                               id="preloadRadios1" value="one" checked>
+                                        <label class="form-check-label" for="preloadRadios1">
+                                            {{ trans('start-with-one-stock') }}
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="preloadRadios"
+                                               id="preloadRadios2" value="product">
+                                        <label class="form-check-label" for="preloadRadios2">
+                                            {{ trans('start-with-product-stock') }}
+                                        </label>
+                                    </div>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="preloadRadios" id="preloadRadios2" value="product">
-                                    <label class="form-check-label" for="preloadRadios2">
-                                        {{ trans('start-with-product-stock') }}
-                                    </label>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary btn-spin-action"
+                                            data-dismiss="modal">{{ trans('close') }}</button>
+                                    <button type="button" class="btn btn-primary btn-spin-action"
+                                            onclick="preloadProduct()">{{ trans('save') }}</button>
                                 </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary btn-spin-action" data-dismiss="modal">{{ trans('close') }}</button>
-                                <button type="button" class="btn btn-primary btn-spin-action" onclick="preloadProduct()">{{ trans('save') }}</button>
                             </div>
                         </div>
                     </div>
                 </div>
+                <div class="col-sm-auto">
+                    <form method="post">
+                        {{ formToken() }}
+                        <input type="hidden" name="action" value="transfer-stock"/>
+                        <button type="submit" class="btn btn-warning btn-spin-action">
+                            {{ trans('transfer-stock') }}
+                        </button>
+                    </form>
+                </div>
             </div>
-            <div class="col-sm-auto">
-                <form method="post">
-                    {{ formToken() }}
-                    <input type="hidden" name="action" value="transfer-stock"/>
-                    <button type="submit" class="btn btn-warning btn-spin-action">
-                        {{ trans('transfer-stock') }}
-                    </button>
-                </form>
-            </div>
-        </div>
         {% endif %}
     </div>
     <div class="table-responsive">
-        <table class="table table-hover mb-0" id="conteoLines">
+        <table class="table table-hover mb-0" id="transferLines">
         </table>
     </div>
 </div>
 
 <script>
-    $(document).ready(function(){
-        $('#addLineReferencia, #addLineBarras').keypress(function(e){
-            if(e.which === 13){
+    $(document).ready(function () {
+        $('#addLineReferencia, #addLineBarras').keypress(function (e) {
+            if (e.which === 13) {
                 e.preventDefault();
                 addLine();
             }
         });
 
         // al pulsar enter sobre la clase .qty-line se actualiza la línea
-        $(document).on('keypress', '.qty-line', function(e){
-            if(e.which === 13){
+        $(document).on('keypress', '.qty-line', function (e) {
+            if (e.which === 13) {
                 e.preventDefault();
                 let div = $(this).parent();
                 div.find('.btn-update-line').click();
@@ -155,27 +161,27 @@
         let formData = new FormData();
         formData.append('referencia', $('#addLineReferencia').val());
         formData.append('codbarras', $('#addLineBarras').val());
-        sendTransferenciaFormAction('addLine', formData);
+        sendTransferFormAction('addLine', formData);
     }
 
     function deleteLine(idlinea) {
         let formData = new FormData();
         formData.append('idlinea', idlinea);
-        sendTransferenciaFormAction('deleteLine', formData);
+        sendTransferFormAction('deleteLine', formData);
     }
 
     function preloadProduct() {
         let formData = new FormData();
         formData.append('family', $('#preloadFamily').val());
         formData.append('option', $('input[name=preloadRadios]:checked').val());
-        sendTransferenciaFormAction('preloadProduct', formData);
+        sendTransferFormAction('preloadProduct', formData);
     }
 
     function renderLines() {
-        sendTransferenciaFormAction('renderLines', new FormData());
+        sendTransferFormAction('renderLines', new FormData());
     }
 
-    function sendTransferenciaFormAction(action, formData) {
+    function sendTransferFormAction(action, formData) {
         animateSpinner('add');
         formData.append('action', action);
         formData.append('ajax', true);
@@ -207,7 +213,7 @@
             }
 
             if (data.renderLines) {
-                $('#conteoLines').html(data.html);
+                $('#transferLines').html(data.html);
                 $('#countLines').text(data.count);
             }
 
@@ -243,18 +249,18 @@
         formData.append('idlinea', idlinea);
 
         // obtenemos el tr con el data-idlinea
-        let tr = $('#conteoLines').find('tr[data-idlinea=' + idlinea + ']');
+        let tr = $('#transferLines').find('tr[data-idlinea=' + idlinea + ']');
 
         // recorremos todos los campos input y los añadimos
-        tr.find('input').each(function(){
+        tr.find('input').each(function () {
             formData.append($(this).attr('name'), $(this).val());
         });
 
         // recorremos todos los campos select y los añadimos
-        tr.find('select').each(function(){
+        tr.find('select').each(function () {
             formData.append($(this).attr('name'), $(this).val());
         });
 
-        sendTransferenciaFormAction('updateLine', formData);
+        sendTransferFormAction('updateLine', formData);
     }
 </script>

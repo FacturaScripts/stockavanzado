@@ -81,6 +81,12 @@ class TransferenciaStock extends Base\ModelClass
 
         $line->fecha = Tools::dateTime();
         $line->nick = Session::user()->nick;
+
+        $resultLine = $this->pipe('addLine', $line);
+        if (null !== $resultLine) {
+            $line = $resultLine;
+        }
+
         $line->save();
         return $line;
     }
@@ -102,7 +108,7 @@ class TransferenciaStock extends Base\ModelClass
 
         $newTransaction = false === self::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
         foreach ($this->getLines(['fecha' => 'DESC']) as $line) {
-            if (false === $line->delete()) {
+            if (false === $this->pipeFalse('deleteLineTransfer', $line, $transfer)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
                 }
@@ -110,6 +116,13 @@ class TransferenciaStock extends Base\ModelClass
             }
 
             if (false === StockMovementManager::deleteLineTransfer($line, $transfer)) {
+                if ($newTransaction) {
+                    self::$dataBase->rollback();
+                }
+                return false;
+            }
+
+            if (false === $line->delete()) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
                 }
@@ -142,6 +155,20 @@ class TransferenciaStock extends Base\ModelClass
         $line = new LineaTransferenciaStock();
         $where = [new DataBaseWhere('idtrans', $this->primaryColumnValue())];
         return $line->all($where, $order, 0, 0);
+    }
+
+    public function getWarehouseDest(): Almacen
+    {
+        $warehouse = new Almacen();
+        $warehouse->loadFromCode($this->codalmacendestino);
+        return $warehouse;
+    }
+
+    public function getWarehouseOrig(): Almacen
+    {
+        $warehouse = new Almacen();
+        $warehouse->loadFromCode($this->codalmacenorigen);
+        return $warehouse;
     }
 
     public static function primaryColumn(): string
@@ -200,7 +227,14 @@ class TransferenciaStock extends Base\ModelClass
                 return false;
             }
 
-            if (false === StockMovementManager::updateLineTransfer($line, $transfer)) {
+            if (false === StockMovementManager::addLineTransferStock($line, $transfer)) {
+                if ($newTransaction) {
+                    self::$dataBase->rollback();
+                }
+                return false;
+            }
+
+            if (false === $this->pipeFalse('transferStock', $line, $transfer)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
                 }

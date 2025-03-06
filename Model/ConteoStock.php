@@ -82,6 +82,12 @@ class ConteoStock extends Base\ModelClass
 
         $line->fecha = Tools::dateTime();
         $line->nick = Session::user()->nick;
+
+        $resultLine = $this->pipe('addLine', $line);
+        if (null !== $resultLine) {
+            $line = $resultLine;
+        }
+
         $line->save();
         return $line;
     }
@@ -104,7 +110,7 @@ class ConteoStock extends Base\ModelClass
 
         $newTransaction = false === static::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
         foreach ($this->getLines(['fecha' => 'DESC']) as $line) {
-            if (false === $line->delete()) {
+            if (false === $this->pipeFalse('deleteLineCounting', $line, $conteo)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
                 }
@@ -112,6 +118,13 @@ class ConteoStock extends Base\ModelClass
             }
 
             if (false === StockMovementManager::deleteLineCounting($line, $conteo)) {
+                if ($newTransaction) {
+                    self::$dataBase->rollback();
+                }
+                return false;
+            }
+
+            if (false === $line->delete()) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
                 }
@@ -174,9 +187,29 @@ class ConteoStock extends Base\ModelClass
             return false;
         }
 
+        // establecemos la fecha de fin del conteo
+        $conteo->fechafin = Tools::dateTime();
+
+        // primero recorremos las líneas para obtener el stock actual por referencia
+        $stocks = [];
+        foreach ($conteo->getLines() as $line) {
+            if (false === isset($stocks[$line->referencia])) {
+                $stocks[$line->referencia] = $line->cantidad;
+                continue;
+            }
+            $stocks[$line->referencia] += $line->cantidad;
+        }
+
         $newTransaction = false === static::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
         foreach ($conteo->getLines(['fecha' => 'ASC']) as $line) {
-            if (false === StockMovementManager::updateLineCounting($line, $conteo)) {
+            if (false === StockMovementManager::addLineCounting($line, $conteo, $stocks[$line->referencia])) {
+                if ($newTransaction) {
+                    self::$dataBase->rollback();
+                }
+                return false;
+            }
+
+            if (false === $this->pipeFalse('updateStock', $line, $conteo, $stocks[$line->referencia])) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
                 }
@@ -191,6 +224,7 @@ class ConteoStock extends Base\ModelClass
             }
         }
 
+        //actualizamos el conteo
         $conteo->completed = true;
         if (false === $conteo->save()) {
             if ($newTransaction) {
