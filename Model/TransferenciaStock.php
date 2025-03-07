@@ -50,6 +50,9 @@ class TransferenciaStock extends Base\ModelClass
     /** @var string */
     public $fecha;
 
+    /** @var string */
+    public $fecha_completed;
+
     /** @var int */
     public $idtrans;
 
@@ -204,6 +207,14 @@ class TransferenciaStock extends Base\ModelClass
         if (false === $transfer->loadFromCode($this->idtrans)) {
             return false;
         }
+
+        // si la transferencia ya está completada, no hacemos nada
+        if ($transfer->completed) {
+            return true;
+        }
+
+        // establecemos la fecha de fin del conteo
+        $transfer->fecha_completed = Tools::dateTime();
 
         $newTransaction = false === static::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
         foreach ($transfer->getLines(['fecha' => 'ASC']) as $line) {

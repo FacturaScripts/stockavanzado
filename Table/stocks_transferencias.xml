@@ -26,6 +26,10 @@
         <type>timestamp</type>
     </column>
     <column>
+        <name>fecha_completed</name>
+        <type>timestamp</type>
+    </column>
+    <column>
         <name>idtrans</name>
         <type>serial</type>
         <null>NO</null>

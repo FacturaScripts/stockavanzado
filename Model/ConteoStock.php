@@ -187,6 +187,11 @@ class ConteoStock extends Base\ModelClass
             return false;
         }
 
+        // si el conteo ya está completado, no hacemos nada
+        if ($conteo->completed) {
+            return true;
+        }
+
         // establecemos la fecha de fin del conteo
         $conteo->fechafin = Tools::dateTime();
 

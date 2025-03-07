@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2024-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -23,7 +23,6 @@ use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\ConteoStock;
-use FacturaScripts\Dinamic\Model\LineaConteoStock;
 
 /**
  * @author Daniel Fernández Giménez <hola@danielfg.es>
@@ -36,7 +35,7 @@ class InitialStockMovement
     /** @var DataBase */
     protected static $dataBase;
 
-    public static function run()
+    public static function run(): void
     {
         self::$dataBase = new DataBase();
 
@@ -62,12 +61,7 @@ class InitialStockMovement
 
             // recorremos los stocks y añadimos cada stock al conteo
             foreach ($stocks as $stock) {
-                $line = new LineaConteoStock();
-                $line->idconteo = $count->idconteo;
-                $line->cantidad = $stock['cantidad'];
-                $line->idproducto = $stock['idproducto'];
-                $line->referencia = $stock['referencia'];
-                $line->save();
+                $count->addLine($stock['referencia'], $stock['idproducto'], $stock['cantidad']);
             }
 
             // procesamos el conteo

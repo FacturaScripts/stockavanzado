@@ -23,7 +23,7 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Controller\EditAlmacen as ParentController;
 
 /**
- * @deprecated 2024.93
+ * @deprecated 2024.93 quitar en la 2025
  * @author Daniel Fernández Giménez     <hola@danielfg.es>
  */
 class EditAlmacen extends ParentController

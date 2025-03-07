@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2022-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2022-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,10 +20,9 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Dinamic\Model\ConteoStock;
+use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Stock;
-use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
@@ -68,6 +67,19 @@ final class ConteoStockTest extends TestCase
         $conteo->loadFromCode($conteo->primaryColumnValue());
         $this->assertTrue($conteo->completed, 'stock-count-not-completed');
 
+        // si intento volver a ejecutarlo debe devolver true porque ya está completado
+        $this->assertTrue($conteo->updateStock(), 'stock-count-not-recalculate');
+
+        // comprobamos que está el movimiento de stock
+        $movement = new MovimientoStock();
+        $where = [
+            new DataBaseWhere('codalmacen', $conteo->codalmacen),
+            new DataBaseWhere('docid', $conteo->primaryColumnValue()),
+            new DataBaseWhere('docmodel', $conteo->modelClassName()),
+            new DataBaseWhere('referencia', $linea->referencia)
+        ];
+        $this->assertTrue($movement->loadFromCode('', $where), 'stock-movement-not-found');
+
         // comprobamos que el stock del producto es 50
         $stock->loadFromCode($stock->primaryColumnValue());
         $this->assertEquals(50, $stock->cantidad, 'stock-quantity-is-not-50');
@@ -78,14 +90,12 @@ final class ConteoStockTest extends TestCase
         // comprobamos que la línea ya no existe
         $this->assertFalse($linea->exists(), 'stock-count-line-still-exists');
 
-        // comprobamos que el stock vuelva a 0
+        // comprobamos que el movimiento de stock ya no existe
+        $this->assertFalse($movement->exists(), 'stock-movement-still-exists');
+
+        // comprobamos que el stock vuelve a 0
         $stock->loadFromCode($stock->primaryColumnValue());
         $this->assertEquals(0, $stock->cantidad, 'stock-quantity-is-not-0');
-
-        // comprobamos que no hay movimientos de stock
-        $movement = new MovimientoStock();
-        $whereRef = [new DataBaseWhere('referencia', $product->referencia)];
-        $this->assertFalse($movement->loadFromCode('', $whereRef), 'stock-movement-exists');
 
         // eliminamos
         $this->assertTrue($stock->delete());
