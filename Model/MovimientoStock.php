@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -70,16 +70,6 @@ class MovimientoStock extends Base\ModelClass
         $this->cantidad = 0.0;
         $this->fecha = Tools::date();
         $this->hora = Tools::hour();
-    }
-
-    public function deleteAll(?int $idproducto = null): bool
-    {
-        $sql = 'DELETE FROM ' . static::tableName();
-        if (!is_null($idproducto)) {
-            $sql .= ' WHERE idproducto = ' . self::$dataBase->var2str($idproducto);
-        }
-
-        return self::$dataBase->exec($sql);
     }
 
     public function getVariant(): Variante

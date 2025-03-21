@@ -44,11 +44,10 @@ class ListAlmacen
     {
         return function ($viewName = 'ListConteoStock') {
             $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll')
-                ->addOrderBy(['fechainicio'], 'date', 2)
-                ->addSearchFields(['idconteo', 'observaciones']);
-
-            // Filters
-            $this->addFilterPeriod($viewName, 'fechainicio', 'date', 'fechainicio');
+                ->addOrderBy(['fechainicio', 'idconteo'], 'date', 2)
+                ->addSearchFields(['idconteo', 'observaciones'])
+                ->addFilterPeriod('fechainicio', 'date', 'fechainicio')
+                ->addFilterCheckbox('completed', 'completed', 'completed');
 
             $warehouses = Almacenes::codeModel();
             if (count($warehouses) > 2) {
@@ -96,11 +95,12 @@ class ListAlmacen
     {
         return function ($viewName = 'ListTransferenciaStock') {
             $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt')
-                ->addOrderBy(['fecha'], 'date', 2)
+                ->addOrderBy(['fecha', 'idtrans'], 'date', 2)
                 ->addSearchFields(['idtrans', 'observaciones']);
 
             // Filters
-            $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
+            $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha')
+                ->addFilterCheckbox('completed', 'completed', 'completed');
 
             $warehouses = Almacenes::codeModel();
             if (count($warehouses) > 2) {

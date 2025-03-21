@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2022-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2022-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,10 +20,9 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Dinamic\Model\ConteoStock;
+use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Stock;
-use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\LineaConteoStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
@@ -45,12 +44,10 @@ final class ConteoStockTest extends TestCase
 
         // añadimos stock del producto al almacén
         $stock = new Stock();
-        $stock->cantidad = 100;
+        $stock->cantidad = 0;
         $stock->codalmacen = $almacen->codalmacen;
         $stock->idproducto = $product->idproducto;
-        $stock->pterecibir = 4;
         $stock->referencia = $product->referencia;
-        $stock->reservada = 2;
         $this->assertTrue($stock->save(), 'stock-can-not-be-saved');
 
         // creamos un conteo de stock
@@ -60,38 +57,32 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($conteo->save(), 'stock-count-can-not-be-saved');
 
         // añadimos el producto al conteo de stock
-        $linea = new LineaConteoStock();
-        $linea->idconteo = $conteo->idconteo;
-        $linea->idproducto = $product->idproducto;
-        $linea->referencia = $product->referencia;
-        $linea->cantidad = 50;
-        $this->assertTrue($linea->save(), 'stock-count-line-can-not-be-saved');
+        $linea = $conteo->addLine($product->referencia, $product->idproducto, 50);
+        $this->assertTrue($linea->exists(), 'stock-count-line-can-not-be-saved');
 
-        // comprobamos que el stock sigue siendo 100, ptereceibir 4 y reservada 2
-        $stock->loadFromCode($stock->primaryColumnValue());
-        $this->assertEquals(100, $stock->cantidad, 'stock-quantity-is-not-100');
-        $this->assertEquals(4, $stock->pterecibir, 'stock-pterecibir-is-not-4');
-        $this->assertEquals(2, $stock->reservada, 'stock-reservada-is-not-2');
-
-        // actualizamos stock según el conteo
+        // ejecutamos el conteo
         $this->assertTrue($conteo->updateStock(), 'stock-count-not-recalculate');
 
-        // comprobamos que ahora el stock sea 50, pero ptereceibir 4 y reservada 2
+        // comprobamos que el conteo está completado
+        $conteo->loadFromCode($conteo->primaryColumnValue());
+        $this->assertTrue($conteo->completed, 'stock-count-not-completed');
+
+        // si intento volver a ejecutarlo debe devolver true porque ya está completado
+        $this->assertTrue($conteo->updateStock(), 'stock-count-not-recalculate');
+
+        // comprobamos que está el movimiento de stock
+        $movement = new MovimientoStock();
+        $where = [
+            new DataBaseWhere('codalmacen', $conteo->codalmacen),
+            new DataBaseWhere('docid', $conteo->primaryColumnValue()),
+            new DataBaseWhere('docmodel', $conteo->modelClassName()),
+            new DataBaseWhere('referencia', $linea->referencia)
+        ];
+        $this->assertTrue($movement->loadFromCode('', $where), 'stock-movement-not-found');
+
+        // comprobamos que el stock del producto es 50
         $stock->loadFromCode($stock->primaryColumnValue());
         $this->assertEquals(50, $stock->cantidad, 'stock-quantity-is-not-50');
-        $this->assertEquals(4, $stock->pterecibir, 'stock-pterecibir-is-not-4');
-        $this->assertEquals(2, $stock->reservada, 'stock-reservada-is-not-2');
-
-        // modificamos el conteo
-        $linea->cantidad = 40;
-        $this->assertTrue($linea->save(), 'stock-count-line-can-not-be-saved');
-        $this->assertTrue($conteo->updateStock(), 'stock-count-not-recalculate');
-
-        // comprobamos que ahora el stock sea 40, pero ptereceibir 4 y reservada 2
-        $stock->loadFromCode($stock->primaryColumnValue());
-        $this->assertEquals(40, $stock->cantidad, 'stock-quantity-is-not-40');
-        $this->assertEquals(4, $stock->pterecibir, 'stock-pterecibir-is-not-4');
-        $this->assertEquals(2, $stock->reservada, 'stock-reservada-is-not-2');
 
         // eliminamos el conteo
         $this->assertTrue($conteo->delete(), 'stock-count-can-not-be-deleted');
@@ -99,16 +90,12 @@ final class ConteoStockTest extends TestCase
         // comprobamos que la línea ya no existe
         $this->assertFalse($linea->exists(), 'stock-count-line-still-exists');
 
-        // comprobamos que el stock sigue siendo 40, ptrecibir 4 y reservada 2
-        $stock->loadFromCode($stock->primaryColumnValue());
-        $this->assertEquals(40, $stock->cantidad, 'stock-quantity-is-not-40');
-        $this->assertEquals(4, $stock->pterecibir, 'stock-pterecibir-is-not-4');
-        $this->assertEquals(2, $stock->reservada, 'stock-reservada-is-not-2');
+        // comprobamos que el movimiento de stock ya no existe
+        $this->assertFalse($movement->exists(), 'stock-movement-still-exists');
 
-        // comprobamos que no hay movimientos de stock
-        $movement = new MovimientoStock();
-        $whereRef = [new DataBaseWhere('referencia', $product->referencia)];
-        $this->assertFalse($movement->loadFromCode('', $whereRef), 'stock-movement-exists');
+        // comprobamos que el stock vuelve a 0
+        $stock->loadFromCode($stock->primaryColumnValue());
+        $this->assertEquals(0, $stock->cantidad, 'stock-quantity-is-not-0');
 
         // eliminamos
         $this->assertTrue($stock->delete());

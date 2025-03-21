@@ -21,6 +21,8 @@ namespace FacturaScripts\Plugins\StockAvanzado;
 
 use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Core\Controller\ApiRoot;
+use FacturaScripts\Core\Kernel;
 use FacturaScripts\Core\Model\Role;
 use FacturaScripts\Core\Model\RoleAccess;
 use FacturaScripts\Core\Template\InitClass;
@@ -45,6 +47,12 @@ class Init extends InitClass
         $this->loadExtension(new Extension\Controller\ListProducto());
         $this->loadExtension(new Extension\Controller\ReportProducto());
         $this->loadExtension(new Extension\Model\Base\BusinessDocumentLine());
+
+        Kernel::addRoute('/api/3/counting-execute', 'ApiCountingExecute', -1);
+        ApiRoot::addCustomResource('counting-execute');
+
+        Kernel::addRoute('/api/3/transfer-execute', 'ApiTransferExecute', -1);
+        ApiRoot::addCustomResource('transfer-execute');
     }
 
     public function uninstall(): void
@@ -105,6 +113,10 @@ class Init extends InitClass
         $dataBase->commit();
     }
 
+    /**
+     * Migración de datos de la versión 2017
+     * @return void
+     */
     private function migrateData(): void
     {
         $database = new DataBase();
@@ -114,6 +126,7 @@ class Init extends InitClass
 
         foreach ($database->select('SELECT * FROM transferenciasstock') as $row) {
             $trans = new TransferenciaStock($row);
+            $trans->completed = true;
             if (false === $trans->save()) {
                 return;
             }
@@ -124,7 +137,6 @@ class Init extends InitClass
             return;
         }
 
-        LineaTransferenciaStock::setDisableUpdateStock(true);
         foreach ($database->select('SELECT * FROM lineastransferenciasstock') as $row) {
             $line = new LineaTransferenciaStock($row);
             if (false === $line->save()) {

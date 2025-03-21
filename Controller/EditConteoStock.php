@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -28,8 +28,6 @@ use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\Variante;
 
 /**
- * Description of EditConteoStock
- *
  * @author Carlos Garcia Gomez          <carlos@facturascripts.com>
  * @author Daniel Fernández Giménez     <hola@danielfg.es>
  */
@@ -80,13 +78,7 @@ class EditConteoStock extends EditController
             return ['addLine' => false];
         }
 
-        // cargamos el conteo
-        $conteo = new ConteoStock();
-        if (false === $conteo->loadFromCode($code)) {
-            return ['addLine' => false];
-        }
-
-        // buscamos la referencia
+        // buscamos la variante
         $variante = new Variante();
         $where = empty($barcode) ?
             [new DataBaseWhere('referencia', $ref)] :
@@ -96,25 +88,15 @@ class EditConteoStock extends EditController
             return ['addLine' => false];
         }
 
-        // comprobamos si ya existe la línea
-        $newLine = new LineaConteoStock();
-        $where2 = [
-            new DataBaseWhere('idconteo', $conteo->idconteo),
-            new DataBaseWhere('referencia', $variante->referencia)
-        ];
-        if (false === $newLine->loadFromCode('', $where2)) {
-            $newLine->cantidad = 0.0;
-            $newLine->idconteo = $conteo->idconteo;
-            $newLine->idproducto = $variante->idproducto;
-            $newLine->referencia = $variante->referencia;
-        } else {
-            $newLine->cantidad++;
+        // cargamos el conteo
+        $conteo = new ConteoStock();
+        if (false === $conteo->loadFromCode($code)) {
+            return ['addLine' => false];
         }
 
-        // guardamos la línea
-        $newLine->fecha = Tools::dateTime();
-        $newLine->nick = $this->user->nick;
-        if (false === $newLine->save()) {
+        // añadimos la línea
+        $newLine = $conteo->addLine($variante->referencia, $variante->idproducto, 1);
+        if (empty($newLine->primaryColumnValue())) {
             Tools::log()->error('record-save-error');
             return ['addLine' => false];
         }
@@ -152,7 +134,7 @@ class EditConteoStock extends EditController
         $this->createViewsLines();
     }
 
-    protected function createViewsLines(string $viewName = 'EditConteoStockLines')
+    protected function createViewsLines(string $viewName = 'EditConteoStockLines'): void
     {
         $this->addHtmlView($viewName, $viewName, 'LineaConteoStock', 'lines', 'fas fa-list');
     }
@@ -253,15 +235,13 @@ class EditConteoStock extends EditController
 
     protected function getRenderLines(): array
     {
-        $html = '';
-
         // permisos
         if (false === $this->permissions->allowUpdate) {
             Tools::log()->warning('not-allowed-update');
             return [
                 'renderLines' => false,
                 'count' => 0,
-                'html' => $html,
+                'html' => $this->getRenderLinesTable([], []),
             ];
         }
 
@@ -271,46 +251,120 @@ class EditConteoStock extends EditController
             return [
                 'renderLines' => false,
                 'count' => 0,
-                'html' => $html,
+                'html' => $this->getRenderLinesTable([], []),
             ];
         }
 
         // obtenemos las líneas
-        $lines = $conteo->getLines();
+        $lines = $conteo->getLines(['idlinea' => 'DESC']);
 
         // si no hay líneas, terminamos
         if (empty($lines)) {
-            $html = '<tr class="table-warning">'
-                . '<td colspan="5">' . Tools::lang()->trans('no-data') . '</td>'
-                . '</tr>';
-
             return [
                 'renderLines' => true,
                 'count' => 0,
-                'html' => $html,
+                'html' => $this->getRenderLinesTable([], []),
             ];
         }
 
-        // recorremos las líneas del conteo
+        $tableHead = [
+            '<th>' . Tools::lang()->trans('reference') . '</th>',
+            '<th class="text-center" style="width: 15%;">' . Tools::lang()->trans('quantity') . '</th>',
+            '<th class="text-right">' . Tools::lang()->trans('user') . '</th>',
+            '<th class="text-right">' . Tools::lang()->trans('date') . '</th>',
+        ];
+
+        $resultHead = $this->pipe('renderLinesTableHead', $tableHead, $conteo);
+        if (is_array($resultHead)) {
+            $tableHead = $resultHead;
+        }
+
+        // recorremos las líneas de la transferencia
+        $tableBody = [];
         foreach ($lines as $line) {
-            $html .= '<tr data-idlinea="' . $line->idlinea . '">'
-                . '<td class="align-middle"><a href="EditProducto?code=' . $line->idproducto . '" target="_blank">' . $line->referencia . '</a></td>'
-                . '<td class="text-right align-middle"><div class="input-group">'
-                . '<input type="number" id="lineaCantidad' . $line->idlinea . '" class="form-control text-right qty-line" value="' . $line->cantidad . '"/>'
-                . '<div class="input-group-append"><button class="btn btn-outline-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
-                . $line->idlinea . '\')" title="' . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button></div></td>'
-                . '<td class="text-right align-middle">' . $line->nick . '</td>'
-                . '<td class="text-right align-middle">' . Tools::dateTime($line->fecha) . '</td>'
-                . '<td class="text-right align-middle"><button class="btn btn-danger btn-sm delete-line btn-spin-action" title="'
-                . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fas fa-trash-alt"></i></button></td>'
-                . '</tr>';
+            $dataLine = [];
+            $product = $line->getProducto();
+
+            $dataLine[] = '<td class="align-middle">'
+                . '<a href="EditProducto?code=' . $line->idproducto . '" target="_blank">' . $line->referencia . '</a>'
+                . '<div class="small">' . Tools::textBreak($product->descripcion) . '</div>'
+                . '</td>';
+
+            if ($conteo->completed) {
+                $dataLine[] = '<td class="text-center align-middle">'
+                    . '<input type="number" name="cantidad" id="lineaCantidad' . $line->idlinea . '" class="form-control text-center qty-line" value="' . $line->cantidad . '"/>'
+                    . '</td>';
+            } else {
+                $dataLine[] = '<td class="text-center align-middle">'
+                    . '<div class="input-group">'
+                    . '<div class="input-group-prepend">'
+                    . '<button class="btn btn-outline-danger delete-line btn-spin-action" title="'
+                    . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fas fa-trash-alt"></i></button>'
+                    . '</div>'
+                    . '<input type="number" name="cantidad" id="lineaCantidad' . $line->idlinea . '" class="form-control text-center qty-line" value="' . $line->cantidad . '"/>'
+                    . '<div class="input-group-append">'
+                    . '<button class="btn btn-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
+                    . $line->idlinea . '\')" title="' . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button>'
+                    . '</div>'
+                    . '</div>'
+                    . '</td>';
+            }
+
+            $dataLine[] = '<td class="text-right align-middle">'
+                . $line->nick
+                . '</td>';
+
+            $dataLine[] = '<td class="text-right align-middle">'
+                . Tools::dateTime($line->fecha)
+                . '</td>';
+
+            $resultDataLine = $this->pipe('renderLinesTableBodyLine', $dataLine, $line, $conteo);
+            if (is_array($resultDataLine)) {
+                $dataLine = $resultDataLine;
+            }
+
+            $tableBody[$line->idlinea] = $dataLine;
         }
 
         return [
             'renderLines' => true,
             'count' => count($lines),
-            'html' => $html,
+            'html' => $this->getRenderLinesTable($tableHead, $tableBody),
         ];
+    }
+
+    protected function getRenderLinesTable(array $tableHead, array $tableBody): string
+    {
+        if (empty($tableHead) || empty($tableBody)) {
+            return '';
+        }
+
+        $html = '<thead>'
+            . '<tr>'
+            . implode('', $tableHead)
+            . '</tr>'
+            . '</thead>'
+            . '<tbody>';
+
+        foreach ($tableBody as $idlinea => $line) {
+            $html .= '<tr data-idlinea="' . $idlinea . '">'
+                . implode('', $line)
+                . '</tr>';
+        }
+
+        return $html . '</tbody>';
+    }
+
+    protected function loadData($viewName, $view)
+    {
+        $mvn = $this->getMainViewName();
+        parent::loadData($viewName, $view);
+
+        // si el modelo está completado, bloqueamos la edición
+        if ($viewName === $mvn && $view->model->completed) {
+            $this->setSettings($viewName, 'btnSave', false);
+            $this->setSettings($viewName, 'btnUndo', false);
+        }
     }
 
     protected function preloadProductAction(): array
@@ -349,25 +403,9 @@ class EditConteoStock extends EditController
 
         // recorremos las variantes
         foreach ($variants as $variant) {
-            // comprobamos si ya existe la línea
-            $newLine = new LineaConteoStock();
-            $where2 = [
-                new DataBaseWhere('idconteo', $conteo->idconteo),
-                new DataBaseWhere('referencia', $variant['referencia'])
-            ];
-            if (false === $newLine->loadFromCode('', $where2)) {
-                $newLine->cantidad = $option === 'cero' ? 0.0 : $variant['stockfis'];
-                $newLine->idconteo = $conteo->idconteo;
-                $newLine->idproducto = $variant['idproducto'];
-                $newLine->referencia = $variant['referencia'];
-            } else {
-                $newLine->cantidad++;
-            }
-
-            // guardamos la línea
-            $newLine->fecha = Tools::dateTime();
-            $newLine->nick = $this->user->nick;
-            if (false === $newLine->save()) {
+            $qty = $option === 'cero' ? 0.0 : $variant['stockfis'];
+            $newLine = $conteo->addLine($variant['referencia'], $variant['idproducto'], $qty);
+            if (empty($newLine->primaryColumnValue())) {
                 Tools::log()->error('record-save-error');
                 return ['preloadProduct' => false];
             }
@@ -404,9 +442,9 @@ class EditConteoStock extends EditController
 
         $lineaConteo->cantidad = (float)$this->request->request->get('cantidad');
 
-        if ($this->user->nick !== $lineaConteo->nick) {
-            $lineaConteo->fecha = Tools::dateTime();
-            $lineaConteo->nick = $this->user->nick;
+        $resultLine = $this->pipe('updateLine', $lineaConteo);
+        if (null !== $resultLine) {
+            $lineaConteo = $resultLine;
         }
 
         if (false === $lineaConteo->save()) {
@@ -430,6 +468,8 @@ class EditConteoStock extends EditController
         $model = $this->getModel();
         if (false === $model->loadFromCode($this->request->get('code'))) {
             Tools::log()->warning('record-not-found');
+            return true;
+        } elseif ($model->completed) {
             return true;
         }
 

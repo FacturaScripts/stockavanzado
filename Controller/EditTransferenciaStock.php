@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2017-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -28,8 +28,6 @@ use FacturaScripts\Dinamic\Model\TransferenciaStock;
 use FacturaScripts\Dinamic\Model\Variante;
 
 /**
- * Controller to edit a transfer of stock
- *
  * @author Cristo M. Estévez Hernández  <cristom.estevez@gmail.com>
  * @author Carlos García Gómez          <carlos@facturascripts.com>
  * @author Daniel Fernández Giménez     <hola@danielfg.es>
@@ -81,12 +79,6 @@ class EditTransferenciaStock extends EditController
             return ['addLine' => false];
         }
 
-        // cargamos la transferencia
-        $transferencia = new TransferenciaStock();
-        if (false === $transferencia->loadFromCode($code)) {
-            return ['addLine' => false];
-        }
-
         // buscamos la referencia
         $variante = new Variante();
         $where = empty($barcode) ?
@@ -97,28 +89,15 @@ class EditTransferenciaStock extends EditController
             return ['addLine' => false];
         }
 
-        // comprobamos si ya existe la línea
-        $newLine = new LineaTransferenciaStock();
-        $where2 = [
-            new DataBaseWhere('idtrans', $transferencia->idtrans),
-            new DataBaseWhere('referencia', $variante->referencia)
-        ];
-        if (false === $newLine->loadFromCode('', $where2)) {
-            $newLine->cantidad = 0.0;
-            $newLine->idtrans = $transferencia->idtrans;
-            $newLine->idproducto = $variante->idproducto;
-            $newLine->referencia = $variante->referencia;
+        // cargamos la transferencia
+        $transferencia = new TransferenciaStock();
+        if (false === $transferencia->loadFromCode($code)) {
+            return ['addLine' => false];
         }
 
-        $result = $this->pipe('addLine', $newLine, $transferencia, $variante);
-        if ($result && $result instanceof LineaTransferenciaStock) {
-            $newLine = $result;
-        } elseif ($newLine->exists()) {
-            $newLine->cantidad++;
-        }
-
-        // guardamos la línea
-        if (false === $newLine->save()) {
+        // añadimos la línea
+        $newLine = $transferencia->addLine($variante->referencia, $variante->idproducto, 1);
+        if (empty($newLine->primaryColumnValue())) {
             Tools::log()->error('record-save-error');
             return ['addLine' => false];
         }
@@ -240,7 +219,13 @@ class EditTransferenciaStock extends EditController
             return false;
         }
 
-        return parent::execPreviousAction($action);
+        switch ($action) {
+            case 'transfer-stock':
+                return $this->transferStockAction();
+
+            default:
+                return parent::execPreviousAction($action);
+        }
     }
 
     protected function getMessages(): array
@@ -272,7 +257,7 @@ class EditTransferenciaStock extends EditController
         }
 
         // obtenemos las líneas
-        $lines = $transferencia->getLines();
+        $lines = $transferencia->getLines(['idlinea' => 'DESC']);
 
         // si no hay líneas, terminamos
         if (empty($lines)) {
@@ -285,11 +270,12 @@ class EditTransferenciaStock extends EditController
 
         $tableHead = [
             '<th>' . Tools::lang()->trans('reference') . '</th>',
-            '<th class="text-right" style="width: 15%;">' . Tools::lang()->trans('quantity') . '</th>',
-            '<th class="text-right"></th>'
+            '<th class="text-center" style="width: 15%;">' . Tools::lang()->trans('quantity') . '</th>',
+            '<th class="text-right">' . Tools::lang()->trans('user') . '</th>',
+            '<th class="text-right">' . Tools::lang()->trans('date') . '</th>',
         ];
 
-        $resultHead = $this->pipe('renderLinesTableHead', $tableHead);
+        $resultHead = $this->pipe('renderLinesTableHead', $tableHead, $transferencia);
         if (is_array($resultHead)) {
             $tableHead = $resultHead;
         }
@@ -297,22 +283,43 @@ class EditTransferenciaStock extends EditController
         // recorremos las líneas de la transferencia
         $tableBody = [];
         foreach ($lines as $line) {
-            $dataLine = [
-                '<td class="align-middle"><a href="EditProducto?code=' . $line->idproducto . '" target="_blank">' . $line->referencia . '</a></td>',
-                '<td class="text-right align-middle">'
-                    . '<input type="number" name="cantidad" id="lineaCantidad' . $line->idlinea . '" class="form-control text-right qty-line" value="' . $line->cantidad . '"/>'
-                    . '</td>',
-                '<td class="text-right align-middle">'
-                    . '<div class="btn-group" role="group">'
-                    . '<button class="btn btn-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
-                    . $line->idlinea . '\')" title="'
-                    . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button>'
-                    . '<button class="btn btn-outline-danger delete-line btn-spin-action" title="'
-                    . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fas fa-trash-alt"></i></button></div>'
-                    . '</td>'
-            ];
+            $dataLine = [];
+            $product = $line->getProducto();
 
-            $resultDataLine = $this->pipe('renderLinesTableBodyLine', $dataLine, $line);
+            $dataLine[] = '<td class="align-middle">'
+                . '<a href="EditProducto?code=' . $line->idproducto . '" target="_blank">' . $line->referencia . '</a>'
+                . '<div class="small">' . Tools::textBreak($product->descripcion) . '</div>'
+                . '</td>';
+
+            if ($transferencia->completed) {
+                $dataLine[] = '<td class="text-center align-middle">'
+                    . '<input type="number" name="cantidad" id="lineaCantidad' . $line->idlinea . '" class="form-control text-center qty-line" value="' . $line->cantidad . '"/>'
+                    . '</td>';
+            } else {
+                $dataLine[] = '<td class="text-center align-middle">'
+                    . '<div class="input-group">'
+                    . '<div class="input-group-prepend">'
+                    . '<button class="btn btn-outline-danger delete-line btn-spin-action" title="'
+                    . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fas fa-trash-alt"></i></button>'
+                    . '</div>'
+                    . '<input type="number" name="cantidad" id="lineaCantidad' . $line->idlinea . '" class="form-control text-center qty-line" value="' . $line->cantidad . '"/>'
+                    . '<div class="input-group-append">'
+                    . '<button class="btn btn-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
+                    . $line->idlinea . '\')" title="' . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button>'
+                    . '</div>'
+                    . '</div>'
+                    . '</td>';
+            }
+
+            $dataLine[] = '<td class="text-right align-middle">'
+                . $line->nick
+                . '</td>';
+
+            $dataLine[] = '<td class="text-right align-middle">'
+                . Tools::dateTime($line->fecha)
+                . '</td>';
+
+            $resultDataLine = $this->pipe('renderLinesTableBodyLine', $dataLine, $line, $transferencia);
             if (is_array($resultDataLine)) {
                 $dataLine = $resultDataLine;
             }
@@ -347,6 +354,17 @@ class EditTransferenciaStock extends EditController
         }
 
         return $html . '</tbody>';
+    }
+
+    protected function loadData($viewName, $view)
+    {
+        $mvn = $this->getMainViewName();
+        parent::loadData($viewName, $view);
+
+        if ($viewName === $mvn && $view->model->completed) {
+            $this->setSettings($viewName, 'btnSave', false);
+            $this->setSettings($viewName, 'btnUndo', false);
+        }
     }
 
     protected function preloadProductAction(): array
@@ -388,28 +406,42 @@ class EditTransferenciaStock extends EditController
 
         // recorremos las variantes
         foreach ($variants as $variant) {
-            // comprobamos si ya existe la línea
-            $newLine = new LineaTransferenciaStock();
-            $where2 = [
-                new DataBaseWhere('idtrans', $transferencia->idtrans),
-                new DataBaseWhere('referencia', $variant['referencia'])
-            ];
-            if (false === $newLine->loadFromCode('', $where2)) {
-                $newLine->cantidad = $option === 'one' ? 1 : $variant['stockfis'];
-                $newLine->idtrans = $transferencia->idtrans;
-                $newLine->idproducto = $variant['idproducto'];
-                $newLine->referencia = $variant['referencia'];
-            } else {
-                $newLine->cantidad++;
-            }
-
-            if (false === $newLine->save()) {
+            $qty = $option === 'one' ? 1 : $variant['stockfis'];
+            $newLine = $transferencia->addLine($variant['referencia'], $variant['idproducto'], $qty);
+            if (empty($newLine->primaryColumnValue())) {
                 Tools::log()->error('record-save-error');
                 return ['preloadProduct' => false];
             }
         }
 
         return ['preloadProduct' => true];
+    }
+
+    protected function transferStockAction(): bool
+    {
+        if (false === $this->permissions->allowUpdate) {
+            Tools::log()->warning('not-allowed-update');
+            return true;
+        } elseif (false === $this->validateFormToken()) {
+            return true;
+        }
+
+        $model = $this->getModel();
+        if (false === $model->loadFromCode($this->request->get('code'))) {
+            Tools::log()->warning('record-not-found');
+            return true;
+        } elseif ($model->completed) {
+            return true;
+        }
+
+        if (false === $model->transferStock()) {
+            Tools::log()->error('record-save-error');
+            return true;
+        }
+
+        Tools::log()->notice('record-updated-correctly');
+        Tools::log('audit')->info('applied-stock-transfer', ['%code%' => $model->primaryColumnValue()]);
+        return true;
     }
 
     protected function updateLineAction(): array
