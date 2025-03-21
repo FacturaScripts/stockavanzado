@@ -36,6 +36,14 @@ class ListProducto
         return function () {
             if ($this->user->admin) {
                 $this->addButton('ListStock', [
+                    'action' => 'rebuild-movements',
+                    'color' => 'warning',
+                    'confirm' => true,
+                    'icon' => 'fa-solid fa-repeat',
+                    'label' => 'rebuild-movements'
+                ]);
+
+                $this->addButton('ListStock', [
                     'action' => 'rebuild-stock',
                     'color' => 'warning',
                     'confirm' => true,
@@ -49,10 +57,31 @@ class ListProducto
     protected function execPreviousAction(): Closure
     {
         return function ($action) {
-            if ($action != 'rebuild-stock') {
+            if ($action === 'rebuild-stock') {
+                $this->rebuildStockAction();
+            } elseif ($action === 'rebuild-movements') {
+                $this->rebuildMovementsAction();
+            }
+        };
+    }
+
+    protected function rebuildMovementsAction(): Closure
+    {
+        return function () {
+            // si no hay movimientos, no hacemos nada
+            $movimiento = new MovimientoStock();
+            if ($movimiento->count() === 0) {
+                Tools::log()->warning('no-movements-to-rebuild-stock');
                 return;
             }
 
+            StockMovementManager::rebuild();
+        };
+    }
+
+    protected function rebuildStockAction(): Closure
+    {
+        return function () {
             // si no hay movimientos, no hacemos nada
             $movimiento = new MovimientoStock();
             if ($movimiento->count() === 0) {

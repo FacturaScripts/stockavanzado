@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2017-2022 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,7 +21,7 @@
 -->
 <view>
     <columns>
-        <group name="data" numcolumns="12">
+        <group name="data" valign="bottom">
             <column name="id" order="100" display="none">
                 <widget type="number" fieldname="idtrans" onclick="EditTransferenciaStock"/>
             </column>
@@ -45,7 +45,10 @@
                     <values source="users" fieldcode="nick" fieldtitle="nick"/>
                 </widget>
             </column>
-            <column name="observations" order="150" numcolumns="12">
+            <column name="completed" order="150">
+                <widget type="checkbox" fieldname="completed" readonly="true"/>
+            </column>
+            <column name="observations" order="160" numcolumns="12">
                 <widget type="textarea" fieldname="observaciones" title="observations"/>
             </column>
         </group>

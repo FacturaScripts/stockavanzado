@@ -27,6 +27,14 @@
         <null>NO</null>
     </column>
     <column>
+        <name>fecha</name>
+        <type>timestamp</type>
+    </column>
+    <column>
+        <name>nick</name>
+        <type>character varying(50)</type>
+    </column>
+    <column>
         <name>referencia</name>
         <type>character varying(30)</type>
     </column>
@@ -45,5 +53,9 @@
     <constraint>
         <name>ca_stocks_lineastransferencias_variantes</name>
         <type>FOREIGN KEY (referencia) REFERENCES variantes (referencia) ON DELETE CASCADE ON UPDATE CASCADE</type>
+    </constraint>
+    <constraint>
+        <name>ca_stocks_lineastransferencias_users</name>
+        <type>FOREIGN KEY (nick) REFERENCES users (nick) ON DELETE SET NULL ON UPDATE CASCADE</type>
     </constraint>
 </table>

@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,13 +21,11 @@ namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 
 use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Stock;
 
 /**
- * Description of StockRebuild
- *
  * @author Carlos Garcia Gomez <carlos@facturascripts.com>
  */
 class StockRebuild
@@ -46,11 +44,10 @@ class StockRebuild
 
         static::$idproducto = $idproducto;
 
-        self::dataBase()->beginTransaction();
+        $newTransaction = false === static::dataBase()->inTransaction() && self::dataBase()->beginTransaction();
         static::clear();
 
-        $warehouse = new Almacen();
-        foreach ($warehouse->all([], [], 0, 0) as $war) {
+        foreach (Almacenes::all() as $war) {
             foreach (static::calculateStockData($war->codalmacen) as $data) {
                 $stock = new Stock();
                 $where = [
@@ -60,20 +57,28 @@ class StockRebuild
                 if ($stock->loadFromCode('', $where)) {
                     // el stock ya existe
                     $stock->loadFromData($data);
-                    $stock->save();
-                    continue;
+                } else {
+                    // creamos un nuevo stock
+                    $stock = new Stock($data);
                 }
 
-                // creamos y guardamos el stock
-                $newStock = new Stock($data);
-                $newStock->save();
+                if (false === $stock->save()) {
+                    Tools::log()->error('error-saving-stock');
+                    Tools::log('audit')->error('error-saving-stock');
+                    if ($newTransaction) {
+                        self::dataBase()->rollBack();
+                    }
+                    return false;
+                }
             }
+        }
+
+        if ($newTransaction) {
+            self::dataBase()->commit();
         }
 
         Tools::log()->notice('rebuilt-stock');
         Tools::log('audit')->warning('rebuilt-stock');
-
-        self::dataBase()->commit();
         return true;
     }
 

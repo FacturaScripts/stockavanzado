@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -23,19 +23,17 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base;
 use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Dinamic\Lib\StockMovementManager;
-use FacturaScripts\Dinamic\Model\Producto;
+use FacturaScripts\Dinamic\Model\ConteoStock as DinConteoStock;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
 
 /**
- * Description of LineaConteoStock
- *
  * @author Carlos Garcia Gomez <carlos@facturascripts.com>
  */
 class LineaConteoStock extends Base\ModelClass
 {
     use Base\ModelTrait;
+    use Base\ProductRelationTrait;
 
     /** @var float */
     public $cantidad;
@@ -45,9 +43,6 @@ class LineaConteoStock extends Base\ModelClass
 
     /** @var int */
     public $idlinea;
-
-    /** @var int */
-    public $idproducto;
 
     /** @var int */
     public $idconteo;
@@ -66,30 +61,11 @@ class LineaConteoStock extends Base\ModelClass
         $this->nick = Session::user()->nick;
     }
 
-    public function delete(): bool
+    public function getConteo(): DinConteoStock
     {
-        if (false === parent::delete()) {
-            return false;
-        }
-
-        // eliminamos el movimiento de stock
-        StockMovementManager::deleteLineCount($this, $this->getConteo());
-
-        return true;
-    }
-
-    public function getConteo(): ConteoStock
-    {
-        $conteo = new ConteoStock();
+        $conteo = new DinConteoStock();
         $conteo->loadFromCode($this->idconteo);
         return $conteo;
-    }
-
-    public function getProducto(): Producto
-    {
-        $producto = new Producto();
-        $producto->loadFromCode($this->idproducto);
-        return $producto;
     }
 
     public function getStock(): Stock
@@ -116,18 +92,21 @@ class LineaConteoStock extends Base\ModelClass
         return 'idlinea';
     }
 
-    public function save(): bool
-    {
-        if (false === parent::save()) {
-            return false;
-        }
-
-        StockMovementManager::updateLineCount($this, $this->getConteo());
-        return true;
-    }
-
     public static function tableName(): string
     {
         return 'stocks_lineasconteos';
+    }
+
+    public function test(): bool
+    {
+        $this->fecha = Tools::dateTime();
+        $this->nick = Session::user()->nick;
+
+        if (empty($this->idproducto)) {
+            $variant = $this->getVariant();
+            $this->idproducto = $variant->idproducto;
+        }
+
+        return parent::test();
     }
 }
