@@ -136,8 +136,8 @@ class ReportStock extends ListController
         $families = $this->codeModel->all('familias', 'codfamilia', 'descripcion');
         $this->addFilterSelect($viewName, 'codfamilia', 'family', 'codfamilia', $families);
 
-        $this->addFilterNumber($viewName, 'max-stock', 'quantity', 'cantidad', '>=');
-        $this->addFilterNumber($viewName, 'min-stock', 'quantity', 'cantidad', '<=');
+        $this->addFilterNumber($viewName, 'max-stock', 'quantity', 'stocks.cantidad', '>=');
+        $this->addFilterNumber($viewName, 'min-stock', 'quantity', 'stocks.cantidad', '<=');
 
         $this->addFilterCheckbox($viewName, 'secompra', 'for-purchase', 'productos.secompra');
 
