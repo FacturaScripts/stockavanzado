@@ -305,6 +305,61 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testCantTransferWithoutStock(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos una transferencia de stock
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Transferencia sin stock test';
+        $this->assertTrue($transferencia->save());
+
+        // añadimos el producto a la transferencia
+        $lineaTrans = $transferencia->addLine($product->referencia, $product->idproducto, 10);
+        $this->assertTrue($lineaTrans->exists());
+
+        // ejecutamos la transferencia
+        $this->assertFalse($transferencia->transferStock());
+
+        // comprobamos que la transferencia no está completada
+        $transferencia->loadFromCode($transferencia->idtrans);
+        $this->assertFalse($transferencia->completed);
+
+        // comprobamos que no hay stock en el almacén de origen
+        $stock = new Stock();
+        $where = [
+            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
+            new DataBaseWhere('referencia', $product->referencia)
+        ];
+        $this->assertFalse($stock->loadFromCode('', $where));
+
+        // comprobamos que no hay stock en el almacén de destino
+        $stock2 = new Stock();
+        $where2 = [
+            new DataBaseWhere('codalmacen', $warehouse2->codalmacen),
+            new DataBaseWhere('referencia', $product->referencia)
+        ];
+        $this->assertFalse($stock2->loadFromCode('', $where2));
+
+        // eliminamos
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
     public function testHtmlOnFields(): void
     {
         // creamos un almacén

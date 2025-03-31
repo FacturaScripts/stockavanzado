@@ -111,6 +111,11 @@ class TransferenciaStock extends Base\ModelClass
 
         $newTransaction = false === self::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
         foreach ($this->getLines(['fecha' => 'DESC']) as $line) {
+            // si la transferencia no está completada, saltamos
+            if (false === $transfer->completed) {
+                continue;
+            }
+
             // ejecutamos las extensiones
             if (false === $this->pipeFalse('deleteLineTransfer', $line, $transfer)) {
                 if ($newTransaction) {
