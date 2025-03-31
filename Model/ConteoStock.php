@@ -110,6 +110,11 @@ class ConteoStock extends Base\ModelClass
 
         $newTransaction = false === static::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
         foreach ($this->getLines(['fecha' => 'DESC']) as $line) {
+            // si no está completado, saltamos
+            if (false === $conteo->completed) {
+                continue;
+            }
+
             if (false === $this->pipeFalse('deleteLineCounting', $line, $conteo)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();

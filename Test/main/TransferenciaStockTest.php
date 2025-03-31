@@ -21,6 +21,7 @@ namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Stock;
+use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
@@ -358,6 +359,35 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($warehouse2->delete());
         $this->assertTrue($warehouse->delete());
         $this->assertTrue($product->delete());
+    }
+
+    public function testCantTransferBetweenCompanies(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos una empresa
+        $company2 = $this->getRandomCompany();
+        $this->assertTrue($company2->save());
+
+        // cargamos el almacén de la empresa 2
+        $warehouse2 = new Almacen();
+        foreach ($company2->getWarehouses() as $w) {
+            $warehouse2 = $w;
+            break;
+        }
+
+        // creamos una transferencia de stock entre empresas
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Transferencia entre empresas test';
+        $this->assertFalse($transferencia->save());
+
+        // eliminamos
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($company2->delete());
     }
 
     public function testHtmlOnFields(): void

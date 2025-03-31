@@ -149,6 +149,50 @@ final class ConteoStockTest extends TestCase
         $this->assertFalse($conteo->save());
     }
 
+    public function testDeleteBeforeComplete(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos el stock del producto
+        $stock = new Stock();
+        $stock->cantidad = 3;
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->idproducto = $product->idproducto;
+        $stock->referencia = $product->referencia;
+        $this->assertTrue($stock->save());
+
+        // creamos un conteo de stock
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Test';
+        $this->assertTrue($conteo->save());
+
+        // añadimos el producto al conteo de stock
+        $linea = $conteo->addLine($product->referencia, $product->idproducto, 50);
+        $this->assertTrue($linea->exists());
+
+        // comprobamos que el stock del producto es 3
+        $stock->loadFromCode($stock->primaryColumnValue());
+        $this->assertEquals(3, $stock->cantidad);
+
+        // eliminamos el conteo
+        $this->assertTrue($conteo->delete());
+
+        // comprobamos que el stock del producto sigue siendo 3
+        $stock->loadFromCode($stock->idstock);
+        $this->assertEquals(3, $stock->cantidad);
+
+        // eliminamos
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     public function testEscapeHtml(): void
     {
         // creamos un almacén
