@@ -41,6 +41,148 @@ final class TransferenciaStockTest extends TestCase
         $warehouse = $this->getRandomWarehouse();
         $this->assertTrue($warehouse->save());
 
+        // creamos 2 productos
+        $product1 = $this->getRandomProduct();
+        $this->assertTrue($product1->save());
+        $product2 = $this->getRandomProduct();
+        $this->assertTrue($product2->save());
+
+        // añadimos stock al almacén
+        $stock1 = new Stock();
+        $stock1->codalmacen = $warehouse->codalmacen;
+        $stock1->referencia = $product1->referencia;
+        $stock1->idproducto = $product1->idproducto;
+        $stock1->cantidad = 100;
+        $this->assertTrue($stock1->save());
+        $stock2 = new Stock();
+        $stock2->codalmacen = $warehouse->codalmacen;
+        $stock2->referencia = $product2->referencia;
+        $stock2->idproducto = $product2->idproducto;
+        $stock2->cantidad = 25;
+        $this->assertTrue($stock2->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // hacemos una transferencia de stock del almacén 1 al almacén 2
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Transferencia de stock test';
+        $this->assertTrue($transferencia->save());
+
+        // añadimos el producto 1 a la transferencia
+        $lineaTrans1 = $transferencia->addLine($product1->referencia, $product1->idproducto, 10);
+        $this->assertTrue($lineaTrans1->exists());
+
+        // añadimos el producto 2 a la transferencia
+        $lineaTrans2 = $transferencia->addLine($product2->referencia, $product2->idproducto, 5);
+        $this->assertTrue($lineaTrans2->exists());
+
+        // comprobamos que no se ha alterado el stock del almacén 1
+        $stock1->loadFromCode($stock1->idstock);
+        $this->assertEquals(100, $stock1->cantidad);
+        $stock2->loadFromCode($stock2->idstock);
+        $this->assertEquals(25, $stock2->cantidad);
+
+        // ejecutamos la transferencia
+        $this->assertTrue($transferencia->transferStock());
+
+        // si intento volver a ejecutarlo debe devolver true porque ya está completado
+        $this->assertTrue($transferencia->transferStock());
+
+        // comprobamos que la transferencia está completada
+        $transferencia->loadFromCode($transferencia->idtrans);
+        $this->assertTrue($transferencia->completed);
+
+        // comprobamos que está el movimiento de stock del almacén 1
+        $movement1 = new MovimientoStock();
+        $where1 = [
+            new DataBaseWhere('codalmacen', $transferencia->codalmacenorigen),
+            new DataBaseWhere('docid', $transferencia->primaryColumnValue()),
+            new DataBaseWhere('docmodel', $transferencia->modelClassName()),
+            new DataBaseWhere('referencia', $lineaTrans1->referencia)
+        ];
+        $this->assertTrue($movement1->loadFromCode('', $where1));
+
+        // comprobamos que está el movimiento de stock del almacén 2
+        $movement2 = new MovimientoStock();
+        $where2 = [
+            new DataBaseWhere('codalmacen', $transferencia->codalmacendestino),
+            new DataBaseWhere('docid', $transferencia->primaryColumnValue()),
+            new DataBaseWhere('docmodel', $transferencia->modelClassName()),
+            new DataBaseWhere('referencia', $lineaTrans1->referencia)
+        ];
+        $this->assertTrue($movement2->loadFromCode('', $where2));
+
+        // comprobamos que el stock del producto 1 en almacén 1 ahora es 90
+        $stock1->loadFromCode($stock1->idstock);
+        $this->assertEquals(90, $stock1->cantidad);
+
+        // comprobamos que el stock del producto 2 en almacén 1 ahora es 20
+        $stock2->loadFromCode($stock2->idstock);
+        $this->assertEquals(20, $stock2->cantidad);
+
+        // comprobamos que el stock del producto 1 en almacén 2 ahora es 10
+        $stock21 = new Stock();
+        $where21 = [
+            new DataBaseWhere('codalmacen', $warehouse2->codalmacen),
+            new DataBaseWhere('referencia', $product1->referencia)
+        ];
+        $this->assertTrue($stock21->loadFromCode('', $where21));
+        $this->assertEquals(10, $stock21->cantidad);
+
+        // comprobamos que el stock del producto 2 en almacén 2 ahora es 5
+        $stock22 = new Stock();
+        $where22 = [
+            new DataBaseWhere('codalmacen', $warehouse2->codalmacen),
+            new DataBaseWhere('referencia', $product2->referencia)
+        ];
+        $this->assertTrue($stock22->loadFromCode('', $where22));
+        $this->assertEquals(5, $stock22->cantidad);
+
+        // eliminamos la transferencia
+        $this->assertTrue($transferencia->delete());
+
+        // comprobamos que la línea se ha eliminado
+        $this->assertFalse($lineaTrans1->exists());
+
+        // comprobamos que el movimiento de stock del almacén 1 se ha eliminado
+        $this->assertFalse($movement1->exists());
+
+        // comprobamos que el movimiento de stock del almacén 2 se ha eliminado
+        $this->assertFalse($movement2->exists());
+
+        // comprobamos que el stock del almacén 1 vuelve a ser 100
+        $stock1->loadFromCode($stock1->idstock);
+        $this->assertEquals(100, $stock1->cantidad);
+
+        // comprobamos que el stock del almacén 2 vuelve a ser 25
+        $stock2->loadFromCode($stock2->idstock);
+        $this->assertEquals(25, $stock2->cantidad);
+
+        // comprobamos que el stock del producto 1 en el almacén 2 ahora es 0
+        $stock21->loadFromCode($stock21->idstock);
+        $this->assertEquals(0, $stock21->cantidad);
+
+        // comprobamos que el stock del producto 2 en el almacén 2 ahora es 0
+        $stock22->loadFromCode($stock22->idstock);
+        $this->assertEquals(0, $stock22->cantidad);
+
+        // eliminamos
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product1->delete());
+        $this->assertTrue($product2->delete());
+    }
+
+    public function testCreateWithConteo(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
         // creamos un producto
         $product = $this->getRandomProduct();
         $this->assertTrue($product->save());

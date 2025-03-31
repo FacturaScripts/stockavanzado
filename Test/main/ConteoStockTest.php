@@ -38,17 +38,27 @@ final class ConteoStockTest extends TestCase
         $warehouse = $this->getRandomWarehouse();
         $this->assertTrue($warehouse->save());
 
-        // creamos un producto
-        $product = $this->getRandomProduct();
-        $this->assertTrue($product->save());
+        // creamos 2 productos
+        $product1 = $this->getRandomProduct();
+        $this->assertTrue($product1->save());
+        $product2 = $this->getRandomProduct();
+        $this->assertTrue($product2->save());
 
-        // añadimos stock del producto al almacén
-        $stock = new Stock();
-        $stock->cantidad = 0;
-        $stock->codalmacen = $warehouse->codalmacen;
-        $stock->idproducto = $product->idproducto;
-        $stock->referencia = $product->referencia;
-        $this->assertTrue($stock->save());
+        // añadimos stock del producto 1 al almacén
+        $stock1 = new Stock();
+        $stock1->cantidad = 0;
+        $stock1->codalmacen = $warehouse->codalmacen;
+        $stock1->idproducto = $product1->idproducto;
+        $stock1->referencia = $product1->referencia;
+        $this->assertTrue($stock1->save());
+
+        // añadimos stock del producto 2 al almacén
+        $stock2 = new Stock();
+        $stock2->cantidad = 5;
+        $stock2->codalmacen = $warehouse->codalmacen;
+        $stock2->idproducto = $product2->idproducto;
+        $stock2->referencia = $product2->referencia;
+        $this->assertTrue($stock2->save());
 
         // creamos un conteo de stock
         $conteo = new ConteoStock();
@@ -56,9 +66,21 @@ final class ConteoStockTest extends TestCase
         $conteo->observaciones = 'Test';
         $this->assertTrue($conteo->save());
 
-        // añadimos el producto al conteo de stock
-        $linea = $conteo->addLine($product->referencia, $product->idproducto, 50);
-        $this->assertTrue($linea->exists());
+        // añadimos el producto 1 al conteo de stock
+        $linea1 = $conteo->addLine($product1->referencia, $product1->idproducto, 50);
+        $this->assertTrue($linea1->exists());
+
+        // añadimos el producto 2 al conteo de stock
+        $linea2 = $conteo->addLine($product2->referencia, $product2->idproducto, 1);
+        $this->assertTrue($linea2->exists());
+
+        // comprobamos que el stock del producto 1 es 0
+        $stock1->loadFromCode($stock1->primaryColumnValue());
+        $this->assertEquals(0, $stock1->cantidad);
+
+        // comprobamos que el stock del producto 2 es 5
+        $stock2->loadFromCode($stock2->primaryColumnValue());
+        $this->assertEquals(5, $stock2->cantidad);
 
         // ejecutamos el conteo
         $this->assertTrue($conteo->updateStock());
@@ -76,30 +98,36 @@ final class ConteoStockTest extends TestCase
             new DataBaseWhere('codalmacen', $conteo->codalmacen),
             new DataBaseWhere('docid', $conteo->primaryColumnValue()),
             new DataBaseWhere('docmodel', $conteo->modelClassName()),
-            new DataBaseWhere('referencia', $linea->referencia)
+            new DataBaseWhere('referencia', $linea1->referencia)
         ];
         $this->assertTrue($movement->loadFromCode('', $where));
 
-        // comprobamos que el stock del producto es 50
-        $stock->loadFromCode($stock->primaryColumnValue());
-        $this->assertEquals(50, $stock->cantidad);
+        // comprobamos que el stock del producto 1 es 50
+        $stock1->loadFromCode($stock1->primaryColumnValue());
+        $this->assertEquals(50, $stock1->cantidad);
+
+        // comprobamos que el stock del producto 2 es 1
+        $stock2->loadFromCode($stock2->primaryColumnValue());
+        $this->assertEquals(1, $stock2->cantidad);
 
         // eliminamos el conteo
         $this->assertTrue($conteo->delete());
 
         // comprobamos que la línea ya no existe
-        $this->assertFalse($linea->exists());
+        $this->assertFalse($linea1->exists());
 
         // comprobamos que el movimiento de stock ya no existe
         $this->assertFalse($movement->exists());
 
         // comprobamos que el stock vuelve a 0
-        $stock->loadFromCode($stock->primaryColumnValue());
-        $this->assertEquals(0, $stock->cantidad);
+        $stock1->loadFromCode($stock1->primaryColumnValue());
+        $this->assertEquals(0, $stock1->cantidad);
 
         // eliminamos
-        $this->assertTrue($stock->delete());
-        $this->assertTrue($product->delete());
+        $this->assertTrue($stock1->delete());
+        $this->assertTrue($product1->delete());
+        $this->assertTrue($stock2->delete());
+        $this->assertTrue($product2->delete());
         $this->assertTrue($warehouse->delete());
     }
 

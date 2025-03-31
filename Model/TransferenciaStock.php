@@ -111,6 +111,7 @@ class TransferenciaStock extends Base\ModelClass
 
         $newTransaction = false === self::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
         foreach ($this->getLines(['fecha' => 'DESC']) as $line) {
+            // ejecutamos las extensiones
             if (false === $this->pipeFalse('deleteLineTransfer', $line, $transfer)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
@@ -118,6 +119,7 @@ class TransferenciaStock extends Base\ModelClass
                 return false;
             }
 
+            // eliminamos el movimiento de stock
             if (false === StockMovementManager::deleteLineTransfer($line, $transfer)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
@@ -125,14 +127,29 @@ class TransferenciaStock extends Base\ModelClass
                 return false;
             }
 
-            if (false === $line->delete()) {
+            // cargamos el stock de la línea
+            $stock = new Stock();
+            $where = [
+                new DataBaseWhere('codalmacen', $transfer->codalmacenorigen),
+                new DataBaseWhere('referencia', $line->referencia)
+            ];
+            if (false === $stock->loadFromCode('', $where)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
                 }
                 return false;
             }
 
-            if (false === StockRebuild::rebuild($line->idproducto)) {
+            // transferimos el stock de la línea
+            if (false === $stock->transferTo($transfer->codalmacendestino, 0 - $line->cantidad)) {
+                if ($newTransaction) {
+                    self::$dataBase->rollback();
+                }
+                return false;
+            }
+
+            // eliminamos la línea
+            if (false === $line->delete()) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
                 }
@@ -140,6 +157,7 @@ class TransferenciaStock extends Base\ModelClass
             }
         }
 
+        // eliminamos la transferencia
         if (false === parent::delete()) {
             if ($newTransaction) {
                 self::$dataBase->rollback();
@@ -218,6 +236,7 @@ class TransferenciaStock extends Base\ModelClass
 
         $newTransaction = false === static::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
         foreach ($transfer->getLines(['fecha' => 'ASC']) as $line) {
+            // cargamos el stock de la línea
             $stock = new Stock();
             $where = [
                 new DataBaseWhere('codalmacen', $transfer->codalmacenorigen),
@@ -231,6 +250,7 @@ class TransferenciaStock extends Base\ModelClass
                 return false;
             }
 
+            // transferimos el stock de la línea
             if (false === $stock->transferTo($transfer->codalmacendestino, $line->cantidad)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
@@ -238,6 +258,7 @@ class TransferenciaStock extends Base\ModelClass
                 return false;
             }
 
+            // creamos el movimiento de stock
             if (false === StockMovementManager::addLineTransferStock($line, $transfer)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
@@ -245,14 +266,8 @@ class TransferenciaStock extends Base\ModelClass
                 return false;
             }
 
+            // ejecutamos las extensiones
             if (false === $this->pipeFalse('transferStock', $line, $transfer)) {
-                if ($newTransaction) {
-                    self::$dataBase->rollback();
-                }
-                return false;
-            }
-
-            if (false === StockRebuild::rebuild($line->idproducto)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
                 }
