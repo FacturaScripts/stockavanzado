@@ -36,11 +36,11 @@ final class StockValueTest extends TestCase
         // creamos un almacén
         $warehouse = new Almacen();
         $warehouse->nombre = 'Warehouse ' . mt_rand(1, 99);
-        $this->assertTrue($warehouse->save(), 'almacen-can-not-be-saved');
+        $this->assertTrue($warehouse->save());
 
         // creamos un producto
         $product = $this->getRandomProduct();
-        $this->assertTrue($product->save(), 'product-can-not-be-saved');
+        $this->assertTrue($product->save());
 
         // obtenemos la primera variante
         $variante = $product->getVariants()[0];
@@ -48,7 +48,7 @@ final class StockValueTest extends TestCase
         // ponemos el precio y coste
         $variante->coste = 10.0;
         $variante->precio = 20.0;
-        $this->assertTrue($variante->save(), 'variant-can-not-be-saved');
+        $this->assertTrue($variante->save());
 
         // añadimos stock del producto al almacén
         $stock = new Stock();
@@ -56,20 +56,20 @@ final class StockValueTest extends TestCase
         $stock->codalmacen = $warehouse->codalmacen;
         $stock->idproducto = $product->idproducto;
         $stock->referencia = $product->referencia;
-        $this->assertTrue($stock->save(), 'stock-can-not-be-saved');
+        $this->assertTrue($stock->save());
 
         // ejecutamos la clase StockValue
-        $this->assertTrue(StockValue::update($warehouse), 'stock-value-can-not-be-updated');
+        $this->assertTrue(StockValue::update($warehouse));
 
         // actualizamos el almacén
         $warehouse->loadFromCode($warehouse->codalmacen);
 
         // comprobamos que el stock valorado es correcto
-        $this->assertEquals(100.0, $warehouse->stock_valorado_coste, 'stock-value-coste-is-not-correct');
-        $this->assertEquals(200.0, $warehouse->stock_valorado_precio, 'stock-value-precio-is-not-correct');
+        $this->assertEquals(100.0, $warehouse->stock_valorado_coste);
+        $this->assertEquals(200.0, $warehouse->stock_valorado_precio);
 
         // eliminamos
-        $this->assertTrue($product->delete(), 'product-can-not-be-deleted');
-        $this->assertTrue($warehouse->delete(), 'warehouse-can-not-be-deleted');
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
     }
 }

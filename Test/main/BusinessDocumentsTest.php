@@ -40,306 +40,306 @@ final class BusinessDocumentsTest extends TestCase
     public function testCreateAlbaranCliente(): void
     {
         // creamos un almacén
-        $almacen = $this->getRandomWarehouse();
-        $this->assertTrue($almacen->save(), 'almacen-can-not-be-saved');
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
 
         // creamos un producto
         $product = $this->getRandomProduct();
-        $this->assertTrue($product->save(), 'product-can-not-be-saved');
+        $this->assertTrue($product->save());
 
         // añadimos stock al producto
         $stock = new Stock();
         $stock->referencia = $product->referencia;
-        $stock->codalmacen = $almacen->codalmacen;
+        $stock->codalmacen = $warehouse->codalmacen;
         $stock->cantidad = 10;
         $stock->disponible = 10;
-        $this->assertTrue($stock->save(), 'stock-can-not-be-saved');
+        $this->assertTrue($stock->save());
 
         // creamos un cliente
-        $cliente = $this->getRandomCustomer();
-        $this->assertTrue($cliente->save(), 'customer-can-not-be-saved');
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
 
         // creamos un albarán en ese almacén
         $albaran = new AlbaranCliente();
-        $this->assertTrue($albaran->setSubject($cliente));
-        $this->assertTrue($albaran->setWarehouse($almacen->codalmacen));
-        $this->assertTrue($albaran->save(), 'albaran-can-not-be-saved');
+        $this->assertTrue($albaran->setSubject($customer));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
 
         // añadimos una línea al albarán
         $linea = $albaran->getNewProductLine($product->referencia);
         $linea->cantidad = 10;
         $linea->pvpunitario = 10;
-        $this->assertTrue($linea->save(), 'line-can-not-be-saved');
+        $this->assertTrue($linea->save());
 
         // comprobamos que se ha actualizado el stock del producto
         $this->assertTrue($stock->loadFromCode($stock->primaryColumnValue()));
-        $this->assertEquals(0, $stock->cantidad, 'stock-should-be-ten');
-        $this->assertEquals(0, $stock->disponible, 'stock-available-should-be-ten');
-        $this->assertEquals(0, $stock->pterecibir, 'stock-to-receive-should-be-zero');
-        $this->assertEquals(0, $stock->reservada, 'stock-reserved-should-be-zero');
+        $this->assertEquals(0, $stock->cantidad);
+        $this->assertEquals(0, $stock->disponible);
+        $this->assertEquals(0, $stock->pterecibir);
+        $this->assertEquals(0, $stock->reservada);
 
         // comprobamos que hay un movimiento de stock
-        $movimiento = new MovimientoStock();
+        $movement = new MovimientoStock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $almacen->codalmacen),
+            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
             new DataBaseWhere('referencia', $product->referencia)
         ];
-        $this->assertTrue($movimiento->loadFromCode('', $whereRef), 'stock-movement-can-be-loaded');
-        $this->assertEquals(-10, $movimiento->cantidad, 'stock-movement-quantity-should-be-ten');
-        $this->assertEquals($albaran->primaryColumnValue(), $movimiento->docid, 'stock-movement-docid-should-be-albaran-id');
-        $this->assertEquals($albaran->modelClassName(), $movimiento->docmodel, 'stock-movement-docname-should-be-albaran');
+        $this->assertTrue($movement->loadFromCode('', $whereRef));
+        $this->assertEquals(-10, $movement->cantidad);
+        $this->assertEquals($albaran->primaryColumnValue(), $movement->docid);
+        $this->assertEquals($albaran->modelClassName(), $movement->docmodel);
 
         // eliminamos
-        $this->assertTrue($albaran->delete(), 'albaran-can-not-be-deleted');
-        $this->assertTrue($cliente->delete(), 'customer-can-not-be-deleted');
-        $this->assertTrue($cliente->getDefaultAddress()->delete(), 'address-can-not-be-deleted');
-        $this->assertTrue($product->delete(), 'product-can-not-be-deleted');
-        $this->assertTrue($almacen->delete(), 'warehouse-can-not-be-deleted');
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
     }
 
     public function testCreateAlbaranProveedor(): void
     {
         // creamos un almacén
-        $almacen = $this->getRandomWarehouse();
-        $this->assertTrue($almacen->save(), 'almacen-can-not-be-saved');
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
 
         // creamos un producto
         $product = $this->getRandomProduct();
-        $this->assertTrue($product->save(), 'product-can-not-be-saved');
+        $this->assertTrue($product->save());
 
         // creamos un proveedor
         $proveedor = $this->getRandomSupplier();
-        $this->assertTrue($proveedor->save(), 'supplier-can-not-be-saved');
+        $this->assertTrue($proveedor->save());
 
         // creamos el albarán de proveedor
         $albaran = new AlbaranProveedor();
         $this->assertTrue($albaran->setSubject($proveedor));
-        $this->assertTrue($albaran->setWarehouse($almacen->codalmacen));
-        $this->assertTrue($albaran->save(), 'albaran-can-not-be-saved');
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
 
         // añadimos una línea al albarán
         $linea = $albaran->getNewProductLine($product->referencia);
         $linea->cantidad = 10;
         $linea->pvpunitario = 10;
-        $this->assertTrue($linea->save(), 'line-can-not-be-saved');
+        $this->assertTrue($linea->save());
 
         // comprobamos que hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $almacen->codalmacen),
+            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
             new DataBaseWhere('referencia', $product->referencia)
         ];
-        $this->assertTrue($stock->loadFromCode('', $whereRef), 'stock-can-be-loaded');
-        $this->assertEquals(10, $stock->cantidad, 'stock-should-be-ten');
-        $this->assertEquals(10, $stock->disponible, 'stock-available-should-be-ten');
-        $this->assertEquals(0, $stock->pterecibir, 'stock-to-receive-should-be-zero');
-        $this->assertEquals(0, $stock->reservada, 'stock-reserved-should-be-zero');
+        $this->assertTrue($stock->loadFromCode('', $whereRef));
+        $this->assertEquals(10, $stock->cantidad);
+        $this->assertEquals(10, $stock->disponible);
+        $this->assertEquals(0, $stock->pterecibir);
+        $this->assertEquals(0, $stock->reservada);
 
         // comprobamos que hay un movimiento de stock
-        $movimiento = new MovimientoStock();
-        $this->assertTrue($movimiento->loadFromCode('', $whereRef), 'stock-movement-can-not-be-loaded');
-        $this->assertEquals(10, $movimiento->cantidad, 'stock-movement-quantity-should-be-ten');
-        $this->assertEquals($albaran->primaryColumnValue(), $movimiento->docid, 'stock-movement-docid-should-be-albaran-id');
-        $this->assertEquals($albaran->modelClassName(), $movimiento->docmodel, 'stock-movement-docname-should-be-albaran');
+        $movement = new MovimientoStock();
+        $this->assertTrue($movement->loadFromCode('', $whereRef));
+        $this->assertEquals(10, $movement->cantidad);
+        $this->assertEquals($albaran->primaryColumnValue(), $movement->docid);
+        $this->assertEquals($albaran->modelClassName(), $movement->docmodel);
 
         // eliminamos
-        $this->assertTrue($albaran->delete(), 'albaran-can-not-be-deleted');
-        $this->assertTrue($proveedor->delete(), 'supplier-can-not-be-deleted');
-        $this->assertTrue($proveedor->getDefaultAddress()->delete(), 'address-can-not-be-deleted');
-        $this->assertTrue($product->delete(), 'product-can-not-be-deleted');
-        $this->assertTrue($almacen->delete(), 'warehouse-can-not-be-deleted');
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
     }
 
     public function testCreatePedidoCliente(): void
     {
         // creamos un almacén
-        $almacen = $this->getRandomWarehouse();
-        $this->assertTrue($almacen->save(), 'almacen-can-not-be-saved');
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
 
         // creamos un producto
         $product = $this->getRandomProduct();
-        $this->assertTrue($product->save(), 'product-can-not-be-saved');
+        $this->assertTrue($product->save());
 
         // creamos un cliente
-        $cliente = $this->getRandomCustomer();
-        $this->assertTrue($cliente->save(), 'customer-can-not-be-saved');
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
 
         // creamos un pedido en ese almacén
         $pedido = new PedidoCliente();
-        $this->assertTrue($pedido->setSubject($cliente));
-        $this->assertTrue($pedido->setWarehouse($almacen->codalmacen));
-        $this->assertTrue($pedido->save(), 'pedido-can-not-be-saved');
+        $this->assertTrue($pedido->setSubject($customer));
+        $this->assertTrue($pedido->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($pedido->save());
 
         // añadimos una línea al pedido
         $linea = $pedido->getNewProductLine($product->referencia);
         $linea->cantidad = 10;
         $linea->pvpunitario = 10;
-        $this->assertTrue($linea->save(), 'line-can-not-be-saved');
+        $this->assertTrue($linea->save());
 
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $almacen->codalmacen),
+            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
             new DataBaseWhere('referencia', $product->referencia)
         ];
-        $this->assertTrue($stock->loadFromCode('', $whereRef), 'stock-can-be-loaded');
-        $this->assertEquals(0, $stock->cantidad, 'stock-should-be-zero');
-        $this->assertEquals(0, $stock->disponible, 'stock-available-should-be-zero');
-        $this->assertEquals(0, $stock->pterecibir, 'stock-to-receive-should-be-ten');
-        $this->assertEquals(10, $stock->reservada, 'stock-reserved-should-be-zero');
+        $this->assertTrue($stock->loadFromCode('', $whereRef));
+        $this->assertEquals(0, $stock->cantidad);
+        $this->assertEquals(0, $stock->disponible);
+        $this->assertEquals(0, $stock->pterecibir);
+        $this->assertEquals(10, $stock->reservada);
 
         // comprobamos que no hay ningún movimiento de stock
-        $movimiento = new MovimientoStock();
-        $this->assertFalse($movimiento->loadFromCode('', $whereRef), 'stock-movement-can-not-be-loaded');
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadFromCode('', $whereRef));
 
         // eliminamos
-        $this->assertTrue($pedido->delete(), 'pedido-can-not-be-deleted');
-        $this->assertTrue($cliente->delete(), 'customer-can-not-be-deleted');
-        $this->assertTrue($cliente->getDefaultAddress()->delete(), 'address-can-not-be-deleted');
-        $this->assertTrue($product->delete(), 'product-can-not-be-deleted');
-        $this->assertTrue($almacen->delete(), 'warehouse-can-not-be-deleted');
+        $this->assertTrue($pedido->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
     }
 
     public function testCreatePedidoProveedor(): void
     {
         // creamos un almacén
-        $almacen = $this->getRandomWarehouse();
-        $this->assertTrue($almacen->save(), 'almacen-can-not-be-saved');
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
 
         // creamos un producto
         $product = $this->getRandomProduct();
-        $this->assertTrue($product->save(), 'product-can-not-be-saved');
+        $this->assertTrue($product->save());
 
         // creamos un proveedor
         $proveedor = $this->getRandomSupplier();
-        $this->assertTrue($proveedor->save(), 'supplier-can-not-be-saved');
+        $this->assertTrue($proveedor->save());
 
         // creamos un pedido en ese almacén
         $pedido = new PedidoProveedor();
         $this->assertTrue($pedido->setSubject($proveedor));
-        $this->assertTrue($pedido->setWarehouse($almacen->codalmacen));
-        $this->assertTrue($pedido->save(), 'pedido-can-not-be-saved');
+        $this->assertTrue($pedido->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($pedido->save());
 
         // añadimos una línea al pedido
         $linea = $pedido->getNewProductLine($product->referencia);
         $linea->cantidad = 10;
         $linea->pvpunitario = 10;
-        $this->assertTrue($linea->save(), 'line-can-not-be-saved');
+        $this->assertTrue($linea->save());
 
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $almacen->codalmacen),
+            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
             new DataBaseWhere('referencia', $product->referencia)
         ];
-        $this->assertTrue($stock->loadFromCode('', $whereRef), 'stock-can-be-loaded');
-        $this->assertEquals(0, $stock->cantidad, 'stock-should-be-zero');
-        $this->assertEquals(0, $stock->disponible, 'stock-available-should-be-zero');
-        $this->assertEquals(10, $stock->pterecibir, 'stock-to-receive-should-be-zero');
-        $this->assertEquals(0, $stock->reservada, 'stock-reserved-should-be-zero');
+        $this->assertTrue($stock->loadFromCode('', $whereRef));
+        $this->assertEquals(0, $stock->cantidad);
+        $this->assertEquals(0, $stock->disponible);
+        $this->assertEquals(10, $stock->pterecibir);
+        $this->assertEquals(0, $stock->reservada);
 
         // comprobamos que no hay ningún movimiento de stock
-        $movimiento = new MovimientoStock();
-        $this->assertFalse($movimiento->loadFromCode('', $whereRef), 'stock-movement-can-not-be-loaded');
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadFromCode('', $whereRef));
 
         // eliminamos
-        $this->assertTrue($pedido->delete(), 'pedido-can-not-be-deleted');
-        $this->assertTrue($proveedor->delete(), 'supplier-can-not-be-deleted');
-        $this->assertTrue($proveedor->getDefaultAddress()->delete(), 'address-can-not-be-deleted');
-        $this->assertTrue($product->delete(), 'product-can-not-be-deleted');
-        $this->assertTrue($almacen->delete(), 'warehouse-can-not-be-deleted');
+        $this->assertTrue($pedido->delete());
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
     }
 
     public function testCreatePresupuestoCliente(): void
     {
         // creamos un almacén
-        $almacen = $this->getRandomWarehouse();
-        $this->assertTrue($almacen->save(), 'almacen-can-not-be-saved');
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
 
         // creamos un producto
         $product = $this->getRandomProduct();
-        $this->assertTrue($product->save(), 'product-can-not-be-saved');
+        $this->assertTrue($product->save());
 
         // creamos un cliente
-        $cliente = $this->getRandomCustomer();
-        $this->assertTrue($cliente->save(), 'customer-can-not-be-saved');
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
 
         // creamos un presupuesto en ese almacén
         $presupuesto = new PresupuestoCliente();
-        $this->assertTrue($presupuesto->setSubject($cliente));
-        $this->assertTrue($presupuesto->setWarehouse($almacen->codalmacen));
-        $this->assertTrue($presupuesto->save(), 'presupuesto-can-not-be-saved');
+        $this->assertTrue($presupuesto->setSubject($customer));
+        $this->assertTrue($presupuesto->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($presupuesto->save());
 
         // añadimos una línea al presupuesto
         $linea = $presupuesto->getNewProductLine($product->referencia);
         $linea->cantidad = 10;
         $linea->pvpunitario = 10;
-        $this->assertTrue($linea->save(), 'line-can-not-be-saved');
+        $this->assertTrue($linea->save());
 
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $almacen->codalmacen),
+            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
             new DataBaseWhere('referencia', $product->referencia)
         ];
-        $this->assertFalse($stock->loadFromCode('', $whereRef), 'stock-can-be-loaded');
+        $this->assertFalse($stock->loadFromCode('', $whereRef));
 
         // comprobamos que no hay ningún movimiento de stock
-        $movimiento = new MovimientoStock();
-        $this->assertFalse($movimiento->loadFromCode('', $whereRef), 'stock-movement-can-not-be-loaded');
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadFromCode('', $whereRef));
 
         // eliminamos
-        $this->assertTrue($presupuesto->delete(), 'presupuesto-can-not-be-deleted');
-        $this->assertTrue($cliente->delete(), 'customer-can-not-be-deleted');
-        $this->assertTrue($cliente->getDefaultAddress()->delete(), 'address-can-not-be-deleted');
-        $this->assertTrue($product->delete(), 'product-can-not-be-deleted');
-        $this->assertTrue($almacen->delete(), 'warehouse-can-not-be-deleted');
+        $this->assertTrue($presupuesto->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
     }
 
     public function testCreatePresupuestoProveedor(): void
     {
         // creamos un almacén
-        $almacen = $this->getRandomWarehouse();
-        $this->assertTrue($almacen->save(), 'almacen-can-not-be-saved');
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
 
         // creamos un producto
         $product = $this->getRandomProduct();
-        $this->assertTrue($product->save(), 'product-can-not-be-saved');
+        $this->assertTrue($product->save());
 
         // creamos un proveedor
         $proveedor = $this->getRandomSupplier();
-        $this->assertTrue($proveedor->save(), 'supplier-can-not-be-saved');
+        $this->assertTrue($proveedor->save());
 
         // creamos un presupuesto en ese almacén
         $presupuesto = new PresupuestoProveedor();
         $this->assertTrue($presupuesto->setSubject($proveedor));
-        $this->assertTrue($presupuesto->setWarehouse($almacen->codalmacen));
-        $this->assertTrue($presupuesto->save(), 'presupuesto-can-not-be-saved');
+        $this->assertTrue($presupuesto->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($presupuesto->save());
 
         // añadimos una línea al presupuesto
         $linea = $presupuesto->getNewProductLine($product->referencia);
         $linea->cantidad = 10;
         $linea->pvpunitario = 10;
-        $this->assertTrue($linea->save(), 'line-can-not-be-saved');
+        $this->assertTrue($linea->save());
 
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $almacen->codalmacen),
+            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
             new DataBaseWhere('referencia', $product->referencia)
         ];
-        $this->assertFalse($stock->loadFromCode('', $whereRef), 'stock-can-be-loaded');
+        $this->assertFalse($stock->loadFromCode('', $whereRef));
 
         // comprobamos que no hay ningún movimiento de stock
-        $movimiento = new MovimientoStock();
-        $this->assertFalse($movimiento->loadFromCode('', $whereRef), 'stock-movement-can-not-be-loaded');
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadFromCode('', $whereRef));
 
         // eliminamos
-        $this->assertTrue($presupuesto->delete(), 'presupuesto-can-not-be-deleted');
-        $this->assertTrue($proveedor->delete(), 'supplier-can-not-be-deleted');
-        $this->assertTrue($proveedor->getDefaultAddress()->delete(), 'address-can-not-be-deleted');
-        $this->assertTrue($product->delete(), 'product-can-not-be-deleted');
-        $this->assertTrue($almacen->delete(), 'warehouse-can-not-be-deleted');
+        $this->assertTrue($presupuesto->delete());
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
     }
 
     protected function tearDown(): void

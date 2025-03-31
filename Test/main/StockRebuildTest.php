@@ -35,53 +35,53 @@ final class StockRebuildTest extends TestCase
     public function testCreate(): void
     {
         // creamos un almacén
-        $almacen = $this->getRandomWarehouse();
-        $this->assertTrue($almacen->save(), 'almacen-can-not-be-saved');
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
 
         // creamos un producto
         $product = $this->getRandomProduct();
-        $this->assertTrue($product->save(), 'product-can-not-be-saved');
+        $this->assertTrue($product->save());
 
         // creamos un conteo de stock
         $conteo = new ConteoStock();
-        $conteo->codalmacen = $almacen->codalmacen;
+        $conteo->codalmacen = $warehouse->codalmacen;
         $conteo->observaciones = 'Test';
-        $this->assertTrue($conteo->save(), 'stock-count-can-not-be-saved');
+        $this->assertTrue($conteo->save());
 
         // añadimos el producto al conteo de stock
         $linea = $conteo->addLine($product->referencia, $product->idproducto, 50);
-        $this->assertTrue($linea->exists(), 'stock-count-line-can-not-be-saved');
+        $this->assertTrue($linea->exists());
 
         // ejecutamos el conteo
-        $this->assertTrue($conteo->updateStock(), 'stock-count-not-recalculate');
+        $this->assertTrue($conteo->updateStock());
 
         // obtenemos el stock del producto
         $stock = new Stock();
         $where = [
-            new DataBaseWhere('codalmacen', $almacen->codalmacen),
+            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
             new DataBaseWhere('referencia', $product->referencia)
         ];
-        $this->assertTrue($stock->loadFromCode('', $where), 'stock-not-found');
+        $this->assertTrue($stock->loadFromCode('', $where));
 
         // comprobamos que el stock es correcto
-        $this->assertEquals(50, $stock->cantidad, 'stock-quantity-is-wrong');
+        $this->assertEquals(50, $stock->cantidad);
 
         // cambiamos la cantidad del stock
         $stock->cantidad = 100;
-        $this->assertTrue($stock->save(), 'stock-can-not-be-saved');
+        $this->assertTrue($stock->save());
 
         // ejecutamos la reconstrucción del stock con base en sus movimientos
-        $this->assertTrue(StockRebuild::rebuild($product->idproducto), 'stock-rebuild-can-not-be-saved');
+        $this->assertTrue(StockRebuild::rebuild($product->idproducto));
 
         // recargamos el stock
         $stock->loadFromCode($stock->primaryColumnValue());
 
         // comprobamos que el stock es correcto
-        $this->assertEquals(50, $stock->cantidad, 'stock-quantity-is-wrong');
+        $this->assertEquals(50, $stock->cantidad);
 
         // eliminamos
-        $this->assertTrue($conteo->delete(), 'stock-count-not-deleted');
-        $this->assertTrue($product->delete(), 'product-not-deleted');
-        $this->assertTrue($almacen->delete(), 'warehouse-not-deleted');
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
     }
 }

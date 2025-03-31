@@ -35,25 +35,25 @@ final class StockMovementTest extends TestCase
     public function testCreate(): void
     {
         // creamos un almacén
-        $almacen = $this->getRandomWarehouse();
-        $this->assertTrue($almacen->save(), 'almacen-can-not-be-saved');
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
 
         // creamos un producto
         $product = $this->getRandomProduct();
-        $this->assertTrue($product->save(), 'product-can-not-be-saved');
+        $this->assertTrue($product->save());
 
         // creamos un conteo de stock
         $conteo = new ConteoStock();
-        $conteo->codalmacen = $almacen->codalmacen;
+        $conteo->codalmacen = $warehouse->codalmacen;
         $conteo->observaciones = 'Test';
-        $this->assertTrue($conteo->save(), 'stock-count-can-not-be-saved');
+        $this->assertTrue($conteo->save());
 
         // añadimos el producto al conteo de stock
         $linea = $conteo->addLine($product->referencia, $product->idproducto, 50);
-        $this->assertTrue($linea->exists(), 'stock-count-line-can-not-be-saved');
+        $this->assertTrue($linea->exists());
 
         // ejecutamos el conteo
-        $this->assertTrue($conteo->updateStock(), 'stock-count-not-recalculate');
+        $this->assertTrue($conteo->updateStock());
 
         // comprobamos que está el movimiento de stock
         $movement = new MovimientoStock();
@@ -63,20 +63,20 @@ final class StockMovementTest extends TestCase
             new DataBaseWhere('docmodel', $conteo->modelClassName()),
             new DataBaseWhere('referencia', $linea->referencia)
         ];
-        $this->assertTrue($movement->loadFromCode('', $where), 'stock-movement-not-found');
+        $this->assertTrue($movement->loadFromCode('', $where));
 
         // eliminamos el movimiento de stock
-        $this->assertTrue($movement->delete(), 'stock-movement-not-deleted');
+        $this->assertTrue($movement->delete());
 
         // ejecutamos la reconstrucción de movimientos de stock
         StockMovementManager::rebuild($product->idproducto);
 
         // comprobamos que está el movimiento de stock
-        $this->assertTrue($movement->loadFromCode('', $where), 'stock-movement-not-rebuilt');
+        $this->assertTrue($movement->loadFromCode('', $where));
 
         // eliminamos
-        $this->assertTrue($conteo->delete(), 'stock-count-not-deleted');
-        $this->assertTrue($product->delete(), 'product-not-deleted');
-        $this->assertTrue($almacen->delete(), 'warehouse-not-deleted');
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
     }
 }

@@ -36,20 +36,20 @@ final class InitialStockTest extends TestCase
     public function testCreate(): void
     {
         // creamos un almacén
-        $almacen = $this->getRandomWarehouse();
-        $this->assertTrue($almacen->save(), 'almacen-can-not-be-saved');
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
 
         // creamos un producto
         $product = $this->getRandomProduct();
-        $this->assertTrue($product->save(), 'product-can-not-be-saved');
+        $this->assertTrue($product->save());
 
         // añadimos stock del producto al almacén
         $stock = new Stock();
         $stock->cantidad = 10;
-        $stock->codalmacen = $almacen->codalmacen;
+        $stock->codalmacen = $warehouse->codalmacen;
         $stock->idproducto = $product->idproducto;
         $stock->referencia = $product->referencia;
-        $this->assertTrue($stock->save(), 'stock-can-not-be-saved');
+        $this->assertTrue($stock->save());
 
         // ejecutamos la clase InitialStockMovement
         InitialStockMovement::run();
@@ -57,10 +57,10 @@ final class InitialStockTest extends TestCase
         // buscamos un movimiento para el producto
         $movimiento = new MovimientoStock();
         $where = [
-            new DataBaseWhere('codalmacen', $almacen->codalmacen),
+            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
             new DataBaseWhere('referencia', $product->referencia)
         ];
-        $this->assertTrue($movimiento->loadFromCode('', $where), 'stock-movement-not-found');
+        $this->assertTrue($movimiento->loadFromCode('', $where));
 
         // buscamos la línea del conteo
         $line = new LineaConteoStock();
@@ -68,24 +68,24 @@ final class InitialStockTest extends TestCase
             new DataBaseWhere('referencia', $product->referencia),
             new DataBaseWhere('idproducto', $product->idproducto)
         ];
-        $this->assertTrue($line->loadFromCode('', $where), 'stock-count-line-not-found');
+        $this->assertTrue($line->loadFromCode('', $where));
 
         // obtenemos el conteo de la línea
         $conteo = $line->getConteo();
-        $this->assertTrue($conteo->exists(), 'stock-count-not-found');
+        $this->assertTrue($conteo->exists());
 
         // eliminamos el conteo
-        $this->assertTrue($conteo->delete(), 'stock-count-not-deleted');
+        $this->assertTrue($conteo->delete());
 
         // comprobamos que la línea no existe
-        $this->assertFalse($line->exists(), 'stock-count-line-not-deleted');
+        $this->assertFalse($line->exists());
 
         // comprobamos que el movimiento no existe
-        $this->assertFalse($movimiento->exists(), 'stock-movement-not-deleted');
+        $this->assertFalse($movimiento->exists());
 
         // eliminamos
-        $this->assertTrue($stock->delete(), 'stock-can-not-be-deleted');
-        $this->assertTrue($product->delete(), 'product-can-not-be-deleted');
-        $this->assertTrue($almacen->delete(), 'warehouse-can-not-be-deleted');
+        $this->assertTrue($stock->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
     }
 }
