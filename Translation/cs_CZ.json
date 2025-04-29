@@ -12,7 +12,7 @@
     "reconstructed-movements": "Movimientos de stock reconstruidos",
     "start-with-one-stock": "Začněte s jedním skladem",
     "start-with-product-stock": "Inicializovat s aktuálním skladem",
-    "start-with-zero-stock": "Inicializovat se zásobou 0",
+    "start-with-zero-stock": "Inicializovat s množstvím 0",
     "stock-count": "Conteo de stock",
     "stock-count-line-p": "Añade líneas a este listado escribiendo\/escaneando un código de barras o referencia. Si el producto ya estaba, se incrementa la cantidad.",
     "stock-counts": "Conteos",
