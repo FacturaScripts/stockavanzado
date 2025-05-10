@@ -16,7 +16,7 @@
     "stock-count": "Inventaire",
     "stock-count-line-p": "Ajoutez des lignes à cet inventaire en tapant\/numérisant un code-barres ou une référence. Si le produit se trouve déjà dans la liste, la quantité augmentera.",
     "stock-counts": "Inventaires",
-    "transfer-stock": "Transferir stock",
+    "transfer-stock": "Transférer le stock",
     "valued-stock-cost": "Actions évaluées au coût",
     "valued-stock-price": "Actions évaluées au prix du marché",
     "without-stock-count": "Exclure les comptes"
