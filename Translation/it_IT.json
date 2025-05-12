@@ -16,6 +16,7 @@
     "stock-count": "Conteggio dello stock",
     "stock-count-line-p": "Aggiungi righe a questo elenco digitando\/scansionando un codice a barre o un riferimento. Se il prodotto era già presente, la quantità viene incrementata.",
     "stock-counts": "conteggi di magazzino",
+    "transfer-stock": "Trasferire stock",
     "valued-stock-cost": "stock valorizzato a costo",
     "valued-stock-price": "Prezzo azionario valutato",
     "without-stock-count": "escludere conteggio"

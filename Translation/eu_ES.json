@@ -4,7 +4,7 @@
     "new-quantity": "Kopuru berria",
     "new-quantity-description": "Sartu zenbatekoa",
     "no-movements-to-rebuild-stock": "Ez dago stock-a berreraikitzeko mugimendurik",
-    "preload": "Aurrez kargatu",
+    "preload": "Aurrez Kargatu",
     "preload-products": "Produktu guztiak aurretik kargatu",
     "reason-for-change": "Aldaketaren arrazoia",
     "rebuild-movements": "Mugimenduak berritu",
@@ -16,6 +16,7 @@
     "stock-count": "Stock kopurua",
     "stock-count-line-p": "Zerrenda honi lerroak gehitu barra kode edo erreferentzi bat idatziz\/eskaneatuz. Produktua lehendik bertan bazegoen, kantitatea handitu egingo da.",
     "stock-counts": "Zenbaketak",
+    "transfer-stock": "Transferir stock",
     "valued-stock-cost": "Kostura estimatutako stocka",
     "valued-stock-price": "Preziora estimatutako stocka",
     "without-stock-count": "Stock kontuak exkluditu"

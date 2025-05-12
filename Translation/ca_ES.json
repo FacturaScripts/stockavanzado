@@ -16,6 +16,7 @@
     "stock-count": "Conteo d'estoc",
     "stock-count-line-p": "Afegeix línies a aquest llistat escrivint\/escanejant un codi de barres o referència. Si el producte ja estava, s'incrementa la quantitat.",
     "stock-counts": "Conteos",
+    "transfer-stock": "Transferir stock",
     "valued-stock-cost": "Estoc valorat a cost",
     "valued-stock-price": "Estoc valorat a preu",
     "without-stock-count": "Excloure recomptes"
