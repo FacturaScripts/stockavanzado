@@ -98,7 +98,14 @@ class StockMovementManager
     {
         $docid = $stockCount->primaryColumnValue();
         $docmodel = $stockCount->modelClassName();
-        $stockSum = static::getStockSum($line->referencia, $stockCount->codalmacen, $docid, $docmodel, $line->fecha);
+        // usamos la fecha de ejecución del conteo para calcular el stock previo
+        $stockSum = static::getStockSum(
+            $line->referencia,
+            $stockCount->codalmacen,
+            $docid,
+            $docmodel,
+            $stockCount->fechafin
+        );
         $cantidad = $stock - $stockSum;
 
         $movement = new MovimientoStock();
@@ -293,7 +300,7 @@ class StockMovementManager
                 continue;
             }
 
-            if (strtotime($datetime) > strtotime($move->fecha . ' ' . $move->hora)) {
+            if (strtotime($move->fecha . ' ' . $move->hora) <= strtotime($datetime)) {
                 $sum += $move->cantidad;
             }
         }
