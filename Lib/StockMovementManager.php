@@ -359,7 +359,7 @@ class StockMovementManager
     protected static function rebuildStockCounting(): void
     {
         $where = [new DataBaseWhere('completed', true)];
-        foreach (ConteoStock::all($where, [], 0, 0) as $conteo) {
+        foreach (ConteoStock::all($where, ['idconteo' => 'ASC'], 0, 0) as $conteo) {
             // primero recorremos las líneas para obtener el stock actual por referencia
             $stocks = [];
             foreach ($conteo->getLines() as $line) {
@@ -387,7 +387,7 @@ class StockMovementManager
     protected static function rebuildTransferStock(): void
     {
         $where = [new DataBaseWhere('completed', true)];
-        foreach (TransferenciaStock::all($where, [], 0, 0) as $transfer) {
+        foreach (TransferenciaStock::all($where, ['idtrans' => 'ASC'], 0, 0) as $transfer) {
             foreach ($transfer->getLines() as $line) {
                 $variant = $line->getVariant();
                 $product = $variant->getProducto();
