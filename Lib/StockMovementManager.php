@@ -287,7 +287,7 @@ class StockMovementManager
             new DataBaseWhere('fecha', Tools::date($datetime), '<='),
             new DataBaseWhere('referencia', $reference)
         ];
-        foreach (MovimientoStock::all($where, ['fecha' => 'ASC'], 0, 0) as $move) {
+        foreach (MovimientoStock::all($where, ['id' => 'ASC'], 0, 0) as $move) {
             // excluir movimiento seleccionado
             if ($move->docid == $docid && $move->docmodel == $docmodel) {
                 continue;
