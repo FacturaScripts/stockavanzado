@@ -93,6 +93,7 @@ class MovimientoStock extends Base\ModelClass
         // cargamos las dependencias
         new Almacen();
         new Producto();
+        new Variante();
 
         return parent::install();
     }
@@ -110,6 +111,7 @@ class MovimientoStock extends Base\ModelClass
     public function test(): bool
     {
         $this->documento = Tools::noHtml($this->documento);
+
         return parent::test();
     }
 
