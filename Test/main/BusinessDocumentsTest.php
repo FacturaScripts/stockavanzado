@@ -28,6 +28,7 @@ use FacturaScripts\Dinamic\Model\PedidoProveedor;
 use FacturaScripts\Dinamic\Model\PresupuestoCliente;
 use FacturaScripts\Dinamic\Model\PresupuestoProveedor;
 use FacturaScripts\Dinamic\Model\Stock;
+use FacturaScripts\Test\Traits\DefaultSettingsTrait;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
@@ -36,6 +37,14 @@ final class BusinessDocumentsTest extends TestCase
 {
     use LogErrorsTrait;
     use RandomDataTrait;
+    use DefaultSettingsTrait;
+
+    public static function setUpBeforeClass(): void
+    {
+        self::setDefaultSettings();
+        self::installAccountingPlan();
+        self::removeTaxRegularization();
+    }
 
     public function testCreateAlbaranCliente(): void
     {
