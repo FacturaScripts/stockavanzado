@@ -98,7 +98,14 @@ class StockMovementManager
     {
         $docid = $stockCount->primaryColumnValue();
         $docmodel = $stockCount->modelClassName();
-        $stockSum = static::getStockSum($line->referencia, $stockCount->codalmacen, $docid, $docmodel, $line->fecha);
+        // usamos la fecha de ejecución del conteo para calcular el stock previo
+        $stockSum = static::getStockSum(
+            $line->referencia,
+            $stockCount->codalmacen,
+            $docid,
+            $docmodel,
+            $stockCount->fechafin
+        );
         $cantidad = $stock - $stockSum;
 
         $movement = new MovimientoStock();
@@ -287,13 +294,13 @@ class StockMovementManager
             new DataBaseWhere('fecha', Tools::date($datetime), '<='),
             new DataBaseWhere('referencia', $reference)
         ];
-        foreach (MovimientoStock::all($where, ['fecha' => 'ASC'], 0, 0) as $move) {
+        foreach (MovimientoStock::all($where, ['id' => 'ASC'], 0, 0) as $move) {
             // excluir movimiento seleccionado
             if ($move->docid == $docid && $move->docmodel == $docmodel) {
                 continue;
             }
 
-            if (strtotime($datetime) > strtotime($move->fecha . ' ' . $move->hora)) {
+            if (strtotime($move->fecha . ' ' . $move->hora) <= strtotime($datetime)) {
                 $sum += $move->cantidad;
             }
         }
@@ -359,7 +366,7 @@ class StockMovementManager
     protected static function rebuildStockCounting(): void
     {
         $where = [new DataBaseWhere('completed', true)];
-        foreach (ConteoStock::all($where, [], 0, 0) as $conteo) {
+        foreach (ConteoStock::all($where, ['idconteo' => 'ASC'], 0, 0) as $conteo) {
             // primero recorremos las líneas para obtener el stock actual por referencia
             $stocks = [];
             foreach ($conteo->getLines() as $line) {
@@ -387,7 +394,7 @@ class StockMovementManager
     protected static function rebuildTransferStock(): void
     {
         $where = [new DataBaseWhere('completed', true)];
-        foreach (TransferenciaStock::all($where, [], 0, 0) as $transfer) {
+        foreach (TransferenciaStock::all($where, ['idtrans' => 'ASC'], 0, 0) as $transfer) {
             foreach ($transfer->getLines() as $line) {
                 $variant = $line->getVariant();
                 $product = $variant->getProducto();

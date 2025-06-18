@@ -22,6 +22,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Model;
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Variante;
 
@@ -87,6 +88,16 @@ class MovimientoStock extends Base\ModelClass
         return $product;
     }
 
+    public function install(): string
+    {
+        // cargamos las dependencias
+        new Almacen();
+        new Producto();
+        new Variante();
+
+        return parent::install();
+    }
+
     public static function primaryColumn(): string
     {
         return 'id';
@@ -100,6 +111,7 @@ class MovimientoStock extends Base\ModelClass
     public function test(): bool
     {
         $this->documento = Tools::noHtml($this->documento);
+
         return parent::test();
     }
 

@@ -197,6 +197,14 @@ class TransferenciaStock extends Base\ModelClass
         return $warehouse;
     }
 
+    public function install(): string
+    {
+        // cargamos las dependencias
+        new Almacen();
+
+        return parent::install();
+    }
+
     public static function primaryColumn(): string
     {
         return 'idtrans';

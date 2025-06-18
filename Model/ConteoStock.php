@@ -169,6 +169,14 @@ class ConteoStock extends Base\ModelClass
         return $lineaConteo->all($where, $order, 0, 0);
     }
 
+    public function install(): string
+    {
+        // cargamos las dependencias
+        new Almacen();
+
+        return parent::install();
+    }
+
     public static function primaryColumn(): string
     {
         return 'idconteo';
