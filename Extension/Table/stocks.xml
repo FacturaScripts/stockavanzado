@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<table>
+    <column>
+        <name>sa_notification_min</name>
+        <type>datetime</type>
+    </column>
+    <column>
+        <name>sa_notification_max</name>
+        <type>datetime</type>
+    </column>
+</table>

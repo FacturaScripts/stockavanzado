@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -26,9 +26,11 @@ use FacturaScripts\Core\Kernel;
 use FacturaScripts\Core\Model\Role;
 use FacturaScripts\Core\Model\RoleAccess;
 use FacturaScripts\Core\Template\InitClass;
+use FacturaScripts\Dinamic\Model\EmailNotification;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\TransferenciaStock;
+use FacturaScripts\Plugins\StockAvanzado\CronJob\StockMinMax;
 
 /**
  * Description of Init
@@ -46,6 +48,7 @@ class Init extends InitClass
         $this->loadExtension(new Extension\Controller\ListAlmacen());
         $this->loadExtension(new Extension\Controller\ListProducto());
         $this->loadExtension(new Extension\Controller\ReportProducto());
+        $this->loadExtension(new Extension\Model\Stock());
         $this->loadExtension(new Extension\Model\Base\BusinessDocumentLine());
 
         Kernel::addRoute('/api/3/counting-execute', 'ApiCountingExecute', -1);
@@ -63,6 +66,7 @@ class Init extends InitClass
     {
         new MovimientoStock();
 
+        $this->updateEmailNotifications();
         $this->createRoleForPlugin();
         $this->migrateData();
         $this->unlinkUsers();
@@ -161,6 +165,27 @@ class Init extends InitClass
             $sqlUnlink = 'update ' . $table . ' set nick = null'
                 . ' where nick is not null and nick not in (select nick from users)';
             $database->exec($sqlUnlink);
+        }
+    }
+
+    private function updateEmailNotifications(): void
+    {
+        $notificationMax = new EmailNotification();
+        if (!$notificationMax->loadFromCode(StockMinMax::NOTIFICATION_STOCK_MAX)) {
+            $notificationMax->name = StockMinMax::NOTIFICATION_STOCK_MAX;
+            $notificationMax->body = "Hola {nick}.\n\nSe ha alcanzado el stock máximo de los siguientes productos.";
+            $notificationMax->subject = 'Stock máximo alcanzado';
+            $notificationMax->enabled = true;
+            $notificationMax->save();
+        }
+
+        $notificationMin = new EmailNotification();
+        if (!$notificationMin->loadFromCode(StockMinMax::NOTIFICATION_STOCK_MIN)) {
+            $notificationMin->name = StockMinMax::NOTIFICATION_STOCK_MIN;
+            $notificationMin->body = "Hola {nick}.\n\nSe ha alcanzado el stock mínimo de los siguientes productos.";
+            $notificationMin->subject = 'Stock mínimo alcanzado';
+            $notificationMin->enabled = true;
+            $notificationMin->save();
         }
     }
 }
