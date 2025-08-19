@@ -12,7 +12,7 @@
     "reconstructed-movements": "Odbudowane ruchy zapasów",
     "start-with-one-stock": "Zacznij od zapasu jeden",
     "start-with-product-stock": "Zainicjalizuj z aktualnym stanem magazynowym",
-    "start-with-zero-stock": "Zainicjuj z zapasem 0",
+    "start-with-zero-stock": "Zainicjuj z zerowym stanem magazynowym",
     "stock-count": "Liczba produktów na magazynie",
     "stock-count-line-p": "Dodaj linie do tej listy wpisując\/zeskanując kod kreskowy lub referencję. Jeśli produkt już istniał, zwiększa się ilość.",
     "stock-counts": "Liczba zapasów",
