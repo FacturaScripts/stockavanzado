@@ -142,7 +142,7 @@ final class StockMinMax extends CronJobClass
         self::echo("\n-- Notificaciones de stock máximo enviadas correctamente.");
     }
 
-    private static function stockMin()
+    private static function stockMin(): void
     {
         self::echo("\n- Búsqueda de productos con stock mínimo ...");
 
