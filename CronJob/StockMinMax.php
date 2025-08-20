@@ -80,7 +80,7 @@ final class StockMinMax extends CronJobClass
         $where = [new DataBaseWhere('admin', true)];
         return User::all($where, [], 0, 0);
     }
-    private static function stockMax()
+    private static function stockMax(): void
     {
         self::echo("\n- Búsqueda de productos con stock máximo ...");
 
