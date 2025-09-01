@@ -35,6 +35,10 @@ class ListProducto
     protected function createViews(): Closure
     {
         return function () {
+            $viewName = 'ListStock';
+            $this->addFilterNumber($viewName, 'min-stock', 'quantity', 'stocks.cantidad', '>=');
+            $this->addFilterNumber($viewName, 'max-stock', 'quantity', 'stocks.cantidad', '<=');
+
             if ($this->user->admin) {
                 $this->addButton('ListStock', [
                     'action' => 'rebuild-movements',
