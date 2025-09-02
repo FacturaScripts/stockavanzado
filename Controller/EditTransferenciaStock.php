@@ -20,6 +20,7 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
 use FacturaScripts\Core\Lib\ExtendedController\EditController;
+use FacturaScripts\Core\Plugins;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\Familia;
@@ -37,12 +38,10 @@ class EditTransferenciaStock extends EditController
     public function getFamilySelect(): array
     {
         $families = [];
-
-        $familyModel = new Familia();
-        foreach ($familyModel->codeModelAll() as $family) {
+        foreach (Familia::all() as $family) {
             $families[] = [
-                'value' => $family->code,
-                'description' => $family->description
+                'value' => $family->id(),
+                'description' => $family->descripcion
             ];
         }
 
@@ -173,6 +172,61 @@ class EditTransferenciaStock extends EditController
 
         Tools::log()->error('record-deleted-error');
         return ['deleteLine' => false];
+    }
+
+    protected function exportAction()
+    {
+        if (false === $this->views[$this->active]->settings['btnPrint'] ||
+            false === $this->permissions->allowExport) {
+            Tools::log()->warning('no-print-permission');
+            return;
+        }
+
+        $this->setTemplate(false);
+        $this->exportManager->newDoc(
+            $this->request->get('option', ''),
+            $this->title,
+            (int)$this->request->request->get('idformat', ''),
+            $this->request->request->get('langcode', '')
+        );
+
+        foreach ($this->views as $selectedView) {
+            if (false === $selectedView->settings['active']) {
+                continue;
+            }
+
+            if ($selectedView->getViewName() === 'EditTransferenciaStockLines') {
+                $lines = [];
+                $where = [Where::column('idtrans', $this->views[$this->active]->model->id())];
+                foreach (LineaTransferenciaStock::all($where) as $line) {
+                    $row = [
+                        Tools::lang()->trans('reference') => $line->referencia,
+                        Tools::lang()->trans('quantity') => $line->cantidad,
+                        Tools::lang()->trans('date') => $line->fecha,
+                    ];
+
+                    if (Plugins::isEnabled('Trazabilidad')) {
+                        $row[Tools::lang()->trans('traceability')] = $line->numserie;
+                    }
+
+                    $lines[] = $row;
+                }
+
+                if (empty($lines)) {
+                    continue;
+                }
+
+                $this->exportManager->addTablePage(array_keys($lines[0]), $lines, [], Tools::lang()->trans('lines'));
+                continue;
+            }
+
+            $codes = $this->request->request->getArray('codes');
+            if (false === $selectedView->export($this->exportManager, $codes)) {
+                break;
+            }
+        }
+
+        $this->exportManager->show($this->response);
     }
 
     /**

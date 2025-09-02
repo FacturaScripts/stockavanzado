@@ -20,11 +20,13 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
 use FacturaScripts\Core\Lib\ExtendedController\EditController;
+use FacturaScripts\Core\Plugins;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\Familia;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
+use FacturaScripts\Dinamic\Model\LineaConteoStockTraza;
 use FacturaScripts\Dinamic\Model\Variante;
 
 /**
@@ -172,6 +174,76 @@ class EditConteoStock extends EditController
 
         Tools::log()->error('record-deleted-error');
         return ['deleteLine' => false];
+    }
+
+    protected function exportAction()
+    {
+        if (false === $this->views[$this->active]->settings['btnPrint'] ||
+            false === $this->permissions->allowExport) {
+            Tools::log()->warning('no-print-permission');
+            return;
+        }
+
+        $this->setTemplate(false);
+        $this->exportManager->newDoc(
+            $this->request->get('option', ''),
+            $this->title,
+            (int)$this->request->request->get('idformat', ''),
+            $this->request->request->get('langcode', '')
+        );
+
+        foreach ($this->views as $selectedView) {
+            if (false === $selectedView->settings['active']) {
+                continue;
+            }
+
+            if ($selectedView->getViewName() === 'EditConteoStockLines') {
+                $lines = [];
+                $where = [Where::column('idconteo', $this->views[$this->active]->model->id())];
+                foreach (LineaConteoStock::all($where) as $line) {
+                    $lines[] = [
+                        Tools::lang()->trans('reference') => $line->referencia,
+                        Tools::lang()->trans('quantity') => $line->cantidad,
+                        Tools::lang()->trans('date') => $line->fecha,
+                    ];
+                }
+
+                if (empty($lines)) {
+                    continue;
+                }
+
+                $this->exportManager->addTablePage(array_keys($lines[0]), $lines, [], Tools::lang()->trans('lines'));
+
+                if (Plugins::isEnabled('Trazabilidad')) {
+                    $lotes = [];
+                    foreach (LineaConteoStockTraza::all($where) as $lineTraza) {
+                        $lote = $lineTraza->getLote();
+                        $line = $lineTraza->getCountingLine();
+                        $lotes[] = [
+                            Tools::lang()->trans('reference') => $line->referencia,
+                            Tools::lang()->trans('batch-serial-number') => $lote->numserie,
+                            Tools::lang()->trans('quantity') => $lineTraza->quantity,
+                            Tools::lang()->trans('date') => $lineTraza->last_update,
+                        ];
+                    }
+
+                    if (empty($lotes)) {
+                        continue;
+                    }
+
+                    $this->exportManager->addTablePage(array_keys($lotes[0]), $lotes, [], Tools::lang()->trans('traceability'));
+                }
+
+                continue;
+            }
+
+            $codes = $this->request->request->getArray('codes');
+            if (false === $selectedView->export($this->exportManager, $codes)) {
+                break;
+            }
+        }
+
+        $this->exportManager->show($this->response);
     }
 
     /**
