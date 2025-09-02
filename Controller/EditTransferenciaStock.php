@@ -44,7 +44,6 @@ class EditTransferenciaStock extends EditController
                 'description' => $family->descripcion
             ];
         }
-
         return $families;
     }
 

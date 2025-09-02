@@ -38,15 +38,12 @@ class EditConteoStock extends EditController
     public function getFamilySelect(): array
     {
         $families = [];
-
-        $familyModel = new Familia();
-        foreach ($familyModel->codeModelAll() as $family) {
+        foreach (Familia::all() as $family) {
             $families[] = [
-                'value' => $family->code,
-                'description' => $family->description
+                'value' => $family->id(),
+                'description' => $family->descripcion
             ];
         }
-
         return $families;
     }
 
