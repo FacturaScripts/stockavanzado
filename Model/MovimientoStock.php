@@ -91,11 +91,8 @@ class MovimientoStock extends ModelClass
 
     public function install(): string
     {
-        // cargamos las dependencias
         new Almacen();
-        new Producto();
         new Variante();
-
         return parent::install();
     }
 

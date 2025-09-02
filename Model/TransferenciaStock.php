@@ -199,9 +199,7 @@ class TransferenciaStock extends ModelClass
 
     public function install(): string
     {
-        // cargamos las dependencias
         new Almacen();
-
         return parent::install();
     }
 

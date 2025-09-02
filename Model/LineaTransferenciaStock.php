@@ -80,10 +80,8 @@ class LineaTransferenciaStock extends ModelClass
 
     public function install(): string
     {
-        // needed dependencies
-        new TransferenciaStock();
+        new DinTransferenciaStock();
         new Variante();
-
         return parent::install();
     }
 

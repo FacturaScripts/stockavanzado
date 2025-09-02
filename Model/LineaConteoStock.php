@@ -26,6 +26,7 @@ use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\ConteoStock as DinConteoStock;
+use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
 
@@ -87,6 +88,13 @@ class LineaConteoStock extends ModelClass
         $where = [Where::column('referencia', $this->referencia)];
         $variante->loadWhere($where);
         return $variante;
+    }
+
+    public function install(): string
+    {
+        new Variante();
+        new DinConteoStock();
+        return parent::install();
     }
 
     public static function primaryColumn(): string
