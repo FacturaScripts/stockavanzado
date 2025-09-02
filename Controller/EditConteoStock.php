@@ -19,9 +19,9 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\EditController;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\Familia;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
@@ -58,7 +58,7 @@ class EditConteoStock extends EditController
         $data = parent::getPageData();
         $data['menu'] = 'warehouse';
         $data['title'] = 'stock-count';
-        $data['icon'] = 'fas fa-scroll';
+        $data['icon'] = 'fa-solid fa-scroll';
         return $data;
     }
 
@@ -81,22 +81,22 @@ class EditConteoStock extends EditController
         // buscamos la variante
         $variante = new Variante();
         $where = empty($barcode) ?
-            [new DataBaseWhere('referencia', $ref)] :
-            [new DataBaseWhere('codbarras', $barcode)];
-        if (false === $variante->loadFromCode('', $where)) {
+            [Where::column('referencia', $ref)] :
+            [Where::column('codbarras', $barcode)];
+        if (false === $variante->loadWhere($where)) {
             Tools::log()->warning('no-data');
             return ['addLine' => false];
         }
 
         // cargamos el conteo
         $conteo = new ConteoStock();
-        if (false === $conteo->loadFromCode($code)) {
+        if (false === $conteo->load($code)) {
             return ['addLine' => false];
         }
 
         // añadimos la línea
         $newLine = $conteo->addLine($variante->referencia, $variante->idproducto, 1);
-        if (empty($newLine->primaryColumnValue())) {
+        if (empty($newLine->id())) {
             Tools::log()->error('record-save-error');
             return ['addLine' => false];
         }
@@ -136,7 +136,7 @@ class EditConteoStock extends EditController
 
     protected function createViewsLines(string $viewName = 'EditConteoStockLines'): void
     {
-        $this->addHtmlView($viewName, $viewName, 'LineaConteoStock', 'lines', 'fas fa-list');
+        $this->addHtmlView($viewName, $viewName, 'LineaConteoStock', 'lines', 'fa-solid fa-list');
     }
 
     protected function deleteLineAction(): array
@@ -148,14 +148,14 @@ class EditConteoStock extends EditController
 
         // cargamos el conteo
         $conteo = new ConteoStock();
-        if (false === $conteo->loadFromCode($this->request->get('code'))) {
+        if (false === $conteo->load($this->request->get('code'))) {
             Tools::log()->warning('record-not-found');
             return ['deleteLine' => false];
         }
 
         $lineaConteo = new LineaConteoStock();
         $idLinea = $this->request->get('idlinea');
-        if (false === $lineaConteo->loadFromCode($idLinea)) {
+        if (false === $lineaConteo->load($idLinea)) {
             Tools::log()->warning('record-not-found');
             return ['deleteLine' => false];
         }
@@ -218,13 +218,10 @@ class EditConteoStock extends EditController
             return false;
         }
 
-        switch ($action) {
-            case 'update-stock':
-                return $this->updateStockAction();
-
-            default:
-                return parent::execPreviousAction($action);
-        }
+        return match ($action) {
+            'update-stock' => $this->updateStockAction(),
+            default => parent::execPreviousAction($action),
+        };
     }
 
     protected function getMessages(): array
@@ -247,7 +244,7 @@ class EditConteoStock extends EditController
 
         // cargamos el conteo
         $conteo = new ConteoStock();
-        if (false === $conteo->loadFromCode($this->request->get('code'))) {
+        if (false === $conteo->load($this->request->get('code'))) {
             return [
                 'renderLines' => false,
                 'count' => 0,
@@ -270,8 +267,8 @@ class EditConteoStock extends EditController
         $tableHead = [
             '<th>' . Tools::lang()->trans('reference') . '</th>',
             '<th class="text-center" style="width: 15%;">' . Tools::lang()->trans('quantity') . '</th>',
-            '<th class="text-right">' . Tools::lang()->trans('user') . '</th>',
-            '<th class="text-right">' . Tools::lang()->trans('date') . '</th>',
+            '<th class="text-end">' . Tools::lang()->trans('user') . '</th>',
+            '<th class="text-end">' . Tools::lang()->trans('date') . '</th>',
         ];
 
         $resultHead = $this->pipe('renderLinesTableHead', $tableHead, $conteo);
@@ -297,24 +294,20 @@ class EditConteoStock extends EditController
             } else {
                 $dataLine[] = '<td class="text-center align-middle">'
                     . '<div class="input-group">'
-                    . '<div class="input-group-prepend">'
                     . '<button class="btn btn-outline-danger delete-line btn-spin-action" title="'
-                    . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fas fa-trash-alt"></i></button>'
-                    . '</div>'
+                    . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fa-solid fa-trash-alt"></i></button>'
                     . '<input type="number" name="cantidad" id="lineaCantidad' . $line->idlinea . '" class="form-control text-center qty-line" value="' . $line->cantidad . '"/>'
-                    . '<div class="input-group-append">'
                     . '<button class="btn btn-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
-                    . $line->idlinea . '\')" title="' . Tools::lang()->trans('update') . '"><i class="fas fa-save"></i></button>'
-                    . '</div>'
+                    . $line->idlinea . '\')" title="' . Tools::lang()->trans('update') . '"><i class="fa-solid fa-save"></i></button>'
                     . '</div>'
                     . '</td>';
             }
 
-            $dataLine[] = '<td class="text-right align-middle">'
+            $dataLine[] = '<td class="text-end align-middle">'
                 . $line->nick
                 . '</td>';
 
-            $dataLine[] = '<td class="text-right align-middle">'
+            $dataLine[] = '<td class="text-end align-middle">'
                 . Tools::dateTime($line->fecha)
                 . '</td>';
 
@@ -376,7 +369,7 @@ class EditConteoStock extends EditController
 
         // cargamos el conteo
         $conteo = new ConteoStock();
-        if (false === $conteo->loadFromCode($this->request->get('code'))) {
+        if (false === $conteo->load($this->request->get('code'))) {
             return ['preloadProduct' => false];
         }
 
@@ -405,7 +398,7 @@ class EditConteoStock extends EditController
         foreach ($variants as $variant) {
             $qty = $option === 'cero' ? 0.0 : $variant['stockfis'];
             $newLine = $conteo->addLine($variant['referencia'], $variant['idproducto'], $qty);
-            if (empty($newLine->primaryColumnValue())) {
+            if (empty($newLine->id())) {
                 Tools::log()->error('record-save-error');
                 return ['preloadProduct' => false];
             }
@@ -423,14 +416,14 @@ class EditConteoStock extends EditController
 
         // cargamos el conteo
         $conteo = new ConteoStock();
-        if (false === $conteo->loadFromCode($this->request->get('code'))) {
+        if (false === $conteo->load($this->request->get('code'))) {
             Tools::log()->warning('record-not-found');
             return ['updateLine' => false];
         }
 
         $lineaConteo = new LineaConteoStock();
         $idLinea = $this->request->request->get('idlinea');
-        if (false === $lineaConteo->loadFromCode($idLinea)) {
+        if (false === $lineaConteo->load($idLinea)) {
             Tools::log()->notice('record-not-found');
             return ['updateLine' => false];
         }
@@ -466,7 +459,7 @@ class EditConteoStock extends EditController
         }
 
         $model = $this->getModel();
-        if (false === $model->loadFromCode($this->request->get('code'))) {
+        if (false === $model->load($this->request->get('code'))) {
             Tools::log()->warning('record-not-found');
             return true;
         } elseif ($model->completed) {
@@ -479,7 +472,7 @@ class EditConteoStock extends EditController
         }
 
         Tools::log()->notice('record-updated-correctly');
-        Tools::log('audit')->info('applied-stock-count', ['%code%' => $model->primaryColumnValue()]);
+        Tools::log('audit')->info('applied-stock-count', ['%code%' => $model->id()]);
         return true;
     }
 }

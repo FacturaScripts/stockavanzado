@@ -19,10 +19,12 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Core\Model\Base;
+use FacturaScripts\Core\Model\Base\ProductRelationTrait;
+use FacturaScripts\Core\Template\ModelClass;
+use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\ConteoStock as DinConteoStock;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
@@ -30,10 +32,10 @@ use FacturaScripts\Dinamic\Model\Variante;
 /**
  * @author Carlos Garcia Gomez <carlos@facturascripts.com>
  */
-class LineaConteoStock extends Base\ModelClass
+class LineaConteoStock extends ModelClass
 {
-    use Base\ModelTrait;
-    use Base\ProductRelationTrait;
+    use ModelTrait;
+    use ProductRelationTrait;
 
     /** @var float */
     public $cantidad;
@@ -53,7 +55,7 @@ class LineaConteoStock extends Base\ModelClass
     /** @var string */
     public $referencia;
 
-    public function clear()
+    public function clear(): void
     {
         parent::clear();
         $this->cantidad = 1.0;
@@ -64,7 +66,7 @@ class LineaConteoStock extends Base\ModelClass
     public function getConteo(): DinConteoStock
     {
         $conteo = new DinConteoStock();
-        $conteo->loadFromCode($this->idconteo);
+        $conteo->load($this->idconteo);
         return $conteo;
     }
 
@@ -72,18 +74,18 @@ class LineaConteoStock extends Base\ModelClass
     {
         $stock = new Stock();
         $where = [
-            new DataBaseWhere('codalmacen', $this->getConteo()->codalmacen),
-            new DataBaseWhere('referencia', $this->referencia)
+            Where::column('codalmacen', $this->getConteo()->codalmacen),
+            Where::column('referencia', $this->referencia)
         ];
-        $stock->loadFromCode('', $where);
+        $stock->loadWhere($where);
         return $stock;
     }
 
     public function getVariant(): Variante
     {
         $variante = new Variante();
-        $where = [new DataBaseWhere('referencia', $this->referencia)];
-        $variante->loadFromCode('', $where);
+        $where = [Where::column('referencia', $this->referencia)];
+        $variante->loadWhere($where);
         return $variante;
     }
 

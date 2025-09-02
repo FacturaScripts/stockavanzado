@@ -20,9 +20,9 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 
 use FacturaScripts\Core\Base\DataBase;
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\Stock;
 
 /**
@@ -51,10 +51,10 @@ class StockRebuild
             foreach (static::calculateStockData($war->codalmacen) as $data) {
                 $stock = new Stock();
                 $where = [
-                    new DataBaseWhere('codalmacen', $data['codalmacen']),
-                    new DataBaseWhere('referencia', $data['referencia'])
+                    Where::column('codalmacen', $data['codalmacen']),
+                    Where::column('referencia', $data['referencia'])
                 ];
-                if ($stock->loadFromCode('', $where)) {
+                if ($stock->loadWhere($where)) {
                     // el stock ya existe
                     $stock->loadFromData($data);
                 } else {

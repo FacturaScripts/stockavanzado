@@ -19,9 +19,10 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Core\Model\Base;
+use FacturaScripts\Core\Template\ModelClass;
+use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Variante;
@@ -31,9 +32,9 @@ use FacturaScripts\Dinamic\Model\Variante;
  *
  * @author Carlos Garcia Gomez <carlos@facturascripts.com>
  */
-class MovimientoStock extends Base\ModelClass
+class MovimientoStock extends ModelClass
 {
-    use Base\ModelTrait;
+    use ModelTrait;
 
     /** @var float */
     public $cantidad;
@@ -65,7 +66,7 @@ class MovimientoStock extends Base\ModelClass
     /** @var string */
     public $referencia;
 
-    public function clear()
+    public function clear(): void
     {
         parent::clear();
         $this->cantidad = 0.0;
@@ -76,15 +77,15 @@ class MovimientoStock extends Base\ModelClass
     public function getVariant(): Variante
     {
         $variant = new Variante();
-        $where = [new DataBaseWhere('referencia', $this->referencia)];
-        $variant->loadFromCode('', $where);
+        $where = [Where::column('referencia', $this->referencia)];
+        $variant->loadWhere($where);
         return $variant;
     }
 
     public function getProduct(): Producto
     {
         $product = new Producto();
-        $product->loadFromCode($this->idproducto);
+        $product->load($this->idproducto);
         return $product;
     }
 
@@ -120,11 +121,11 @@ class MovimientoStock extends Base\ModelClass
         $modelClass = '\\FacturaScripts\\Dinamic\\Model\\' . $this->docmodel;
         if (!empty($this->docmodel) && class_exists($modelClass)) {
             $model = new $modelClass();
-            if ($model->loadFromCode($this->docid)) {
+            if ($model->load($this->docid)) {
                 return $model->url();
             }
         }
 
-        return empty($this->primaryColumnValue()) ? parent::url($type, $list) : $this->getProduct()->url();
+        return empty($this->id()) ? parent::url($type, $list) : $this->getProduct()->url();
     }
 }

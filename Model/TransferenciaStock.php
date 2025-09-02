@@ -19,10 +19,11 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Core\Model\Base;
+use FacturaScripts\Core\Template\ModelClass;
+use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuild;
 use FacturaScripts\Dinamic\Model\Almacen;
@@ -34,9 +35,9 @@ use FacturaScripts\Dinamic\Model\TransferenciaStock as DinTransferenciaStock;
  * @author Cristo M. Estévez Hernández  <cristom.estevez@gmail.com>
  * @author Carlos García Gómez          <carlos@facturascripts.com>
  */
-class TransferenciaStock extends Base\ModelClass
+class TransferenciaStock extends ModelClass
 {
-    use Base\ModelTrait;
+    use ModelTrait;
 
     /** @var string */
     public $codalmacendestino;
@@ -66,13 +67,13 @@ class TransferenciaStock extends Base\ModelClass
     {
         $line = new LineaTransferenciaStock();
         $where = [
-            new DataBaseWhere('idtrans', $this->idtrans),
-            new DataBaseWhere('referencia', $referencia)
+            Where::column('idtrans', $this->idtrans),
+            Where::column('referencia', $referencia)
         ];
         $orderBy = ['idlinea' => 'DESC'];
 
         // si no existe la línea, la creamos
-        if (false === $line->loadFromCode('', $where, $orderBy)) {
+        if (false === $line->loadWhere($where, $orderBy)) {
             $line->cantidad = $quantity;
             $line->idtrans = $this->idtrans;
             $line->idproducto = $idproducto;
@@ -94,7 +95,7 @@ class TransferenciaStock extends Base\ModelClass
         return $line;
     }
 
-    public function clear()
+    public function clear(): void
     {
         parent::clear();
         $this->completed = false;
@@ -105,7 +106,7 @@ class TransferenciaStock extends Base\ModelClass
     public function delete(): bool
     {
         $transfer = new DinTransferenciaStock();
-        if (false === $transfer->loadFromCode($this->idtrans)) {
+        if (false === $transfer->load($this->idtrans)) {
             return false;
         }
 
@@ -135,10 +136,10 @@ class TransferenciaStock extends Base\ModelClass
             // cargamos el stock de la línea
             $stock = new Stock();
             $where = [
-                new DataBaseWhere('codalmacen', $transfer->codalmacenorigen),
-                new DataBaseWhere('referencia', $line->referencia)
+                Where::column('codalmacen', $transfer->codalmacenorigen),
+                Where::column('referencia', $line->referencia)
             ];
-            if (false === $stock->loadFromCode('', $where)) {
+            if (false === $stock->loadWhere($where)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
                 }
@@ -178,22 +179,21 @@ class TransferenciaStock extends Base\ModelClass
 
     public function getLines(array $order = []): array
     {
-        $line = new LineaTransferenciaStock();
-        $where = [new DataBaseWhere('idtrans', $this->primaryColumnValue())];
-        return $line->all($where, $order, 0, 0);
+        $where = [Where::column('idtrans', $this->id())];
+        return LineaTransferenciaStock::all($where, $order);
     }
 
     public function getWarehouseDest(): Almacen
     {
         $warehouse = new Almacen();
-        $warehouse->loadFromCode($this->codalmacendestino);
+        $warehouse->load($this->codalmacendestino);
         return $warehouse;
     }
 
     public function getWarehouseOrig(): Almacen
     {
         $warehouse = new Almacen();
-        $warehouse->loadFromCode($this->codalmacenorigen);
+        $warehouse->load($this->codalmacenorigen);
         return $warehouse;
     }
 
@@ -235,7 +235,7 @@ class TransferenciaStock extends Base\ModelClass
     public function transferStock(): bool
     {
         $transfer = new DinTransferenciaStock();
-        if (false === $transfer->loadFromCode($this->idtrans)) {
+        if (false === $transfer->load($this->idtrans)) {
             return false;
         }
 
@@ -252,10 +252,10 @@ class TransferenciaStock extends Base\ModelClass
             // cargamos el stock de la línea
             $stock = new Stock();
             $where = [
-                new DataBaseWhere('codalmacen', $transfer->codalmacenorigen),
-                new DataBaseWhere('referencia', $line->referencia)
+                Where::column('codalmacen', $transfer->codalmacenorigen),
+                Where::column('referencia', $line->referencia)
             ];
-            if (false === $stock->loadFromCode('', $where) || $stock->cantidad < $line->cantidad) {
+            if (false === $stock->loadWhere($where) || $stock->cantidad < $line->cantidad) {
                 Tools::log()->warning('not-enough-stock', ['%reference%' => $line->referencia]);
                 if ($newTransaction) {
                     self::$dataBase->rollback();
@@ -310,7 +310,7 @@ class TransferenciaStock extends Base\ModelClass
     protected function getIdempresa(string $codalmacen): int
     {
         $warehouse = new Almacen;
-        $warehouse->loadFromCode($codalmacen);
+        $warehouse->load($codalmacen);
         return $warehouse->idempresa;
     }
 }

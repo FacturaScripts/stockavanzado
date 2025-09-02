@@ -19,11 +19,12 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\DataSrc\Almacenes;
-use FacturaScripts\Core\Model\Base;
+use FacturaScripts\Core\Template\ModelClass;
+use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuild;
 use FacturaScripts\Dinamic\Model\Almacen;
@@ -35,9 +36,9 @@ use FacturaScripts\Dinamic\Model\LineaConteoStock;
  *
  * @author Carlos Garcia Gomez <carlos@facturascripts.com>
  */
-class ConteoStock extends Base\ModelClass
+class ConteoStock extends ModelClass
 {
-    use Base\ModelTrait;
+    use ModelTrait;
 
     /** @var string */
     public $codalmacen;
@@ -64,13 +65,13 @@ class ConteoStock extends Base\ModelClass
     {
         $line = new LineaConteoStock();
         $where = [
-            new DataBaseWhere('idconteo', $this->idconteo),
-            new DataBaseWhere('referencia', $referencia)
+            Where::column('idconteo', $this->idconteo),
+            Where::column('referencia', $referencia)
         ];
         $orderBy = ['idlinea' => 'DESC'];
 
         // si no existe la línea, la creamos
-        if (false === $line->loadFromCode('', $where, $orderBy)) {
+        if (false === $line->loadWhere($where, $orderBy)) {
             $line->cantidad = $quantity;
             $line->idconteo = $this->idconteo;
             $line->idproducto = $idproducto;
@@ -92,7 +93,7 @@ class ConteoStock extends Base\ModelClass
         return $line;
     }
 
-    public function clear()
+    public function clear(): void
     {
         parent::clear();
         $this->completed = false;
@@ -104,7 +105,7 @@ class ConteoStock extends Base\ModelClass
     public function delete(): bool
     {
         $conteo = new DinConteoStock();
-        if (false === $conteo->loadFromCode($this->idconteo)) {
+        if (false === $conteo->load($this->idconteo)) {
             return false;
         }
 
@@ -164,9 +165,8 @@ class ConteoStock extends Base\ModelClass
 
     public function getLines(array $order = []): array
     {
-        $lineaConteo = new LineaConteoStock();
-        $where = [new DataBaseWhere('idconteo', $this->idconteo)];
-        return $lineaConteo->all($where, $order, 0, 0);
+        $where = [Where::column('idconteo', $this->idconteo)];
+        return LineaConteoStock::all($where, $order);
     }
 
     public function install(): string
@@ -196,7 +196,7 @@ class ConteoStock extends Base\ModelClass
     public function updateStock(): bool
     {
         $conteo = new DinConteoStock();
-        if (false === $conteo->loadFromCode($this->idconteo)) {
+        if (false === $conteo->load($this->idconteo)) {
             return false;
         }
 

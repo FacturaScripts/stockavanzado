@@ -19,7 +19,7 @@
 
 namespace FacturaScripts\Test\Plugins;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Stock;
@@ -75,18 +75,18 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($linea2->exists());
 
         // comprobamos que el stock del producto 1 es 0
-        $stock1->loadFromCode($stock1->primaryColumnValue());
+        $stock1->load($stock1->id());
         $this->assertEquals(0, $stock1->cantidad);
 
         // comprobamos que el stock del producto 2 es 5
-        $stock2->loadFromCode($stock2->primaryColumnValue());
+        $stock2->load($stock2->id());
         $this->assertEquals(5, $stock2->cantidad);
 
         // ejecutamos el conteo
         $this->assertTrue($conteo->updateStock());
 
         // comprobamos que el conteo está completado
-        $conteo->loadFromCode($conteo->primaryColumnValue());
+        $conteo->load($conteo->id());
         $this->assertTrue($conteo->completed);
 
         // si intento volver a ejecutarlo debe devolver true porque ya está completado
@@ -95,19 +95,19 @@ final class ConteoStockTest extends TestCase
         // comprobamos que está el movimiento de stock
         $movement = new MovimientoStock();
         $where = [
-            new DataBaseWhere('codalmacen', $conteo->codalmacen),
-            new DataBaseWhere('docid', $conteo->primaryColumnValue()),
-            new DataBaseWhere('docmodel', $conteo->modelClassName()),
-            new DataBaseWhere('referencia', $linea1->referencia)
+            Where::column('codalmacen', $conteo->codalmacen),
+            Where::column('docid', $conteo->id()),
+            Where::column('docmodel', $conteo->modelClassName()),
+            Where::column('referencia', $linea1->referencia)
         ];
-        $this->assertTrue($movement->loadFromCode('', $where));
+        $this->assertTrue($movement->loadWhere($where));
 
         // comprobamos que el stock del producto 1 es 50
-        $stock1->loadFromCode($stock1->primaryColumnValue());
+        $stock1->load($stock1->id());
         $this->assertEquals(50, $stock1->cantidad);
 
         // comprobamos que el stock del producto 2 es 1
-        $stock2->loadFromCode($stock2->primaryColumnValue());
+        $stock2->load($stock2->id());
         $this->assertEquals(1, $stock2->cantidad);
 
         // eliminamos el conteo
@@ -120,7 +120,7 @@ final class ConteoStockTest extends TestCase
         $this->assertFalse($movement->exists());
 
         // comprobamos que el stock vuelve a 0
-        $stock1->loadFromCode($stock1->primaryColumnValue());
+        $stock1->load($stock1->id());
         $this->assertEquals(0, $stock1->cantidad);
 
         // eliminamos
@@ -178,14 +178,14 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($linea->exists());
 
         // comprobamos que el stock del producto es 3
-        $stock->loadFromCode($stock->primaryColumnValue());
+        $stock->load($stock->id());
         $this->assertEquals(3, $stock->cantidad);
 
         // eliminamos el conteo
         $this->assertTrue($conteo->delete());
 
         // comprobamos que el stock del producto sigue siendo 3
-        $stock->loadFromCode($stock->idstock);
+        $stock->load($stock->idstock);
         $this->assertEquals(3, $stock->cantidad);
 
         // eliminamos

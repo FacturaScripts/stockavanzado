@@ -22,12 +22,12 @@
 <view>
     <rows>
         <row type="actions">
-            <button type="modal" label="new-quantity" color="warning" action="change-stock" icon="fas fa-pen"/>
+            <button type="modal" label="new-quantity" color="warning" action="change-stock" icon="fa-solid fa-pen"/>
         </row>
     </rows>
 
     <modals>
-        <group name="change-stock" title="stock" icon="fas fa-dolly fa-fw">
+        <group name="change-stock" title="stock" icon="fa-solid fa-dolly fa-fw">
             <column name="new-quantity" numcolumns="12" description="new-quantity-description">
                 <widget type="number" fieldname="mov-quantity" required="true"/>
             </column>
