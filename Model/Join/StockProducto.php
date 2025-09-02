@@ -71,7 +71,11 @@ class StockProducto extends JoinModel
 
     protected function getGroupFields(): string
     {
-        return 'stocks.codalmacen, variantes.referencia, variantes.precio, variantes.coste, productos.tipo, stocks.cantidad';
+        return 'productos.bloqueado, stocks.cantidad, stocks.codalmacen, productos.codfabricante, '
+            . 'productos.codfamilia, variantes.coste, productos.descripcion, stocks.disponible, '
+            . 'stocks.pterecibir, stocks.reservada, stocks.idproducto, stocks.idstock, '
+            . 'productos.nostock, variantes.precio, stocks.referencia, stocks.stockmax, '
+            . 'stocks.stockmin, productos.tipo, variantes.referencia';
     }
 
     protected function getSQLFrom(): string
