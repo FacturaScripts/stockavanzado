@@ -66,10 +66,14 @@ class MovimientoStock extends ModelClass
     /** @var string */
     public $referencia;
 
+    /** @var float */
+    public $saldo;
+
     public function clear(): void
     {
         parent::clear();
         $this->cantidad = 0.0;
+        $this->saldo = 0.0;
         $this->fecha = Tools::date();
         $this->hora = Tools::hour();
     }
@@ -111,6 +115,45 @@ class MovimientoStock extends ModelClass
         $this->documento = Tools::noHtml($this->documento);
 
         return parent::test();
+    }
+
+    public function saveInsert(): bool
+    {
+        if (!parent::saveInsert()) {
+            return false;
+        }
+
+        // Calculamos el saldo antes de guardar
+        $this->calculateSaldo();
+
+        return true;
+    }
+
+    /**
+     * Calcula y actualiza el saldo de todos los movimientos al insertar un movimiento nuevo.
+     * El saldo será la suma de todas las cantidades de movimientos anteriores (fecha, hora, id ASC) más la cantidad de este movimiento.
+     */
+    private function calculateSaldo(): void
+    {
+        // Filtrar por producto y almacén
+        $where = [
+            Where::column('codalmacen', $this->codalmacen),
+            Where::column('referencia', $this->referencia)
+        ];
+
+        // Seleccionar todos los movimientos en orden cronológico
+        $movements = MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC']);
+
+        if (empty($movements)) {
+            self::$dataBase->exec("UPDATE stocks_movimientos SET saldo = " . self::$dataBase->var2str($this->cantidad) . " WHERE id = " . self::$dataBase->var2str($this->id));
+            return;
+        }
+
+        $saldo = 0.0;
+        foreach ($movements as $movement) {
+            $saldo += (float)$movement->cantidad;
+            self::$dataBase->exec("UPDATE stocks_movimientos SET saldo = " . self::$dataBase->var2str($saldo) . " WHERE id = " . self::$dataBase->var2str($movement->id()));
+        }
     }
 
     public function url(string $type = 'auto', string $list = 'List'): string

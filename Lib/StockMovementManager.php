@@ -43,7 +43,7 @@ use FacturaScripts\Plugins\StockAvanzado\Contract\StockMovementModInterface;
  */
 class StockMovementManager
 {
-    const JOB_NAME = 'rebuild-movements';
+    const JOB_NAME = 'movements-rebuild';
     const JOB_PERIOD = '99 years';
 
     /** @var array */
@@ -61,10 +61,10 @@ class StockMovementManager
     /** @var array */
     private static $variants = [];
 
-    public static function addLineBusinessDocument(BusinessDocumentLine $line, array $prevData, TransformerDocument $doc): void
+    public static function addLineBusinessDocument(BusinessDocumentLine $line, TransformerDocument $doc): void
     {
         if (false === in_array($line->actualizastock, [1, -1], true) &&
-            false === in_array($prevData['actualizastock'], [1, -1], true)) {
+            false === in_array($line->getOriginal('actualizastock'), [1, -1], true)) {
             return;
         }
 
@@ -86,7 +86,7 @@ class StockMovementManager
             }
         }
 
-        $movement->cantidad -= $prevData['actualizastock'] * $prevData['cantidad'];
+        $movement->cantidad -= $line->getOriginal('actualizastock') * $line->getOriginal('cantidad');
         $movement->cantidad += $line->actualizastock * $line->cantidad;
         $movement->documento = Tools::lang()->trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
@@ -98,14 +98,12 @@ class StockMovementManager
     {
         $docid = $stockCount->id();
         $docmodel = $stockCount->modelClassName();
-        // usamos la fecha de ejecución del conteo para calcular el stock previo
-        $stockSum = static::getStockSum(
-            $line->referencia,
-            $stockCount->codalmacen,
-            $docid,
-            $docmodel,
-            $stockCount->fechafin
-        );
+
+        // Calculamos el stock acumulado hasta la fecha del conteo (excluyendo el conteo actual)
+        $stockSum = static::getStockSum($line->referencia, $stockCount->codalmacen, $docid, $docmodel, $stockCount->fechafin);
+
+        // El movimiento del conteo debe ajustar el stock para que quede exactamente en el valor contado
+        // Fórmula: cantidad_movimiento = stock_objetivo - stock_calculado_antes_del_conteo
         $cantidad = $stock - $stockSum;
 
         $movement = new MovimientoStock();
@@ -115,6 +113,7 @@ class StockMovementManager
             Where::column('docmodel', $docmodel),
             Where::column('referencia', $line->referencia)
         ];
+
         if (false === $movement->loadWhere($where)) {
             $movement->documento = Tools::lang()->trans($stockCount->modelClassName()) . ' ' . $stockCount->id();
             $movement->fecha = Tools::date($stockCount->fechafin);
@@ -124,13 +123,16 @@ class StockMovementManager
             $movement->docmodel = $docmodel;
             $movement->idproducto = $line->idproducto;
             $movement->referencia = $line->referencia;
-            if (empty($cantidad)) {
-                return true;
-            }
         }
 
         $movement->cantidad = $cantidad;
-        return empty($movement->cantidad) ? $movement->delete() : $movement->save();
+
+        // Solo guardar si hay cantidad diferente de 0, sino eliminar el movimiento
+        if ($cantidad == 0) {
+            return $movement->exists() ? $movement->delete() : true;
+        }
+
+        return $movement->save();
     }
 
     public static function addLineTransferStock(LineaTransferenciaStock $line, TransferenciaStock $transfer): void
@@ -177,7 +179,10 @@ class StockMovementManager
         static::$idproducto = $idproducto;
 
         // eliminamos todos los movimientos de stock
-        static::deleteMovements();
+        if (!static::deleteMovements()) {
+            Tools::log('audit')->warning('error-deleting-movements');
+            return;
+        }
 
         // creamos los movimientos de los documentos de compra y venta
         static::rebuildBusinessDocument();
@@ -192,6 +197,8 @@ class StockMovementManager
         foreach (self::$mods as $mod) {
             $mod->run(static::$idproducto);
         }
+
+        Tools::log('audit')->warning('rebuilt-movements');
     }
 
     protected static function addLineTransferStockMovement(string $codalmacen, float $cantidad, TransferenciaStock $transfer, LineaTransferenciaStock $line): bool
@@ -289,20 +296,30 @@ class StockMovementManager
     protected static function getStockSum(string $reference, string $codalmacen, int $docid, string $docmodel, string $datetime): float
     {
         $sum = 0.0;
+        $targetTimestamp = strtotime($datetime);
+
         $where = [
             Where::column('codalmacen', $codalmacen),
-            Where::column('fecha', Tools::date($datetime), '<='),
             Where::column('referencia', $reference)
         ];
-        foreach (MovimientoStock::all($where, ['id' => 'ASC']) as $move) {
-            // excluir movimiento seleccionado
+
+        // Obtener todos los movimientos ordenados cronológicamente
+        $movements = MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC']);
+
+        foreach ($movements as $move) {
+            $moveTimestamp = strtotime($move->fecha . ' ' . $move->hora);
+
+            // Excluir el movimiento actual (mismo documento) ANTES de verificar la fecha
             if ($move->docid == $docid && $move->docmodel == $docmodel) {
                 continue;
             }
 
-            if (strtotime($move->fecha . ' ' . $move->hora) <= strtotime($datetime)) {
-                $sum += $move->cantidad;
+            // Solo procesar movimientos anteriores al datetime objetivo
+            if ($moveTimestamp > $targetTimestamp) {
+                break; // Como está ordenado, ya no hay movimientos anteriores
             }
+
+            $sum += $move->cantidad;
         }
 
         return $sum;
@@ -351,9 +368,31 @@ class StockMovementManager
                             continue;
                         }
 
-                        $prevData['actualizastock'] = $line->actualizastock;
-                        $prevData['cantidad'] = 0.0;
-                        static::addLineBusinessDocument($line, $prevData, $doc);
+                        // En rebuild, creamos movimientos nuevos directamente
+                        $movement = new MovimientoStock();
+                        $where = [
+                            Where::column('codalmacen', $doc->codalmacen),
+                            Where::column('docid', $doc->id()),
+                            Where::column('docmodel', $doc->modelClassName()),
+                            Where::column('referencia', $line->referencia)
+                        ];
+
+                        // Solo crear si no existe ya
+                        if (false === $movement->loadWhere($where)) {
+                            $movement->codalmacen = $doc->codalmacen;
+                            $movement->docid = $doc->id();
+                            $movement->docmodel = $doc->modelClassName();
+                            $movement->idproducto = $line->idproducto ?? $line->getProducto()->idproducto;
+                            $movement->referencia = $line->referencia;
+                            $movement->cantidad = $line->actualizastock * $line->cantidad;
+                            $movement->documento = Tools::lang()->trans($doc->modelClassName()) . ' ' . $doc->codigo;
+                            $movement->fecha = $doc->fecha;
+                            $movement->hora = $doc->hora;
+
+                            if (!empty($movement->cantidad)) {
+                                $movement->save();
+                            }
+                        }
                     }
                 }
 

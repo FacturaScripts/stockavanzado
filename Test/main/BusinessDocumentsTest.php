@@ -95,6 +95,7 @@ final class BusinessDocumentsTest extends TestCase
         ];
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals(-10, $movement->cantidad);
+        $this->assertEquals(-10, $movement->saldo);
         $this->assertEquals($albaran->id(), $movement->docid);
         $this->assertEquals($albaran->modelClassName(), $movement->docmodel);
 
@@ -148,6 +149,7 @@ final class BusinessDocumentsTest extends TestCase
         $movement = new MovimientoStock();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals(10, $movement->cantidad);
+        $this->assertEquals(10, $movement->saldo);
         $this->assertEquals($albaran->id(), $movement->docid);
         $this->assertEquals($albaran->modelClassName(), $movement->docmodel);
 

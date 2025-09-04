@@ -62,6 +62,12 @@ final class InitialStockTest extends TestCase
         ];
         $this->assertTrue($movimiento->loadWhere($where));
 
+        // comprobamos la cantidad del movimiento
+        $this->assertEquals(10, $movimiento->cantidad);
+
+        // comprobamos el saldo del movimiento
+        $this->assertEquals(10, $movimiento->saldo);
+
         // buscamos la línea del conteo
         $line = new LineaConteoStock();
         $where = [

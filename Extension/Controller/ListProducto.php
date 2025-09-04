@@ -24,6 +24,7 @@ use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuild;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
+use FacturaScripts\Dinamic\Model\Producto;
 
 /**
  * Description of ListProducto
@@ -73,14 +74,23 @@ class ListProducto
     protected function rebuildMovementsAction(): Closure
     {
         return function () {
-            // si no hay movimientos, no hacemos nada
-            $movimiento = new MovimientoStock();
-            if ($movimiento->count() === 0) {
-                Tools::log()->warning('no-movements-to-rebuild-stock');
+            // si no hay productos, no hacemos nada
+            $total = (int)$this->request->get('total', Producto::count());
+            if (empty($total)) {
+                Tools::log()->warning('no-products');
                 return;
             }
 
-            StockMovementManager::rebuild();
+            // procesamos los productos de uno en uno, redirigiendo a la misma página
+            $offset = (int)$this->request->get('offset', 0);
+            foreach (Producto::all([], [], $offset, 1) as $product) {
+                StockMovementManager::rebuild($product->id());
+                Tools::log()->info('rebuilding-movements', ['%reference%' => $product->referencia, '%offset%' => $offset + 1, '%total%' => $total]);
+                $this->redirect('?activetab=ListStock&action=rebuild-movements&total=' . $total . '&offset=' . ($offset + 1), 1);
+                return;
+            }
+
+            Tools::log()->info('rebuilding-movements-finished', ['%total%' => $total]);
         };
     }
 
@@ -88,13 +98,28 @@ class ListProducto
     {
         return function () {
             // si no hay movimientos, no hacemos nada
-            $movimiento = new MovimientoStock();
-            if ($movimiento->count() === 0) {
+            if (MovimientoStock::count() === 0) {
                 Tools::log()->warning('no-movements-to-rebuild-stock');
                 return;
             }
 
-            StockRebuild::rebuild();
+            // si no hay productos, no hacemos nada
+            $total = (int)$this->request->get('total', Producto::count());
+            if (empty($total)) {
+                Tools::log()->warning('no-products');
+                return;
+            }
+
+            // procesamos los productos de uno en uno, redirigiendo a la misma página
+            $offset = (int)$this->request->get('offset', 0);
+            foreach (Producto::all([], [], $offset, 1) as $product) {
+                StockRebuild::rebuild($product->id());
+                Tools::log()->info('rebuilding-stock', ['%reference%' => $product->referencia, '%offset%' => $offset + 1, '%total%' => $total]);
+                $this->redirect('?activetab=ListStock&action=rebuild-stock&total=' . $total . '&offset=' . ($offset + 1), 1);
+                return;
+            }
+
+            Tools::log()->info('rebuilding-stock-finished', ['total' => $total]);
         };
     }
 }

@@ -51,6 +51,11 @@
         <type>character varying(30)</type>
         <null>NO</null>
     </column>
+    <column>
+        <name>saldo</name>
+        <type>double precision</type>
+        <default>0.0</default>
+    </column>
     <constraint>
         <name>stocks_movimientos_pkey</name>
         <type>PRIMARY KEY (id)</type>

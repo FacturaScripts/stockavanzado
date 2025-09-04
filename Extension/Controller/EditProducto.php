@@ -187,6 +187,7 @@ class EditProducto
             }
 
             StockMovementManager::rebuild($product->idproducto);
+            Tools::log()->notice('rebuilt-movements');
         };
     }
 
@@ -206,6 +207,7 @@ class EditProducto
             }
 
             StockRebuild::rebuild($product->idproducto);
+            Tools::log()->notice('rebuilt-stock');
         };
     }
 }

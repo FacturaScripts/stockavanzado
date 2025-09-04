@@ -65,6 +65,12 @@ final class StockMovementTest extends TestCase
         ];
         $this->assertTrue($movement->loadWhere($where));
 
+        // comprobamos la cantidad del movimiento
+        $this->assertEquals(50, $movement->cantidad);
+
+        // comprobamos el saldo del movimiento
+        $this->assertEquals(50, $movement->saldo);
+
         // eliminamos el movimiento de stock
         $this->assertTrue($movement->delete());
 
@@ -73,6 +79,12 @@ final class StockMovementTest extends TestCase
 
         // comprobamos que está el movimiento de stock
         $this->assertTrue($movement->loadWhere($where));
+
+        // comprobamos la cantidad del movimiento
+        $this->assertEquals(50, $movement->cantidad);
+
+        // comprobamos el saldo del movimiento
+        $this->assertEquals(50, $movement->saldo);
 
         // eliminamos
         $this->assertTrue($conteo->delete());

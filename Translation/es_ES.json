@@ -19,5 +19,12 @@
     "transfer-stock": "Transferir stock",
     "valued-stock-cost": "Stock valorado a coste",
     "valued-stock-price": "Stock valorado a precio",
-    "without-stock-count": "Excluir conteos"
+    "without-stock-count": "Excluir conteos",
+  "no-products": "No hay productos",
+  "rebuilding-movements": "Reconstruyendo movimientos del producto %reference% (%offset%/%total%)",
+  "rebuilding-stock": "Reconstruyendo stock del producto %reference% (%offset%/%total%)",
+  "rebuilding-stock-finished": "Reconstrucción de stock finalizada con %total% productos",
+  "rebuilding-movements-finished": "Reconstrucción de movimientos finalizada con %total% productos",
+  "rebuilt-movements": "Movimientos reconstruidos",
+  "stock-rebuild-inconsistency-detected": "Se ha detectado una inconsistencia en el stock del producto %referencia% del almacén %codalmacen%: la suma de los movimientos (%sum_movements%) no coincide con el saldo del último movimiento (%last_saldo%)"
 }

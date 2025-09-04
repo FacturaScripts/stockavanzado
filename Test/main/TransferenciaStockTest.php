@@ -107,6 +107,12 @@ final class TransferenciaStockTest extends TestCase
         ];
         $this->assertTrue($movement1->loadWhere($where1));
 
+        // comprobamos la cantidad del movimiento 1
+        $this->assertEquals(-10, $movement1->cantidad);
+
+        // comprobamos el saldo del movimiento 1
+        $this->assertEquals(-10, $movement1->saldo);
+
         // comprobamos que está el movimiento de stock del almacén 2
         $movement2 = new MovimientoStock();
         $where2 = [
@@ -116,6 +122,12 @@ final class TransferenciaStockTest extends TestCase
             Where::column('referencia', $lineaTrans1->referencia)
         ];
         $this->assertTrue($movement2->loadWhere($where2));
+
+        // comprobamos la cantidad del movimiento 2
+        $this->assertEquals(10, $movement2->cantidad);
+
+        // comprobamos el saldo del movimiento 2
+        $this->assertEquals(10, $movement2->saldo);
 
         // comprobamos que el stock del producto 1 en almacén 1 ahora es 90
         $stock1->load($stock1->idstock);

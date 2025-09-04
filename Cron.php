@@ -23,6 +23,7 @@ use FacturaScripts\Core\Template\CronClass;
 use FacturaScripts\Dinamic\Lib\InitialStockMovement;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockValue;
+use FacturaScripts\Plugins\StockAvanzado\CronJob\FixedIdProduct;
 use FacturaScripts\Plugins\StockAvanzado\CronJob\StockMinMax;
 
 final class Cron extends CronClass
@@ -59,6 +60,13 @@ final class Cron extends CronClass
             ->withoutOverlapping()
             ->run(function () {
                 StockMinMax::run();
+            });
+
+        // con este proceso rectificamos los IDs de productos que no estén bien enlazados con el ID producto de la variante
+        $this->job(FixedIdProduct::JOB_NAME)
+            ->every(FixedIdProduct::JOB_PERIOD)
+            ->run(function () {
+                FixedIdProduct::run();
             });
     }
 }
