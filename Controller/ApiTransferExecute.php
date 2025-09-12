@@ -21,15 +21,15 @@ namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
 use FacturaScripts\Core\Template\ApiController;
 use FacturaScripts\Dinamic\Model\TransferenciaStock;
-use Symfony\Component\HttpFoundation\Response;
+use FacturaScripts\Core\Response;
 
 class ApiTransferExecute extends ApiController
 {
     protected function runResource(): void
     {
         // si la llamada no es post, devolvemos un error
-        if ('POST' !== $this->request->getMethod()) {
-            $this->response->setStatusCode(Response::HTTP_METHOD_NOT_ALLOWED);
+        if ('POST' !== $this->request->method()) {
+            $this->response->setHttpCode(Response::HTTP_METHOD_NOT_ALLOWED);
             $this->response->setContent(json_encode([
                 'status' => 'error',
                 'message' => 'Method not allowed',
@@ -39,8 +39,8 @@ class ApiTransferExecute extends ApiController
 
         // cargamos la transferencia
         $transfer = new TransferenciaStock();
-        if (false === $transfer->loadFromCode($this->request->get('code'))) {
-            $this->response->setStatusCode(Response::HTTP_NOT_FOUND);
+        if (false === $transfer->load($this->request->get('code'))) {
+            $this->response->setHttpCode(Response::HTTP_NOT_FOUND);
             $this->response->setContent(json_encode([
                 'status' => 'error',
                 'message' => 'Transfer not found',
@@ -50,7 +50,7 @@ class ApiTransferExecute extends ApiController
 
         // si la transferencia ya está completada, devolvemos un error
         if ($transfer->completed) {
-            $this->response->setStatusCode(Response::HTTP_BAD_REQUEST);
+            $this->response->setHttpCode(Response::HTTP_BAD_REQUEST);
             $this->response->setContent(json_encode([
                 'status' => 'error',
                 'message' => 'Transfer already completed',
@@ -60,7 +60,7 @@ class ApiTransferExecute extends ApiController
 
         // ejecutamos la transferencia
         if (false === $transfer->transferStock()) {
-            $this->response->setStatusCode(Response::HTTP_INTERNAL_SERVER_ERROR);
+            $this->response->setHttpCode(Response::HTTP_INTERNAL_SERVER_ERROR);
             $this->response->setContent(json_encode([
                 'status' => 'error',
                 'message' => 'Error executing transfer',

@@ -4,40 +4,36 @@
 <script src="{{ asset('node_modules/jquery-ui-dist/jquery-ui.min.js') }}"></script>
 
 <div class="card shadow mb-3">
-    <div class="card-body pl-3 pt-3 pr-3 pb-0">
+    <div class="card-body ps-3 pt-3 pe-3 pb-0">
         <h2 class="h5 card-title">
             {{ trans('lines') }}
-            <span id="countLines" class="badge badge-secondary">{{ fsc.getCurrentView().count }}</span>
+            <span id="countLines" class="badge bg-secondary">{{ fsc.getCurrentView().count }}</span>
         </h2>
         {% if firstView.model.completed == false %}
             <p>{{ trans('stock-count-line-p') }}</p>
-            <div class="form-row">
+            <div class="row">
                 <div class="col-sm-3">
                     <div class="input-group mb-3">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text">
-                                <i class="fas fa-barcode"></i>
+                        <span class="input-group-text">
+                                <i class="fa-solid fa-barcode"></i>
                             </span>
-                        </div>
                         <input type="text" name="codbarras" id="addLineBarras" class="form-control"
                                placeholder="{{ trans('barcode') }}" autofocus/>
                     </div>
                 </div>
                 <div class="col-sm-3">
                     <div class="input-group mb-3">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text">
-                                <i class="fas fa-hashtag"></i>
+                        <span class="input-group-text">
+                                <i class="fa-solid fa-hashtag"></i>
                             </span>
-                        </div>
                         <input type="text" name="referencia" id="addLineReferencia" class="form-control"
                                placeholder="{{ trans('reference') }}"/>
                     </div>
                 </div>
                 <div class="col-sm">
                     <button type="button" class="btn btn-success" onclick="addLine();">{{ trans('add') }}</button>
-                    <button type="button" class="btn btn-outline-primary" data-toggle="modal"
-                            data-target="#preloadModal">
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
+                            data-bs-target="#preloadModal">
                         {{ trans('preload') }}
                     </button>
                     <div class="modal fade" id="preloadModal" tabindex="-1" aria-labelledby="preloadModalLabel"
@@ -46,14 +42,12 @@
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title" id="preloadModalLabel">{{ trans('preload-products') }}</h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <div class="form-group">
+                                    <div class="mb-3">
                                         {{ trans('family') }}
-                                        <select id="preloadFamily" class="form-control">
+                                        <select id="preloadFamily" class="form-select">
                                             <option value="">{{ trans('all') }}</option>
                                             <option value="">------</option>
                                             {% for family in fsc.getFamilySelect() %}
@@ -78,7 +72,7 @@
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary btn-spin-action"
-                                            data-dismiss="modal">{{ trans('close') }}</button>
+                                            data-bs-dismiss="modal">{{ trans('close') }}</button>
                                     <button type="button" class="btn btn-primary btn-spin-action"
                                             onclick="preloadProduct()">{{ trans('save') }}</button>
                                 </div>

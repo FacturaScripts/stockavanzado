@@ -19,10 +19,12 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Core\Model\Base;
+use FacturaScripts\Core\Model\Base\ProductRelationTrait;
+use FacturaScripts\Core\Template\ModelClass;
+use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\TransferenciaStock as DinTransferenciaStock;
 use FacturaScripts\Dinamic\Model\Variante;
 
@@ -30,10 +32,10 @@ use FacturaScripts\Dinamic\Model\Variante;
  * @author Cristo M. Estévez Hernández  <cristom.estevez@gmail.com>
  * @author Carlos Garcia Gomez          <carlos@facturascripts.com>
  */
-class LineaTransferenciaStock extends Base\ModelClass
+class LineaTransferenciaStock extends ModelClass
 {
-    use Base\ModelTrait;
-    use Base\ProductRelationTrait;
+    use ModelTrait;
+    use ProductRelationTrait;
 
     /** @var float */
     public $cantidad;
@@ -53,7 +55,7 @@ class LineaTransferenciaStock extends Base\ModelClass
     /** @var string */
     public $referencia;
 
-    public function clear()
+    public function clear(): void
     {
         parent::clear();
         $this->cantidad = 1.0;
@@ -64,24 +66,22 @@ class LineaTransferenciaStock extends Base\ModelClass
     public function getTransference(): DinTransferenciaStock
     {
         $trans = new DinTransferenciaStock();
-        $trans->loadFromCode($this->idtrans);
+        $trans->load($this->idtrans);
         return $trans;
     }
 
     public function getVariant(): Variante
     {
         $variant = new Variante();
-        $where = [new DataBaseWhere('referencia', $this->referencia)];
-        $variant->loadFromCode('', $where);
+        $where = [Where::column('referencia', $this->referencia)];
+        $variant->loadWhere($where);
         return $variant;
     }
 
     public function install(): string
     {
-        // needed dependencies
-        new TransferenciaStock();
+        new DinTransferenciaStock();
         new Variante();
-
         return parent::install();
     }
 

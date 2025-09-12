@@ -19,9 +19,10 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Core\Model\Base;
+use FacturaScripts\Core\Template\ModelClass;
+use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Variante;
@@ -31,9 +32,9 @@ use FacturaScripts\Dinamic\Model\Variante;
  *
  * @author Carlos Garcia Gomez <carlos@facturascripts.com>
  */
-class MovimientoStock extends Base\ModelClass
+class MovimientoStock extends ModelClass
 {
-    use Base\ModelTrait;
+    use ModelTrait;
 
     /** @var float */
     public $cantidad;
@@ -65,10 +66,14 @@ class MovimientoStock extends Base\ModelClass
     /** @var string */
     public $referencia;
 
-    public function clear()
+    /** @var float */
+    public $saldo;
+
+    public function clear(): void
     {
         parent::clear();
         $this->cantidad = 0.0;
+        $this->saldo = 0.0;
         $this->fecha = Tools::date();
         $this->hora = Tools::hour();
     }
@@ -76,25 +81,22 @@ class MovimientoStock extends Base\ModelClass
     public function getVariant(): Variante
     {
         $variant = new Variante();
-        $where = [new DataBaseWhere('referencia', $this->referencia)];
-        $variant->loadFromCode('', $where);
+        $where = [Where::column('referencia', $this->referencia)];
+        $variant->loadWhere($where);
         return $variant;
     }
 
     public function getProduct(): Producto
     {
         $product = new Producto();
-        $product->loadFromCode($this->idproducto);
+        $product->load($this->idproducto);
         return $product;
     }
 
     public function install(): string
     {
-        // cargamos las dependencias
         new Almacen();
-        new Producto();
         new Variante();
-
         return parent::install();
     }
 
@@ -115,16 +117,55 @@ class MovimientoStock extends Base\ModelClass
         return parent::test();
     }
 
+    public function saveInsert(): bool
+    {
+        if (!parent::saveInsert()) {
+            return false;
+        }
+
+        // Calculamos el saldo antes de guardar
+        $this->calculateSaldo();
+
+        return true;
+    }
+
+    /**
+     * Calcula y actualiza el saldo de todos los movimientos al insertar un movimiento nuevo.
+     * El saldo será la suma de todas las cantidades de movimientos anteriores (fecha, hora, id ASC) más la cantidad de este movimiento.
+     */
+    private function calculateSaldo(): void
+    {
+        // Filtrar por producto y almacén
+        $where = [
+            Where::column('codalmacen', $this->codalmacen),
+            Where::column('referencia', $this->referencia)
+        ];
+
+        // Seleccionar todos los movimientos en orden cronológico
+        $movements = MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC']);
+
+        if (empty($movements)) {
+            self::$dataBase->exec("UPDATE stocks_movimientos SET saldo = " . self::$dataBase->var2str($this->cantidad) . " WHERE id = " . self::$dataBase->var2str($this->id));
+            return;
+        }
+
+        $saldo = 0.0;
+        foreach ($movements as $movement) {
+            $saldo += (float)$movement->cantidad;
+            self::$dataBase->exec("UPDATE stocks_movimientos SET saldo = " . self::$dataBase->var2str($saldo) . " WHERE id = " . self::$dataBase->var2str($movement->id()));
+        }
+    }
+
     public function url(string $type = 'auto', string $list = 'List'): string
     {
         $modelClass = '\\FacturaScripts\\Dinamic\\Model\\' . $this->docmodel;
         if (!empty($this->docmodel) && class_exists($modelClass)) {
             $model = new $modelClass();
-            if ($model->loadFromCode($this->docid)) {
+            if ($model->load($this->docid)) {
                 return $model->url();
             }
         }
 
-        return empty($this->primaryColumnValue()) ? parent::url($type, $list) : $this->getProduct()->url();
+        return empty($this->id()) ? parent::url($type, $list) : $this->getProduct()->url();
     }
 }

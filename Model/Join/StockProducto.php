@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -71,7 +71,11 @@ class StockProducto extends JoinModel
 
     protected function getGroupFields(): string
     {
-        return 'stocks.codalmacen, variantes.referencia, variantes.precio, variantes.coste, productos.tipo, stocks.cantidad';
+        return 'productos.bloqueado, stocks.cantidad, stocks.codalmacen, productos.codfabricante, '
+            . 'productos.codfamilia, variantes.coste, productos.descripcion, stocks.disponible, '
+            . 'stocks.pterecibir, stocks.reservada, stocks.idproducto, stocks.idstock, '
+            . 'productos.nostock, variantes.precio, stocks.referencia, stocks.stockmax, '
+            . 'stocks.stockmin, productos.tipo, variantes.referencia';
     }
 
     protected function getSQLFrom(): string

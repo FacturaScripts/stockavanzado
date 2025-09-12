@@ -20,10 +20,10 @@
 namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 
 use FacturaScripts\Core\Base\DataBase;
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\Email\MailNotifier;
 use FacturaScripts\Dinamic\Lib\Email\TextBlock;
 use FacturaScripts\Dinamic\Lib\Email\TitleBlock;
@@ -77,8 +77,8 @@ final class StockMinMax extends CronJobClass
 
     private static function getUsers(): array
     {
-        $where = [new DataBaseWhere('admin', true)];
-        return User::all($where, [], 0, 0);
+        $where = [Where::column('admin', true)];
+        return User::all($where);
     }
     private static function stockMax(): void
     {

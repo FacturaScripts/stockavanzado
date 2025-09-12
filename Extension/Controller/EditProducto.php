@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,9 +20,9 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuild;
 use FacturaScripts\Dinamic\Model\ConteoStock;
@@ -43,7 +43,7 @@ class EditProducto
             $data = $this->request->request->all();
 
             $stock = new Stock();
-            if (empty($data['code']) || false === $stock->loadFromCode($data['code'])) {
+            if (empty($data['code']) || false === $stock->load($data['code'])) {
                 Tools::log()->warning('record-not-found');
                 return true;
             }
@@ -62,7 +62,7 @@ class EditProducto
 
             // añadimos una línea con la nueva cantidad
             $line = $conteo->addLine($stock->referencia, $stock->idproducto, (float)$data['mov-quantity']);
-            if (empty($line->primaryColumnValue())) {
+            if (empty($line->id())) {
                 $this->dataBase->rollback();
                 Tools::log()->warning('record-save-error');
                 return true;
@@ -95,7 +95,7 @@ class EditProducto
     protected function createViewsMovements(): Closure
     {
         return function ($viewName = 'ListMovimientoStock') {
-            $this->addListView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading')
+            $this->addListView($viewName, 'MovimientoStock', 'movements', 'fa-solid fa-truck-loading')
                 ->addOrderBy(['fecha', 'hora', 'id'], 'date', 2)
                 ->addOrderBy(['cantidad'], 'quantity')
                 ->addSearchFields(['documento', 'referencia'])
@@ -163,12 +163,10 @@ class EditProducto
         return function ($viewName, $view) {
             $id = $this->getViewModelValue('EditProducto', 'idproducto');
 
-            switch ($viewName) {
-                case 'ListMovimientoStock':
-                    $where = [new DataBaseWhere('idproducto', $id)];
-                    $view->loadData('', $where);
-                    $view->setSettings('active', $view->model->count($where) > 0);
-                    break;
+            if ($viewName == 'ListMovimientoStock') {
+                $where = [Where::column('idproducto', $id)];
+                $view->loadData('', $where);
+                $view->setSettings('active', $view->model->count($where) > 0);
             }
         };
     }
@@ -184,11 +182,12 @@ class EditProducto
             }
 
             $product = $this->getModel();
-            if (false === $product->loadFromCode($this->request->get('code'))) {
+            if (false === $product->load($this->request->get('code'))) {
                 return;
             }
 
             StockMovementManager::rebuild($product->idproducto);
+            Tools::log()->notice('rebuilt-movements');
         };
     }
 
@@ -203,11 +202,12 @@ class EditProducto
             }
 
             $product = $this->getModel();
-            if (false === $product->loadFromCode($this->request->get('code'))) {
+            if (false === $product->load($this->request->get('code'))) {
                 return;
             }
 
             StockRebuild::rebuild($product->idproducto);
+            Tools::log()->notice('rebuilt-stock');
         };
     }
 }

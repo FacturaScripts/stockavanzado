@@ -20,9 +20,10 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 
 use FacturaScripts\Core\Base\DataBase;
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
+use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Stock;
 
 /**
@@ -51,10 +52,10 @@ class StockRebuild
             foreach (static::calculateStockData($war->codalmacen) as $data) {
                 $stock = new Stock();
                 $where = [
-                    new DataBaseWhere('codalmacen', $data['codalmacen']),
-                    new DataBaseWhere('referencia', $data['referencia'])
+                    Where::column('codalmacen', $data['codalmacen']),
+                    Where::column('referencia', $data['referencia'])
                 ];
-                if ($stock->loadFromCode('', $where)) {
+                if ($stock->loadWhere($where)) {
                     // el stock ya existe
                     $stock->loadFromData($data);
                 } else {
@@ -77,7 +78,6 @@ class StockRebuild
             self::dataBase()->commit();
         }
 
-        Tools::log()->notice('rebuilt-stock');
         Tools::log('audit')->warning('rebuilt-stock');
         return true;
     }
@@ -104,20 +104,50 @@ class StockRebuild
 
     protected static function calculateStockData(string $codalmacen): array
     {
-        $stockData = [];
-        $sql = "SELECT referencia, SUM(cantidad) as sum"
+        // obtenemos un array de referencias únicas
+        $sql = "SELECT referencia"
             . " FROM stocks_movimientos"
             . " WHERE codalmacen = " . self::dataBase()->var2str($codalmacen);
-
         if (null !== static::$idproducto) {
             $sql .= " AND idproducto = " . self::dataBase()->var2str(static::$idproducto);
         }
-
         $sql .= " GROUP BY 1";
-        foreach (self::dataBase()->select($sql) as $row) {
+        $rows = self::dataBase()->select($sql);
+
+        // si no hay referencias, devolvemos array vacío
+        if (empty($rows)) {
+            return [];
+        }
+
+        $stockData = [];
+        foreach ($rows as $row) {
+            $where = [
+                Where::column('codalmacen', $codalmacen),
+                Where::column('referencia', $row['referencia'])
+            ];
+
+            // obtenemos el último movimiento de cada referencia
+            $lastMovement = new MovimientoStock();
+            $lastMovement->loadWhere($where, ['fecha' => 'DESC', 'hora' => 'DESC', 'id' => 'DESC']);
+
+            // sumamos todos los movimientos de cada referencia para obtener el stock actual
+            $stockSumMovements = 0.0;
+            foreach (MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC']) as $movement) {
+                $stockSumMovements += $movement->cantidad;
+            }
+
+            // si hay último movimiento, y la suma de movimientos es distinta al saldo del último movimiento, avisamos
+            if ($lastMovement->id() && $lastMovement->saldo !== $stockSumMovements) {
+                $stock = $lastMovement->saldo;
+                Tools::log()->warning('stock-rebuild-inconsistency-detected', ['%referencia%' => $row['referencia'], '%codalmacen%' => $codalmacen, '%last_saldo%' => $lastMovement->saldo, '%sum_movements%' => $stockSumMovements]);
+                Tools::log('audit')->warning('stock-rebuild-inconsistency-detected', ['%referencia%' => $row['referencia'], '%codalmacen%' => $codalmacen, '%last_saldo%' => $lastMovement->saldo, '%sum_movements%' => $stockSumMovements]);
+            } else {
+                $stock = $stockSumMovements;
+            }
+
             $ref = trim($row['referencia']);
             $stockData[$ref] = [
-                'cantidad' => (float)$row['sum'],
+                'cantidad' => $stock,
                 'codalmacen' => $codalmacen,
                 'pterecibir' => 0,
                 'referencia' => $ref,
@@ -139,7 +169,7 @@ class StockRebuild
         return self::$database;
     }
 
-    protected static function setPterecibir(array &$stockData, string $codalmacen)
+    protected static function setPterecibir(array &$stockData, string $codalmacen): void
     {
         if (false === self::dataBase()->tableExists('lineaspedidosprov')) {
             return;
@@ -174,7 +204,7 @@ class StockRebuild
         }
     }
 
-    protected static function setReservada(array &$stockData, string $codalmacen)
+    protected static function setReservada(array &$stockData, string $codalmacen): void
     {
         if (false === self::dataBase()->tableExists('lineaspedidoscli')) {
             return;

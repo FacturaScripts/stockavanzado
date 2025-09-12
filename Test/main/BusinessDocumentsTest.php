@@ -19,7 +19,7 @@
 
 namespace FacturaScripts\Test\Plugins;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\AlbaranCliente;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
@@ -81,7 +81,7 @@ final class BusinessDocumentsTest extends TestCase
         $this->assertTrue($linea->save());
 
         // comprobamos que se ha actualizado el stock del producto
-        $this->assertTrue($stock->loadFromCode($stock->primaryColumnValue()));
+        $this->assertTrue($stock->load($stock->id()));
         $this->assertEquals(0, $stock->cantidad);
         $this->assertEquals(0, $stock->disponible);
         $this->assertEquals(0, $stock->pterecibir);
@@ -90,12 +90,13 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que hay un movimiento de stock
         $movement = new MovimientoStock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
-            new DataBaseWhere('referencia', $product->referencia)
+            Where::column('codalmacen', $warehouse->codalmacen),
+            Where::column('referencia', $product->referencia)
         ];
-        $this->assertTrue($movement->loadFromCode('', $whereRef));
+        $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals(-10, $movement->cantidad);
-        $this->assertEquals($albaran->primaryColumnValue(), $movement->docid);
+        $this->assertEquals(-10, $movement->saldo);
+        $this->assertEquals($albaran->id(), $movement->docid);
         $this->assertEquals($albaran->modelClassName(), $movement->docmodel);
 
         // eliminamos
@@ -135,10 +136,10 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
-            new DataBaseWhere('referencia', $product->referencia)
+            Where::column('codalmacen', $warehouse->codalmacen),
+            Where::column('referencia', $product->referencia)
         ];
-        $this->assertTrue($stock->loadFromCode('', $whereRef));
+        $this->assertTrue($stock->loadWhere($whereRef));
         $this->assertEquals(10, $stock->cantidad);
         $this->assertEquals(10, $stock->disponible);
         $this->assertEquals(0, $stock->pterecibir);
@@ -146,9 +147,10 @@ final class BusinessDocumentsTest extends TestCase
 
         // comprobamos que hay un movimiento de stock
         $movement = new MovimientoStock();
-        $this->assertTrue($movement->loadFromCode('', $whereRef));
+        $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals(10, $movement->cantidad);
-        $this->assertEquals($albaran->primaryColumnValue(), $movement->docid);
+        $this->assertEquals(10, $movement->saldo);
+        $this->assertEquals($albaran->id(), $movement->docid);
         $this->assertEquals($albaran->modelClassName(), $movement->docmodel);
 
         // eliminamos
@@ -188,10 +190,10 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
-            new DataBaseWhere('referencia', $product->referencia)
+            Where::column('codalmacen', $warehouse->codalmacen),
+            Where::column('referencia', $product->referencia)
         ];
-        $this->assertTrue($stock->loadFromCode('', $whereRef));
+        $this->assertTrue($stock->loadWhere($whereRef));
         $this->assertEquals(0, $stock->cantidad);
         $this->assertEquals(0, $stock->disponible);
         $this->assertEquals(0, $stock->pterecibir);
@@ -199,7 +201,7 @@ final class BusinessDocumentsTest extends TestCase
 
         // comprobamos que no hay ningún movimiento de stock
         $movement = new MovimientoStock();
-        $this->assertFalse($movement->loadFromCode('', $whereRef));
+        $this->assertFalse($movement->loadWhere($whereRef));
 
         // eliminamos
         $this->assertTrue($pedido->delete());
@@ -238,10 +240,10 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
-            new DataBaseWhere('referencia', $product->referencia)
+            Where::column('codalmacen', $warehouse->codalmacen),
+            Where::column('referencia', $product->referencia)
         ];
-        $this->assertTrue($stock->loadFromCode('', $whereRef));
+        $this->assertTrue($stock->loadWhere($whereRef));
         $this->assertEquals(0, $stock->cantidad);
         $this->assertEquals(0, $stock->disponible);
         $this->assertEquals(10, $stock->pterecibir);
@@ -249,7 +251,7 @@ final class BusinessDocumentsTest extends TestCase
 
         // comprobamos que no hay ningún movimiento de stock
         $movement = new MovimientoStock();
-        $this->assertFalse($movement->loadFromCode('', $whereRef));
+        $this->assertFalse($movement->loadWhere($whereRef));
 
         // eliminamos
         $this->assertTrue($pedido->delete());
@@ -288,14 +290,14 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
-            new DataBaseWhere('referencia', $product->referencia)
+            Where::column('codalmacen', $warehouse->codalmacen),
+            Where::column('referencia', $product->referencia)
         ];
-        $this->assertFalse($stock->loadFromCode('', $whereRef));
+        $this->assertFalse($stock->loadWhere($whereRef));
 
         // comprobamos que no hay ningún movimiento de stock
         $movement = new MovimientoStock();
-        $this->assertFalse($movement->loadFromCode('', $whereRef));
+        $this->assertFalse($movement->loadWhere($whereRef));
 
         // eliminamos
         $this->assertTrue($presupuesto->delete());
@@ -334,14 +336,14 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
-            new DataBaseWhere('referencia', $product->referencia)
+            Where::column('codalmacen', $warehouse->codalmacen),
+            Where::column('referencia', $product->referencia)
         ];
-        $this->assertFalse($stock->loadFromCode('', $whereRef));
+        $this->assertFalse($stock->loadWhere($whereRef));
 
         // comprobamos que no hay ningún movimiento de stock
         $movement = new MovimientoStock();
-        $this->assertFalse($movement->loadFromCode('', $whereRef));
+        $this->assertFalse($movement->loadWhere($whereRef));
 
         // eliminamos
         $this->assertTrue($presupuesto->delete());

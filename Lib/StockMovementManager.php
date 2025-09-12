@@ -20,10 +20,10 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 
 use FacturaScripts\Core\Base\DataBase;
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\Base\BusinessDocumentLine;
 use FacturaScripts\Core\Model\Base\TransformerDocument;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\AlbaranCliente;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\ConteoStock;
@@ -43,7 +43,7 @@ use FacturaScripts\Plugins\StockAvanzado\Contract\StockMovementModInterface;
  */
 class StockMovementManager
 {
-    const JOB_NAME = 'rebuild-movements';
+    const JOB_NAME = 'movements-rebuild';
     const JOB_PERIOD = '99 years';
 
     /** @var array */
@@ -61,23 +61,23 @@ class StockMovementManager
     /** @var array */
     private static $variants = [];
 
-    public static function addLineBusinessDocument(BusinessDocumentLine $line, array $prevData, TransformerDocument $doc): void
+    public static function addLineBusinessDocument(BusinessDocumentLine $line, TransformerDocument $doc): void
     {
         if (false === in_array($line->actualizastock, [1, -1], true) &&
-            false === in_array($prevData['actualizastock'], [1, -1], true)) {
+            false === in_array($line->getOriginal('actualizastock'), [1, -1], true)) {
             return;
         }
 
         $movement = new MovimientoStock();
         $where = [
-            new DataBaseWhere('codalmacen', $doc->codalmacen),
-            new DataBaseWhere('docid', $doc->primaryColumnValue()),
-            new DataBaseWhere('docmodel', $doc->modelClassName()),
-            new DataBaseWhere('referencia', $line->referencia)
+            Where::column('codalmacen', $doc->codalmacen),
+            Where::column('docid', $doc->id()),
+            Where::column('docmodel', $doc->modelClassName()),
+            Where::column('referencia', $line->referencia)
         ];
-        if (false === $movement->loadFromCode('', $where)) {
+        if (false === $movement->loadWhere($where)) {
             $movement->codalmacen = $doc->codalmacen;
-            $movement->docid = $doc->primaryColumnValue();
+            $movement->docid = $doc->id();
             $movement->docmodel = $doc->modelClassName();
             $movement->idproducto = $line->idproducto ?? $line->getProducto()->idproducto;
             $movement->referencia = $line->referencia;
@@ -86,7 +86,7 @@ class StockMovementManager
             }
         }
 
-        $movement->cantidad -= $prevData['actualizastock'] * $prevData['cantidad'];
+        $movement->cantidad -= $line->getOriginal('actualizastock') * $line->getOriginal('cantidad');
         $movement->cantidad += $line->actualizastock * $line->cantidad;
         $movement->documento = Tools::lang()->trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
@@ -96,27 +96,26 @@ class StockMovementManager
 
     public static function addLineCounting(LineaConteoStock $line, ConteoStock $stockCount, float $stock): bool
     {
-        $docid = $stockCount->primaryColumnValue();
+        $docid = $stockCount->id();
         $docmodel = $stockCount->modelClassName();
-        // usamos la fecha de ejecución del conteo para calcular el stock previo
-        $stockSum = static::getStockSum(
-            $line->referencia,
-            $stockCount->codalmacen,
-            $docid,
-            $docmodel,
-            $stockCount->fechafin
-        );
+
+        // Calculamos el stock acumulado hasta la fecha del conteo (excluyendo el conteo actual)
+        $stockSum = static::getStockSum($line->referencia, $stockCount->codalmacen, $docid, $docmodel, $stockCount->fechafin);
+
+        // El movimiento del conteo debe ajustar el stock para que quede exactamente en el valor contado
+        // Fórmula: cantidad_movimiento = stock_objetivo - stock_calculado_antes_del_conteo
         $cantidad = $stock - $stockSum;
 
         $movement = new MovimientoStock();
         $where = [
-            new DataBaseWhere('codalmacen', $stockCount->codalmacen),
-            new DataBaseWhere('docid', $docid),
-            new DataBaseWhere('docmodel', $docmodel),
-            new DataBaseWhere('referencia', $line->referencia)
+            Where::column('codalmacen', $stockCount->codalmacen),
+            Where::column('docid', $docid),
+            Where::column('docmodel', $docmodel),
+            Where::column('referencia', $line->referencia)
         ];
-        if (false === $movement->loadFromCode('', $where)) {
-            $movement->documento = Tools::lang()->trans($stockCount->modelClassName()) . ' ' . $stockCount->primaryColumnValue();
+
+        if (false === $movement->loadWhere($where)) {
+            $movement->documento = Tools::lang()->trans($stockCount->modelClassName()) . ' ' . $stockCount->id();
             $movement->fecha = Tools::date($stockCount->fechafin);
             $movement->hora = Tools::hour($stockCount->fechafin);
             $movement->codalmacen = $stockCount->codalmacen;
@@ -124,13 +123,16 @@ class StockMovementManager
             $movement->docmodel = $docmodel;
             $movement->idproducto = $line->idproducto;
             $movement->referencia = $line->referencia;
-            if (empty($cantidad)) {
-                return true;
-            }
         }
 
         $movement->cantidad = $cantidad;
-        return empty($movement->cantidad) ? $movement->delete() : $movement->save();
+
+        // Solo guardar si hay cantidad diferente de 0, sino eliminar el movimiento
+        if ($cantidad == 0) {
+            return $movement->exists() ? $movement->delete() : true;
+        }
+
+        return $movement->save();
     }
 
     public static function addLineTransferStock(LineaTransferenciaStock $line, TransferenciaStock $transfer): void
@@ -146,17 +148,17 @@ class StockMovementManager
 
     public static function deleteLineCounting(LineaConteoStock $line, ConteoStock $stockCount): bool
     {
-        $docid = $stockCount->primaryColumnValue();
+        $docid = $stockCount->id();
         $docmodel = $stockCount->modelClassName();
 
         $movement = new MovimientoStock();
         $where = [
-            new DataBaseWhere('codalmacen', $stockCount->codalmacen),
-            new DataBaseWhere('docid', $docid),
-            new DataBaseWhere('docmodel', $docmodel),
-            new DataBaseWhere('referencia', $line->referencia)
+            Where::column('codalmacen', $stockCount->codalmacen),
+            Where::column('docid', $docid),
+            Where::column('docmodel', $docmodel),
+            Where::column('referencia', $line->referencia)
         ];
-        if (false === $movement->loadFromCode('', $where)) {
+        if (false === $movement->loadWhere($where)) {
             return true;
         }
 
@@ -177,7 +179,10 @@ class StockMovementManager
         static::$idproducto = $idproducto;
 
         // eliminamos todos los movimientos de stock
-        static::deleteMovements();
+        if (!static::deleteMovements()) {
+            Tools::log('audit')->warning('error-deleting-movements');
+            return;
+        }
 
         // creamos los movimientos de los documentos de compra y venta
         static::rebuildBusinessDocument();
@@ -192,23 +197,25 @@ class StockMovementManager
         foreach (self::$mods as $mod) {
             $mod->run(static::$idproducto);
         }
+
+        Tools::log('audit')->warning('rebuilt-movements');
     }
 
     protected static function addLineTransferStockMovement(string $codalmacen, float $cantidad, TransferenciaStock $transfer, LineaTransferenciaStock $line): bool
     {
         $movement = new MovimientoStock();
         $where = [
-            new DataBaseWhere('codalmacen', $codalmacen),
-            new DataBaseWhere('docid', $transfer->primaryColumnValue()),
-            new DataBaseWhere('docmodel', $transfer->modelClassName()),
-            new DataBaseWhere('referencia', $line->referencia)
+            Where::column('codalmacen', $codalmacen),
+            Where::column('docid', $transfer->id()),
+            Where::column('docmodel', $transfer->modelClassName()),
+            Where::column('referencia', $line->referencia)
         ];
-        if (false === $movement->loadFromCode('', $where)) {
-            $movement->documento = Tools::lang()->trans($transfer->modelClassName()) . ' ' . $transfer->primaryColumnValue();
+        if (false === $movement->loadWhere($where)) {
+            $movement->documento = Tools::lang()->trans($transfer->modelClassName()) . ' ' . $transfer->id();
             $movement->fecha = Tools::date($transfer->fecha);
             $movement->hora = Tools::hour($transfer->fecha);
             $movement->codalmacen = $codalmacen;
-            $movement->docid = $transfer->primaryColumnValue();
+            $movement->docid = $transfer->id();
             $movement->docmodel = $transfer->modelClassName();
             $movement->idproducto = $line->getVariant()->idproducto;
             $movement->referencia = $line->referencia;
@@ -225,12 +232,12 @@ class StockMovementManager
     {
         $movement = new MovimientoStock();
         $where = [
-            new DataBaseWhere('codalmacen', $fromCodalmacen),
-            new DataBaseWhere('docid', $doc->primaryColumnValue()),
-            new DataBaseWhere('docmodel', $doc->modelClassName()),
-            new DataBaseWhere('referencia', $line->referencia)
+            Where::column('codalmacen', $fromCodalmacen),
+            Where::column('docid', $doc->id()),
+            Where::column('docmodel', $doc->modelClassName()),
+            Where::column('referencia', $line->referencia)
         ];
-        if ($movement->loadFromCode('', $where)) {
+        if ($movement->loadWhere($where)) {
             $movement->codalmacen = $toCodalmacen;
             $movement->save();
         }
@@ -240,12 +247,12 @@ class StockMovementManager
     {
         $movement = new MovimientoStock();
         $where = [
-            new DataBaseWhere('codalmacen', $codalmacen),
-            new DataBaseWhere('docid', $stockCount->primaryColumnValue()),
-            new DataBaseWhere('docmodel', $stockCount->modelClassName()),
-            new DataBaseWhere('referencia', $line->referencia)
+            Where::column('codalmacen', $codalmacen),
+            Where::column('docid', $stockCount->id()),
+            Where::column('docmodel', $stockCount->modelClassName()),
+            Where::column('referencia', $line->referencia)
         ];
-        if ($movement->loadFromCode('', $where) && false === $movement->delete()) {
+        if ($movement->loadWhere($where) && false === $movement->delete()) {
             return false;
         }
 
@@ -278,8 +285,8 @@ class StockMovementManager
     {
         if (!isset(self::$variants[$referencia])) {
             $variante = new Variante();
-            $where = [new DataBaseWhere('referencia', $referencia)];
-            $variante->loadFromCode('', $where);
+            $where = [Where::column('referencia', $referencia)];
+            $variante->loadWhere($where);
             self::$variants[$referencia] = $variante;
         }
 
@@ -289,20 +296,30 @@ class StockMovementManager
     protected static function getStockSum(string $reference, string $codalmacen, int $docid, string $docmodel, string $datetime): float
     {
         $sum = 0.0;
+        $targetTimestamp = strtotime($datetime);
+
         $where = [
-            new DataBaseWhere('codalmacen', $codalmacen),
-            new DataBaseWhere('fecha', Tools::date($datetime), '<='),
-            new DataBaseWhere('referencia', $reference)
+            Where::column('codalmacen', $codalmacen),
+            Where::column('referencia', $reference)
         ];
-        foreach (MovimientoStock::all($where, ['id' => 'ASC'], 0, 0) as $move) {
-            // excluir movimiento seleccionado
+
+        // Obtener todos los movimientos ordenados cronológicamente
+        $movements = MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC']);
+
+        foreach ($movements as $move) {
+            $moveTimestamp = strtotime($move->fecha . ' ' . $move->hora);
+
+            // Excluir el movimiento actual (mismo documento) ANTES de verificar la fecha
             if ($move->docid == $docid && $move->docmodel == $docmodel) {
                 continue;
             }
 
-            if (strtotime($move->fecha . ' ' . $move->hora) <= strtotime($datetime)) {
-                $sum += $move->cantidad;
+            // Solo procesar movimientos anteriores al datetime objetivo
+            if ($moveTimestamp > $targetTimestamp) {
+                break; // Como está ordenado, ya no hay movimientos anteriores
             }
+
+            $sum += $move->cantidad;
         }
 
         return $sum;
@@ -351,9 +368,31 @@ class StockMovementManager
                             continue;
                         }
 
-                        $prevData['actualizastock'] = $line->actualizastock;
-                        $prevData['cantidad'] = 0.0;
-                        static::addLineBusinessDocument($line, $prevData, $doc);
+                        // En rebuild, creamos movimientos nuevos directamente
+                        $movement = new MovimientoStock();
+                        $where = [
+                            Where::column('codalmacen', $doc->codalmacen),
+                            Where::column('docid', $doc->id()),
+                            Where::column('docmodel', $doc->modelClassName()),
+                            Where::column('referencia', $line->referencia)
+                        ];
+
+                        // Solo crear si no existe ya
+                        if (false === $movement->loadWhere($where)) {
+                            $movement->codalmacen = $doc->codalmacen;
+                            $movement->docid = $doc->id();
+                            $movement->docmodel = $doc->modelClassName();
+                            $movement->idproducto = $line->idproducto ?? $line->getProducto()->idproducto;
+                            $movement->referencia = $line->referencia;
+                            $movement->cantidad = $line->actualizastock * $line->cantidad;
+                            $movement->documento = Tools::lang()->trans($doc->modelClassName()) . ' ' . $doc->codigo;
+                            $movement->fecha = $doc->fecha;
+                            $movement->hora = $doc->hora;
+
+                            if (!empty($movement->cantidad)) {
+                                $movement->save();
+                            }
+                        }
                     }
                 }
 
@@ -365,8 +404,8 @@ class StockMovementManager
 
     protected static function rebuildStockCounting(): void
     {
-        $where = [new DataBaseWhere('completed', true)];
-        foreach (ConteoStock::all($where, ['idconteo' => 'ASC'], 0, 0) as $conteo) {
+        $where = [Where::column('completed', true)];
+        foreach (ConteoStock::all($where, ['idconteo' => 'ASC']) as $conteo) {
             // primero recorremos las líneas para obtener el stock actual por referencia
             $stocks = [];
             foreach ($conteo->getLines() as $line) {
@@ -393,8 +432,8 @@ class StockMovementManager
 
     protected static function rebuildTransferStock(): void
     {
-        $where = [new DataBaseWhere('completed', true)];
-        foreach (TransferenciaStock::all($where, ['idtrans' => 'ASC'], 0, 0) as $transfer) {
+        $where = [Where::column('completed', true)];
+        foreach (TransferenciaStock::all($where, ['idtrans' => 'ASC']) as $transfer) {
             foreach ($transfer->getLines() as $line) {
                 $variant = $line->getVariant();
                 $product = $variant->getProducto();

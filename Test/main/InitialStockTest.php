@@ -19,7 +19,7 @@
 
 namespace FacturaScripts\Test\Plugins;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\InitialStockMovement;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
@@ -57,18 +57,24 @@ final class InitialStockTest extends TestCase
         // buscamos un movimiento para el producto
         $movimiento = new MovimientoStock();
         $where = [
-            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
-            new DataBaseWhere('referencia', $product->referencia)
+            Where::column('codalmacen', $warehouse->codalmacen),
+            Where::column('referencia', $product->referencia)
         ];
-        $this->assertTrue($movimiento->loadFromCode('', $where));
+        $this->assertTrue($movimiento->loadWhere($where));
+
+        // comprobamos la cantidad del movimiento
+        $this->assertEquals(10, $movimiento->cantidad);
+
+        // comprobamos el saldo del movimiento
+        $this->assertEquals(10, $movimiento->saldo);
 
         // buscamos la línea del conteo
         $line = new LineaConteoStock();
         $where = [
-            new DataBaseWhere('referencia', $product->referencia),
-            new DataBaseWhere('idproducto', $product->idproducto)
+            Where::column('referencia', $product->referencia),
+            Where::column('idproducto', $product->idproducto)
         ];
-        $this->assertTrue($line->loadFromCode('', $where));
+        $this->assertTrue($line->loadWhere($where));
 
         // obtenemos el conteo de la línea
         $conteo = $line->getConteo();

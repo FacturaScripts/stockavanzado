@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -19,8 +19,8 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Controller\EditAlmacen as ParentController;
+use FacturaScripts\Core\Where;
 
 /**
  * @deprecated 2024.93 quitar en la 2025
@@ -33,7 +33,7 @@ class EditAlmacen extends ParentController
         switch ($viewName) {
             case 'ListStock':
                 $code = $this->getViewModelValue($this->getMainViewName(), 'codalmacen');
-                $where = [new DataBaseWhere('stocks.codalmacen', $code)];
+                $where = [Where::column('stocks.codalmacen', $code)];
                 $view->loadData('', $where);
                 break;
 

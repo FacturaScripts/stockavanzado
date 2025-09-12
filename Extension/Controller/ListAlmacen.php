@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -43,7 +43,7 @@ class ListAlmacen
     protected function createViewsCounting(): Closure
     {
         return function ($viewName = 'ListConteoStock') {
-            $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll')
+            $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fa-solid fa-scroll')
                 ->addOrderBy(['fechainicio', 'idconteo'], 'date', 2)
                 ->addSearchFields(['idconteo', 'observaciones'])
                 ->addFilterPeriod('fechainicio', 'date', 'fechainicio')
@@ -61,18 +61,16 @@ class ListAlmacen
     protected function createViewsMovements(): Closure
     {
         return function ($viewName = 'ListMovimientoStock') {
-            $this->addView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading')
+            $this->addView($viewName, 'MovimientoStock', 'movements', 'fa-solid fa-truck-loading')
                 ->addOrderBy(['fecha', 'hora', 'id'], 'date', 2)
                 ->addOrderBy(['cantidad'], 'quantity')
                 ->addSearchFields(['documento', 'referencia'])
                 ->setSettings('btnDelete', false)
                 ->setSettings('btnNew', false)
-                ->setSettings('checkBoxes', false);
-
-            // Filters
-            $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
-            $this->addFilterNumber($viewName, 'cantidadgt', 'quantity', 'cantidad', '>=');
-            $this->addFilterNumber($viewName, 'cantidadlt', 'quantity', 'cantidad', '<=');
+                ->setSettings('checkBoxes', false)
+                ->addFilterPeriod('fecha', 'date', 'fecha')
+                ->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=')
+                ->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=');
 
             $warehouses = Almacenes::codeModel();
             if (count($warehouses) > 2) {
@@ -84,7 +82,7 @@ class ListAlmacen
                     'action' => 'rebuild-movements',
                     'color' => 'warning',
                     'confirm' => true,
-                    'icon' => 'fas fa-magic',
+                    'icon' => 'fa-solid fa-magic',
                     'label' => 'rebuild-movements'
                 ]);
             }
@@ -94,21 +92,18 @@ class ListAlmacen
     protected function createViewsTransfers(): Closure
     {
         return function ($viewName = 'ListTransferenciaStock') {
-            $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt')
+            $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fa-solid fa-exchange-alt')
                 ->addOrderBy(['fecha', 'idtrans'], 'date', 2)
-                ->addSearchFields(['idtrans', 'observaciones']);
-
-            // Filters
-            $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha')
-                ->addFilterCheckbox('completed', 'completed', 'completed');
+                ->addSearchFields(['idtrans', 'observaciones'])
+                ->addFilterPeriod('fecha', 'date', 'fecha')
+                ->addFilterCheckbox('completed', 'completed', 'completed')
+                ->addFilterAutocomplete('nick', 'user', 'nick', 'users', 'nick', 'nick');
 
             $warehouses = Almacenes::codeModel();
             if (count($warehouses) > 2) {
                 $this->addFilterSelect($viewName, 'codalmacenorigen', 'origin-warehouse', 'codalmacenorigen', $warehouses);
                 $this->addFilterSelect($viewName, 'codalmacendestino', 'destination-warehouse', 'codalmacendestino', $warehouses);
             }
-
-            $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
         };
     }
 

@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2022-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2022-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,9 +20,9 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 
 /**
  * @author Daniel Fernández Giménez <hola@danielfg.es>
@@ -39,33 +39,27 @@ class ReportProducto
     protected function createViewsMovements(): Closure
     {
         return function ($viewName = 'ListMovimientoProducto') {
-            $this->addView($viewName, 'Join\MovimientoProducto', 'movements', 'fas fa-truck-loading')
+            $this->addView($viewName, 'Join\MovimientoProducto', 'movements', 'fa-solid fa-truck-loading')
                 ->addOrderBy(['cantidad'], 'quantity')
                 ->addSearchFields(['sm.referencia', 'p.descripcion'])
                 ->setSettings('btnDelete', false)
                 ->setSettings('btnNew', false)
-                ->setSettings('checkBoxes', false);
-
-            // filtros
-            $this->addFilterPeriod($viewName, 'fecha', 'date', 'sm.fecha');
+                ->setSettings('checkBoxes', false)
+                ->addFilterPeriod('fecha', 'date', 'sm.fecha')
+                ->addFilterSelectWhere('type', [
+                    ['label' => Tools::lang()->trans('all'), 'where' => []],
+                    ['label' => '------', 'where' => []],
+                    ['label' => Tools::lang()->trans('purchases'), 'where' => [Where::column('sm.cantidad', 0, '>')]],
+                    ['label' => Tools::lang()->trans('sales'), 'where' => [Where::column('sm.cantidad', 0, '<')]],
+                ])
+                ->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=')
+                ->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=')
+                ->addFilterCheckbox('ex-conteo', 'without-stock-count', 'sm.docmodel', '!=', 'ConteoStock');
 
             $warehouses = Almacenes::codeModel();
             if (count($warehouses) > 2) {
                 $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'sm.codalmacen', $warehouses);
             }
-
-            $i18n = Tools::lang();
-            $this->addFilterSelectWhere($viewName, 'type', [
-                ['label' => $i18n->trans('all'), 'where' => []],
-                ['label' => '------', 'where' => []],
-                ['label' => $i18n->trans('purchases'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '>')]],
-                ['label' => $i18n->trans('sales'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '<')]],
-            ]);
-
-            $this->addFilterNumber($viewName, 'cantidadgt', 'quantity', 'cantidad', '>=');
-            $this->addFilterNumber($viewName, 'cantidadlt', 'quantity', 'cantidad', '<=');
-
-            $this->addFilterCheckbox($viewName, 'ex-conteo', 'without-stock-count', 'sm.docmodel', '!=', 'ConteoStock');
         };
     }
 }

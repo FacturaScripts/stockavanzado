@@ -19,10 +19,10 @@
 
 namespace FacturaScripts\Test\Plugins;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
-use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
-use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
-use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
+use FacturaScripts\Core\Where;
+use FacturaScripts\Dinamic\Lib\StockMovementManager;
+use FacturaScripts\Dinamic\Model\ConteoStock;
+use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
@@ -58,12 +58,18 @@ final class StockMovementTest extends TestCase
         // comprobamos que está el movimiento de stock
         $movement = new MovimientoStock();
         $where = [
-            new DataBaseWhere('codalmacen', $conteo->codalmacen),
-            new DataBaseWhere('docid', $conteo->primaryColumnValue()),
-            new DataBaseWhere('docmodel', $conteo->modelClassName()),
-            new DataBaseWhere('referencia', $linea->referencia)
+            Where::column('codalmacen', $conteo->codalmacen),
+            Where::column('docid', $conteo->id()),
+            Where::column('docmodel', $conteo->modelClassName()),
+            Where::column('referencia', $linea->referencia)
         ];
-        $this->assertTrue($movement->loadFromCode('', $where));
+        $this->assertTrue($movement->loadWhere($where));
+
+        // comprobamos la cantidad del movimiento
+        $this->assertEquals(50, $movement->cantidad);
+
+        // comprobamos el saldo del movimiento
+        $this->assertEquals(50, $movement->saldo);
 
         // eliminamos el movimiento de stock
         $this->assertTrue($movement->delete());
@@ -72,7 +78,13 @@ final class StockMovementTest extends TestCase
         StockMovementManager::rebuild($product->idproducto);
 
         // comprobamos que está el movimiento de stock
-        $this->assertTrue($movement->loadFromCode('', $where));
+        $this->assertTrue($movement->loadWhere($where));
+
+        // comprobamos la cantidad del movimiento
+        $this->assertEquals(50, $movement->cantidad);
+
+        // comprobamos el saldo del movimiento
+        $this->assertEquals(50, $movement->saldo);
 
         // eliminamos
         $this->assertTrue($conteo->delete());

@@ -37,7 +37,7 @@ class BusinessDocumentLine
     protected function updateStock(): Closure
     {
         return function ($doc) {
-            StockMovementManager::addLineBusinessDocument($this, $this->previousData, $doc);
+            StockMovementManager::addLineBusinessDocument($this, $doc);
         };
     }
 }

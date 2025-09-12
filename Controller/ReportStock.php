@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2024 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -19,9 +19,9 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\ListController;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\ProductType;
 
 /**
@@ -36,7 +36,7 @@ class ReportStock extends ListController
         $data = parent::getPageData();
         $data['menu'] = 'reports';
         $data['title'] = 'stock';
-        $data['icon'] = 'fas fa-dolly';
+        $data['icon'] = 'fa-solid fa-dolly';
         return $data;
     }
 
@@ -50,7 +50,7 @@ class ReportStock extends ListController
 
     protected function createViewsCounting(string $viewName = 'ListConteoStock'): void
     {
-        $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fas fa-scroll')
+        $this->addView($viewName, 'ConteoStock', 'stock-counts', 'fa-solid fa-scroll')
             ->addOrderBy(['fechainicio'], 'date', 2)
             ->addSearchFields(['idconteo', 'observaciones']);
 
@@ -68,101 +68,85 @@ class ReportStock extends ListController
 
     protected function createViewsMovements(string $viewName = 'ListMovimientoStock'): void
     {
-        $this->addView($viewName, 'MovimientoStock', 'movements', 'fas fa-truck-loading')
+        $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
+
+        $this->addView($viewName, 'MovimientoStock', 'movements', 'fa-solid fa-truck-loading')
             ->addOrderBy(['fecha', 'hora', 'id'], 'date', 2)
             ->addOrderBy(['cantidad'], 'quantity')
-            ->addSearchFields(['documento', 'referencia']);
-
-        // Filters
-        $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
-
-        $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
-        $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
-
-        // disable buttons
-        $this->setSettings($viewName, 'btnDelete', false);
-        $this->setSettings($viewName, 'btnNew', false);
-        $this->setSettings($viewName, 'checkBoxes', false);
+            ->addSearchFields(['documento', 'referencia'])
+            ->addFilterPeriod('fecha', 'date', 'fecha')
+            ->addFilterSelect('codalmacen', 'warehouse', 'codalmacen', $warehouses)
+            ->setSettings('btnDelete', false)
+            ->setSettings('btnNew', false)
+            ->setSettings('checkBoxes', false);
     }
 
     protected function createViewsStock(string $viewName = 'StockProducto'): void
     {
-        $this->addView($viewName, 'Join\StockProducto', 'stock', 'fas fa-dolly')
+        $values = [
+            [
+                'label' => Tools::lang()->trans('all'),
+                'where' => []
+            ],
+            [
+                'label' => Tools::lang()->trans('under-minimums'),
+                'where' => [Where::column('disponible', 'field:stockmin', '<')]
+            ],
+            [
+                'label' => Tools::lang()->trans('excess'),
+                'where' => [Where::column('disponible', 'field:stockmax', '>')]
+            ]
+        ];
+
+        $types = [];
+        foreach (ProductType::all() as $key => $key) {
+            $types[$key] = Tools::lang()->trans($key);
+        }
+
+        $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
+        $manufacturers = $this->codeModel->all('fabricantes', 'codfabricante', 'nombre');
+        $families = $this->codeModel->all('familias', 'codfamilia', 'descripcion');
+
+        $this->addView($viewName, 'Join\StockProducto', 'stock', 'fa-solid fa-dolly')
             ->addOrderBy(['referencia', 'codalmacen'], 'reference')
             ->addOrderBy(['disponible'], 'available')
             ->addOrderBy(['cantidad'], 'quantity', 2)
             ->addOrderBy(['total_movimientos'], 'movements')
             ->addOrderBy(['coste'], 'cost-price')
             ->addOrderBy(['total'], 'total')
-            ->addSearchFields(['productos.descripcion', 'stocks.referencia']);
-
-        // filters
-        $i18n = Tools::lang();
-        $values = [
-            [
-                'label' => $i18n->trans('all'),
-                'where' => []
-            ],
-            [
-                'label' => $i18n->trans('under-minimums'),
-                'where' => [new DataBaseWhere('disponible', 'field:stockmin', '<')]
-            ],
-            [
-                'label' => $i18n->trans('excess'),
-                'where' => [new DataBaseWhere('disponible', 'field:stockmax', '>')]
-            ]
-        ];
-        $this->addFilterSelectWhere($viewName, 'type', $values);
-
-        $this->addFilterSelectWhere($viewName, 'status', [
-            ['label' => $i18n->trans('all'), 'where' => []],
-            ['label' => $i18n->trans('only-active'), 'where' => [new DataBaseWhere('productos.bloqueado', false)]],
-            ['label' => $i18n->trans('blocked'), 'where' => [new DataBaseWhere('productos.bloqueado', true)]],
-            ['label' => $i18n->trans('public'), 'where' => [new DataBaseWhere('productos.publico', true)]],
-        ]);
-
-        $types = [];
-        foreach (ProductType::all() as $key => $key) {
-            $types[$key] = $i18n->trans($key);
-        }
-        $this->addFilterSelect($viewName, 'tipo', 'type', 'tipo', $types);
-
-        $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
-        $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
-
-        $manufacturers = $this->codeModel->all('fabricantes', 'codfabricante', 'nombre');
-        $this->addFilterSelect($viewName, 'codfabricante', 'manufacturer', 'codfabricante', $manufacturers);
-
-        $families = $this->codeModel->all('familias', 'codfamilia', 'descripcion');
-        $this->addFilterSelect($viewName, 'codfamilia', 'family', 'codfamilia', $families);
-
-        $this->addFilterNumber($viewName, 'max-stock', 'quantity', 'stocks.cantidad', '>=');
-        $this->addFilterNumber($viewName, 'min-stock', 'quantity', 'stocks.cantidad', '<=');
-
-        $this->addFilterCheckbox($viewName, 'secompra', 'for-purchase', 'productos.secompra');
-
-        // disable buttons
-        $this->setSettings($viewName, 'btnDelete', false);
-        $this->setSettings($viewName, 'btnNew', false);
-        $this->setSettings($viewName, 'checkBoxes', false);
+            ->addSearchFields(['productos.descripcion', 'stocks.referencia'])
+            ->addFilterSelectWhere('type', $values)
+            ->addFilterSelectWhere('status', [
+                ['label' => Tools::lang()->trans('all'), 'where' => []],
+                ['label' => Tools::lang()->trans('only-active'), 'where' => [Where::column('productos.bloqueado', false)]],
+                ['label' => Tools::lang()->trans('blocked'), 'where' => [Where::column('productos.bloqueado', true)]],
+                ['label' => Tools::lang()->trans('public'), 'where' => [Where::column('productos.publico', true)]],
+            ])
+            ->addFilterSelect('tipo', 'type', 'tipo', $types)
+            ->addFilterSelect('codalmacen', 'warehouse', 'codalmacen', $warehouses)
+            ->addFilterSelect('codfabricante', 'manufacturer', 'codfabricante', $manufacturers)
+            ->addFilterSelect('codfamilia', 'family', 'codfamilia', $families)
+            ->addFilterNumber('max-stock', 'quantity', 'stocks.cantidad', '>=')
+            ->addFilterNumber('min-stock', 'quantity', 'stocks.cantidad', '<=')
+            ->addFilterCheckbox('secompra', 'for-purchase', 'productos.secompra')
+            ->setSettings('btnDelete', false)
+            ->setSettings('btnNew', false)
+            ->setSettings('checkBoxes', false);
     }
 
     protected function createViewsTransfers(string $viewName = 'ListTransferenciaStock'): void
     {
-        $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fas fa-exchange-alt')
-            ->addOrderBy(['fecha'], 'date', 2)
-            ->addSearchFields(['idtrans', 'observaciones']);
-
-        // Filters
-        $this->addFilterPeriod($viewName, 'fecha', 'date', 'fecha');
         $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
-        $this->addFilterSelect($viewName, 'codalmacenorigen', 'origin-warehouse', 'codalmacenorigen', $warehouses);
-        $this->addFilterSelect($viewName, 'codalmacendestino', 'destination-warehouse', 'codalmacendestino', $warehouses);
-        $this->addFilterAutocomplete($viewName, 'nick', 'user', 'nick', 'users', 'nick', 'nick');
 
-        // disable buttons
-        $this->setSettings($viewName, 'btnDelete', false);
-        $this->setSettings($viewName, 'btnNew', false);
-        $this->setSettings($viewName, 'checkBoxes', false);
+        $this->addView($viewName, 'TransferenciaStock', 'transfers', 'fa-solid fa-exchange-alt')
+            ->addOrderBy(['fecha'], 'date', 2)
+            ->addSearchFields(['idtrans', 'observaciones'])
+            ->addFilterPeriod('fecha', 'date', 'fecha')
+            ->addFilterSelect('codalmacenorigen', 'origin-warehouse', 'codalmacenorigen', $warehouses)
+            ->addFilterSelect('codalmacendestino', 'destination-warehouse', 'codalmacendestino', $warehouses)
+            ->addFilterAutocomplete('nick', 'user', 'nick', 'users', 'nick', 'nick')
+            ->setSettings('btnDelete', false)
+            ->setSettings('btnNew', false)
+            ->setSettings('checkBoxes', false);
     }
 }

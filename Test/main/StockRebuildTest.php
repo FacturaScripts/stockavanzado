@@ -19,10 +19,10 @@
 
 namespace FacturaScripts\Test\Plugins;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\Stock;
-use FacturaScripts\Plugins\StockAvanzado\Lib\StockRebuild;
-use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
+use FacturaScripts\Dinamic\Lib\StockRebuild;
+use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
@@ -58,10 +58,10 @@ final class StockRebuildTest extends TestCase
         // obtenemos el stock del producto
         $stock = new Stock();
         $where = [
-            new DataBaseWhere('codalmacen', $warehouse->codalmacen),
-            new DataBaseWhere('referencia', $product->referencia)
+            Where::column('codalmacen', $warehouse->codalmacen),
+            Where::column('referencia', $product->referencia)
         ];
-        $this->assertTrue($stock->loadFromCode('', $where));
+        $this->assertTrue($stock->loadWhere($where));
 
         // comprobamos que el stock es correcto
         $this->assertEquals(50, $stock->cantidad);
@@ -74,7 +74,7 @@ final class StockRebuildTest extends TestCase
         $this->assertTrue(StockRebuild::rebuild($product->idproducto));
 
         // recargamos el stock
-        $stock->loadFromCode($stock->primaryColumnValue());
+        $stock->load($stock->id());
 
         // comprobamos que el stock es correcto
         $this->assertEquals(50, $stock->cantidad);

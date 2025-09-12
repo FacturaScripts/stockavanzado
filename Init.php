@@ -20,12 +20,12 @@
 namespace FacturaScripts\Plugins\StockAvanzado;
 
 use FacturaScripts\Core\Base\DataBase;
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Controller\ApiRoot;
 use FacturaScripts\Core\Kernel;
 use FacturaScripts\Core\Model\Role;
 use FacturaScripts\Core\Model\RoleAccess;
 use FacturaScripts\Core\Template\InitClass;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\EmailNotification;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
@@ -60,6 +60,7 @@ class Init extends InitClass
 
     public function uninstall(): void
     {
+
     }
 
     public function update(): void
@@ -79,7 +80,7 @@ class Init extends InitClass
 
         // creates the role if not exists
         $role = new Role();
-        if (false === $role->loadFromCode(self::ROLE_NAME)) {
+        if (false === $role->load(self::ROLE_NAME)) {
             $role->codrole = $role->descripcion = self::ROLE_NAME;
             if (false === $role->save()) {
                 // exit and rollback on fail
@@ -93,10 +94,10 @@ class Init extends InitClass
         foreach ($controllerNames as $controllerName) {
             $roleAccess = new RoleAccess();
             $where = [
-                new DataBaseWhere('codrole', self::ROLE_NAME),
-                new DataBaseWhere('pagename', $controllerName)
+                Where::column('codrole', self::ROLE_NAME),
+                Where::column('pagename', $controllerName)
             ];
-            if ($roleAccess->loadFromCode('', $where)) {
+            if ($roleAccess->loadWhere($where)) {
                 continue;
             }
 
@@ -171,7 +172,7 @@ class Init extends InitClass
     private function updateEmailNotifications(): void
     {
         $notificationMax = new EmailNotification();
-        if (!$notificationMax->loadFromCode(StockMinMax::NOTIFICATION_STOCK_MAX)) {
+        if (!$notificationMax->load(StockMinMax::NOTIFICATION_STOCK_MAX)) {
             $notificationMax->name = StockMinMax::NOTIFICATION_STOCK_MAX;
             $notificationMax->body = "Hola {nick}.\n\nSe ha alcanzado el stock máximo de los siguientes productos.";
             $notificationMax->subject = 'Stock máximo alcanzado';
@@ -180,7 +181,7 @@ class Init extends InitClass
         }
 
         $notificationMin = new EmailNotification();
-        if (!$notificationMin->loadFromCode(StockMinMax::NOTIFICATION_STOCK_MIN)) {
+        if (!$notificationMin->load(StockMinMax::NOTIFICATION_STOCK_MIN)) {
             $notificationMin->name = StockMinMax::NOTIFICATION_STOCK_MIN;
             $notificationMin->body = "Hola {nick}.\n\nSe ha alcanzado el stock mínimo de los siguientes productos.";
             $notificationMin->subject = 'Stock mínimo alcanzado';
