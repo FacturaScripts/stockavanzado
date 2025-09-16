@@ -19,9 +19,9 @@
 
 namespace FacturaScripts\Test\Plugins;
 
+use FacturaScripts\Dinamic\Lib\StockValueManager;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Stock;
-use FacturaScripts\Dinamic\Lib\StockValue;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
@@ -59,7 +59,7 @@ final class StockValueTest extends TestCase
         $this->assertTrue($stock->save());
 
         // ejecutamos la clase StockValue
-        $this->assertTrue(StockValue::update($warehouse));
+        StockValueManager::calculate($warehouse->id());
 
         // actualizamos el almacén
         $warehouse->load($warehouse->codalmacen);

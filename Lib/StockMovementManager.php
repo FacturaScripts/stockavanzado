@@ -38,14 +38,13 @@ use FacturaScripts\Dinamic\Model\Variante;
 use FacturaScripts\Plugins\StockAvanzado\Contract\StockMovementModInterface;
 
 /**
+ * Está clase se encarga de gestionar los movimientos de stock.
+ *
  * @author       Carlos Garcia Gomez            <carlos@facturascripts.com>
  * @collaborator Jerónimo Pedro Sánchez Manzano <socger@gmail.com>
  */
 class StockMovementManager
 {
-    const JOB_NAME = 'movements-rebuild';
-    const JOB_PERIOD = '99 years';
-
     /** @var array */
     private static $docStates = [];
 
@@ -127,7 +126,7 @@ class StockMovementManager
 
         $movement->cantidad = $cantidad;
 
-        // Solo guardar si hay cantidad diferente de 0, sino eliminar el movimiento
+        // Solo guardar si hay cantidad diferente de 0, si no eliminar el movimiento
         if ($cantidad == 0) {
             return $movement->exists() ? $movement->delete() : true;
         }
@@ -143,7 +142,7 @@ class StockMovementManager
 
     public static function addMod(StockMovementModInterface $mod): void
     {
-        self::$mods[] = $mod;
+        static::$mods[] = $mod;
     }
 
     public static function deleteLineCounting(LineaConteoStock $line, ConteoStock $stockCount): bool
@@ -174,12 +173,13 @@ class StockMovementManager
         return static::deleteLineTransferMovement($stockCount->codalmacendestino, $line, $stockCount);
     }
 
-    public static function rebuild(?int $idproducto = null): void
+    public static function rebuild(?int $idproducto = null, array &$messages = [], bool $cron = false): void
     {
         static::$idproducto = $idproducto;
 
         // eliminamos todos los movimientos de stock
         if (!static::deleteMovements()) {
+            $messages[] = 'error-deleting-movements';
             Tools::log('audit')->warning('error-deleting-movements');
             return;
         }
@@ -194,11 +194,19 @@ class StockMovementManager
         static::rebuildStockCounting();
 
         // añadimos los mods para otros plugins
-        foreach (self::$mods as $mod) {
+        foreach (static::$mods as $mod) {
             $mod->run(static::$idproducto);
         }
 
-        Tools::log('audit')->warning('rebuilt-movements');
+        // si hemos ejecutado la clase desde el cron, terminamos
+        if ($cron) {
+            return;
+        }
+
+        // mostramos los mensajes
+        foreach ($messages as $message) {
+            Tools::log('audit')->warning($message);
+        }
     }
 
     protected static function addLineTransferStockMovement(string $codalmacen, float $cantidad, TransferenciaStock $transfer, LineaTransferenciaStock $line): bool
@@ -274,23 +282,23 @@ class StockMovementManager
     protected static function getProduct(string $reference): Producto
     {
         $variant = static::getVariant($reference);
-        if (!isset(self::$products[$variant->idproducto])) {
-            self::$products[$variant->idproducto] = $variant->getProducto();
+        if (!isset(static::$products[$variant->idproducto])) {
+            static::$products[$variant->idproducto] = $variant->getProducto();
         }
 
-        return self::$products[$variant->idproducto];
+        return static::$products[$variant->idproducto];
     }
 
     protected static function getVariant(string $referencia): Variante
     {
-        if (!isset(self::$variants[$referencia])) {
+        if (!isset(static::$variants[$referencia])) {
             $variante = new Variante();
             $where = [Where::column('referencia', $referencia)];
             $variante->loadWhere($where);
-            self::$variants[$referencia] = $variante;
+            static::$variants[$referencia] = $variante;
         }
 
-        return self::$variants[$referencia];
+        return static::$variants[$referencia];
     }
 
     protected static function getStockSum(string $reference, string $codalmacen, int $docid, string $docmodel, string $datetime): float
@@ -328,12 +336,12 @@ class StockMovementManager
     protected static function ignoredBusinessDocumentState(TransformerDocument $doc): bool
     {
         // comprobar o agregar el estado a la lista
-        if (!isset(self::$docStates[$doc->idestado])) {
-            self::$docStates[$doc->idestado] = $doc->getStatus();
+        if (!isset(static::$docStates[$doc->idestado])) {
+            static::$docStates[$doc->idestado] = $doc->getStatus();
         }
 
         // Ignorar estado con actualizastock == 0
-        return empty(self::$docStates[$doc->idestado]->actualizastock);
+        return empty(static::$docStates[$doc->idestado]->actualizastock);
     }
 
     protected static function rebuildBusinessDocument(): void

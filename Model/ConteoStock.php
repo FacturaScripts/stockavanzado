@@ -26,7 +26,7 @@ use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
-use FacturaScripts\Dinamic\Lib\StockRebuild;
+use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\ConteoStock as DinConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
@@ -137,7 +137,9 @@ class ConteoStock extends ModelClass
                 return false;
             }
 
-            if (false === StockRebuild::rebuild($line->idproducto)) {
+            $messages = [];
+            StockRebuildManager::rebuild($line->idproducto, $messages);
+            if (!empty($messages)) {
                 if ($newTransaction) {
                     self::$dataBase->rollback();
                 }
@@ -234,12 +236,20 @@ class ConteoStock extends ModelClass
                 return false;
             }
 
-            if (false === StockRebuild::rebuild($line->idproducto)) {
-                if ($newTransaction) {
-                    self::$dataBase->rollback();
-                }
-                return false;
+            $messages = [];
+            StockRebuildManager::rebuild($line->idproducto, $messages);
+            if (empty($messages)) {
+                continue;
             }
+
+            foreach ($messages as $message) {
+                Tools::log()->warning($message);
+            }
+
+            if ($newTransaction) {
+                self::$dataBase->rollback();
+            }
+            return false;
         }
 
         //actualizamos el conteo
@@ -254,6 +264,7 @@ class ConteoStock extends ModelClass
         if ($newTransaction) {
             self::$dataBase->commit();
         }
+
         return true;
     }
 

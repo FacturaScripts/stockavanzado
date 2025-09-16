@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2024-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,21 +21,24 @@ namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 
 use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Dinamic\Lib\FixedIdProductManager;
+use FacturaScripts\Dinamic\Lib\InitialStockMovementManager;
 
 /**
+ * Este cron, que además sirve de clase, es para crear movimientos iniciales de stock
+ * cuando el producto tiene stock, pero no tiene movimientos.
+ *
  * @author Daniel Fernández Giménez <hola@danielfg.es>
  */
-final class FixedIdProduct extends CronJobClass
+final class InitialStockMovement extends CronJobClass
 {
-    const JOB_NAME = 'fixed-id-product';
-    const JOB_PERIOD = '1 year';
+    const JOB_NAME = 'initial-stock-movements';
+    const JOB_PERIOD = '99 years';
 
     public static function run(): void
     {
         $messages = [];
         self::echo("\n\n* JOB: " . self::JOB_NAME . ' ...');
-        FixedIdProductManager::fixed($messages, true);
+        InitialStockMovementManager::initial(null, $messages, true);
 
         foreach ($messages as $message) {
             self::echo("\n- " . Tools::lang()->trans($message));

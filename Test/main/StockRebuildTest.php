@@ -21,7 +21,7 @@ namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\Stock;
-use FacturaScripts\Dinamic\Lib\StockRebuild;
+use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
@@ -71,7 +71,9 @@ final class StockRebuildTest extends TestCase
         $this->assertTrue($stock->save());
 
         // ejecutamos la reconstrucción del stock con base en sus movimientos
-        $this->assertTrue(StockRebuild::rebuild($product->idproducto));
+        $messages = [];
+        StockRebuildManager::rebuild($product->idproducto, $messages);
+        $this->assertEmpty($messages);
 
         // recargamos el stock
         $stock->load($stock->id());

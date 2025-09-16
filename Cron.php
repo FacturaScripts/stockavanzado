@@ -20,22 +20,22 @@
 namespace FacturaScripts\Plugins\StockAvanzado;
 
 use FacturaScripts\Core\Template\CronClass;
-use FacturaScripts\Dinamic\Lib\InitialStockMovement;
-use FacturaScripts\Dinamic\Lib\StockMovementManager;
-use FacturaScripts\Dinamic\Lib\StockValue;
 use FacturaScripts\Plugins\StockAvanzado\CronJob\FixedIdProduct;
+use FacturaScripts\Plugins\StockAvanzado\CronJob\InitialStockMovement;
+use FacturaScripts\Plugins\StockAvanzado\CronJob\StockMovement;
 use FacturaScripts\Plugins\StockAvanzado\CronJob\StockMinMax;
+use FacturaScripts\Plugins\StockAvanzado\CronJob\StockValue;
 
 final class Cron extends CronClass
 {
     public function run(): void
     {
         // añadimos este proceso al cron para no tener que hacerlo durante la instalación del plugin
-        $this->job(StockMovementManager::JOB_NAME)
-            ->every(StockMovementManager::JOB_PERIOD)
+        $this->job(StockMovement::JOB_NAME)
+            ->every(StockMovement::JOB_PERIOD)
             ->withoutOverlapping()
             ->run(function () {
-                StockMovementManager::rebuild();
+                StockMovement::run();
             });
 
         // con este proceso añadimos un conteo inicial a los productos que no tengan movimientos
@@ -51,7 +51,7 @@ final class Cron extends CronClass
             ->every(StockValue::JOB_PERIOD)
             ->withoutOverlapping()
             ->run(function () {
-                StockValue::updateAll();
+                StockValue::run();
             });
 
         // con este proceso notificamos de stock bajo/alto

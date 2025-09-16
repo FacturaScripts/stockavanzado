@@ -24,7 +24,7 @@ use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
-use FacturaScripts\Dinamic\Lib\StockRebuild;
+use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\Stock;
@@ -206,7 +206,7 @@ class EditProducto
                 return;
             }
 
-            StockRebuild::rebuild($product->idproducto);
+            StockRebuildManager::rebuild($product->idproducto);
             Tools::log()->notice('rebuilt-stock');
         };
     }

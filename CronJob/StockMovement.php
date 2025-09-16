@@ -21,21 +21,23 @@ namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 
 use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Dinamic\Lib\FixedIdProductManager;
+use FacturaScripts\Dinamic\Lib\StockMovementManager;
+use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 
 /**
  * @author Daniel Fernández Giménez <hola@danielfg.es>
  */
-final class FixedIdProduct extends CronJobClass
+final class StockMovement extends CronJobClass
 {
-    const JOB_NAME = 'fixed-id-product';
-    const JOB_PERIOD = '1 year';
+    const JOB_NAME = 'movements-rebuild';
+    const JOB_PERIOD = '99 years';
 
     public static function run(): void
     {
         $messages = [];
         self::echo("\n\n* JOB: " . self::JOB_NAME . ' ...');
-        FixedIdProductManager::fixed($messages, true);
+        StockMovementManager::rebuild(null, $messages, true);
+        StockRebuildManager::rebuild(null, $messages, true);
 
         foreach ($messages as $message) {
             self::echo("\n- " . Tools::lang()->trans($message));

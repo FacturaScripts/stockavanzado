@@ -129,11 +129,24 @@ class MovimientoStock extends ModelClass
         return true;
     }
 
+    public function url(string $type = 'auto', string $list = 'List'): string
+    {
+        $modelClass = '\\FacturaScripts\\Dinamic\\Model\\' . $this->docmodel;
+        if (!empty($this->docmodel) && class_exists($modelClass)) {
+            $model = new $modelClass();
+            if ($model->load($this->docid)) {
+                return $model->url();
+            }
+        }
+
+        return empty($this->id()) ? parent::url($type, $list) : $this->getProduct()->url();
+    }
+
     /**
      * Calcula y actualiza el saldo de todos los movimientos al insertar un movimiento nuevo.
      * El saldo será la suma de todas las cantidades de movimientos anteriores (fecha, hora, id ASC) más la cantidad de este movimiento.
      */
-    private function calculateSaldo(): void
+    protected function calculateSaldo(): void
     {
         // Filtrar por producto y almacén
         $where = [
@@ -154,18 +167,5 @@ class MovimientoStock extends ModelClass
             $saldo += (float)$movement->cantidad;
             self::$dataBase->exec("UPDATE stocks_movimientos SET saldo = " . self::$dataBase->var2str($saldo) . " WHERE id = " . self::$dataBase->var2str($movement->id()));
         }
-    }
-
-    public function url(string $type = 'auto', string $list = 'List'): string
-    {
-        $modelClass = '\\FacturaScripts\\Dinamic\\Model\\' . $this->docmodel;
-        if (!empty($this->docmodel) && class_exists($modelClass)) {
-            $model = new $modelClass();
-            if ($model->load($this->docid)) {
-                return $model->url();
-            }
-        }
-
-        return empty($this->id()) ? parent::url($type, $list) : $this->getProduct()->url();
     }
 }
