@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2024-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -22,28 +22,32 @@ namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Dinamic\Model\ConteoStock;
+use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
 
 /**
+ * Está clase, es para crear movimientos iniciales de stock
+ * cuando el producto tiene stock, pero no tiene movimientos.
+ *
  * @author Daniel Fernández Giménez <hola@danielfg.es>
  */
-class InitialStockMovement
+class InitialStockMovementManager
 {
-    const JOB_NAME = 'initial-stock-movements';
-    const JOB_PERIOD = '99 years';
-
     /** @var DataBase */
-    protected static $dataBase;
+    protected static $db;
 
-    public static function run(): void
+    /** @var int|null */
+    protected static $idproducto = null;
+
+    public static function initial(?int $idproducto = null, array &$messages = [], bool $cron = false): void
     {
-        self::$dataBase = new DataBase();
+        static::$db = new DataBase();
+        static::$idproducto = $idproducto;
 
         // recorremos los almacénes
         foreach (Almacenes::all() as $warehouse) {
             // para cada almacén, obtenemos todos los stocks de cada variante
             // siempre que dicha variante no tenga movimientos de stock
-            $stocks = self::getStocks($warehouse->codalmacen);
+            $stocks = static::getStocks($warehouse->codalmacen);
 
             // si no hay stocks, continuamos
             if (empty($stocks)) {
@@ -67,16 +71,38 @@ class InitialStockMovement
             // procesamos el conteo
             $count->updateStock();
         }
+
+        // si hemos ejecutado la clase desde el cron, terminamos
+        if ($cron) {
+            return;
+        }
+
+        // mostramos los mensajes
+        foreach ($messages as $message) {
+            Tools::log()->warning($message);
+        }
     }
 
     protected static function getStocks(string $codalmacen): array
     {
         $sql = "SELECT *"
             . " FROM stocks"
-            . " WHERE codalmacen = " . self::$dataBase->var2str($codalmacen)
-            . " AND cantidad <> 0"
-            . " AND referencia NOT IN (SELECT referencia FROM stocks_movimientos WHERE codalmacen = " . self::$dataBase->var2str($codalmacen) . ")";
+            . " WHERE codalmacen = " . static::$db->var2str($codalmacen);
 
-        return self::$dataBase->select($sql);
+        if (null !== static::$idproducto) {
+            $sql .= " AND idproducto = " . static::$db->var2str(static::$idproducto);
+        }
+
+        $sql .= " AND cantidad <> 0"
+            . " AND referencia NOT IN (SELECT referencia FROM stocks_movimientos WHERE codalmacen = "
+            . static::$db->var2str($codalmacen);
+
+        if (null !== static::$idproducto) {
+            $sql .= " AND idproducto = " . static::$db->var2str(static::$idproducto);
+        }
+
+        $sql .= ")";
+
+        return static::$db->select($sql);
     }
 }

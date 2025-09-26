@@ -22,7 +22,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 use Closure;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
-use FacturaScripts\Dinamic\Lib\StockRebuild;
+use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Producto;
 
@@ -113,7 +113,7 @@ class ListProducto
             // procesamos los productos de uno en uno, redirigiendo a la misma página
             $offset = (int)$this->request->get('offset', 0);
             foreach (Producto::all([], [], $offset, 1) as $product) {
-                StockRebuild::rebuild($product->id());
+                StockRebuildManager::rebuild($product->id());
                 Tools::log()->info('rebuilding-stock', ['%reference%' => $product->referencia, '%offset%' => $offset + 1, '%total%' => $total]);
                 $this->redirect('?activetab=ListStock&action=rebuild-stock&total=' . $total . '&offset=' . ($offset + 1), 1);
                 return;

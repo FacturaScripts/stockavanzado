@@ -26,11 +26,11 @@ use FacturaScripts\Core\Model\Role;
 use FacturaScripts\Core\Model\RoleAccess;
 use FacturaScripts\Core\Template\InitClass;
 use FacturaScripts\Core\Where;
+use FacturaScripts\Dinamic\Lib\StockMinMaxManager;
 use FacturaScripts\Dinamic\Model\EmailNotification;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\TransferenciaStock;
-use FacturaScripts\Plugins\StockAvanzado\CronJob\StockMinMax;
 
 /**
  * Description of Init
@@ -172,8 +172,8 @@ class Init extends InitClass
     private function updateEmailNotifications(): void
     {
         $notificationMax = new EmailNotification();
-        if (!$notificationMax->load(StockMinMax::NOTIFICATION_STOCK_MAX)) {
-            $notificationMax->name = StockMinMax::NOTIFICATION_STOCK_MAX;
+        if (!$notificationMax->load(StockMinMaxManager::NOTIFICATION_STOCK_MAX)) {
+            $notificationMax->name = StockMinMaxManager::NOTIFICATION_STOCK_MAX;
             $notificationMax->body = "Hola {nick}.\n\nSe ha alcanzado el stock máximo de los siguientes productos.";
             $notificationMax->subject = 'Stock máximo alcanzado';
             $notificationMax->enabled = true;
@@ -181,8 +181,8 @@ class Init extends InitClass
         }
 
         $notificationMin = new EmailNotification();
-        if (!$notificationMin->load(StockMinMax::NOTIFICATION_STOCK_MIN)) {
-            $notificationMin->name = StockMinMax::NOTIFICATION_STOCK_MIN;
+        if (!$notificationMin->load(StockMinMaxManager::NOTIFICATION_STOCK_MIN)) {
+            $notificationMin->name = StockMinMaxManager::NOTIFICATION_STOCK_MIN;
             $notificationMin->body = "Hola {nick}.\n\nSe ha alcanzado el stock mínimo de los siguientes productos.";
             $notificationMin->subject = 'Stock mínimo alcanzado';
             $notificationMin->enabled = true;

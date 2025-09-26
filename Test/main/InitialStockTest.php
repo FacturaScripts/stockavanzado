@@ -20,7 +20,7 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
-use FacturaScripts\Dinamic\Lib\InitialStockMovement;
+use FacturaScripts\Dinamic\Lib\InitialStockMovementManager;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Stock;
@@ -52,7 +52,7 @@ final class InitialStockTest extends TestCase
         $this->assertTrue($stock->save());
 
         // ejecutamos la clase InitialStockMovement
-        InitialStockMovement::run();
+        InitialStockMovementManager::initial();
 
         // buscamos un movimiento para el producto
         $movimiento = new MovimientoStock();
