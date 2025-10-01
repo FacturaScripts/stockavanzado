@@ -9,7 +9,7 @@
     "preload-products": "Předběžné načtení všech produktů",
     "reason-for-change": "Motivo del cambio",
     "rebuild-movements": "Reconstruir movimientos",
-    "rebuilding-movements": "Reconstruyendo movimientos del producto %reference% (%offset%\/%total%)",
+    "rebuilding-movements": "Probíhá rekonstrukce pohybů produktu %reference% (%offset%\/%total%)",
     "rebuilding-movements-finished": "Reconstrucción de movimientos finalizada con %total% productos",
     "rebuilding-stock": "Reconstruyendo stock del producto %reference% (%offset%\/%total%)",
     "rebuilding-stock-finished": "Rekonstrukce zásob byla dokončena s %total% produkty",

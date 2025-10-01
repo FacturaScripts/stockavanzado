@@ -13,7 +13,7 @@
     "rebuilding-movements-finished": "Reconstrucción de movimientos finalizada con %total% productos",
     "rebuilding-stock": "Reconstruyendo stock del producto %reference% (%offset%\/%total%)",
     "rebuilding-stock-finished": "Rekonstrukcja stanu zapasów zakończona z %total% produktami",
-    "rebuilt-movements": "Movimientos reconstruidos",
+    "rebuilt-movements": "Operacje odtworzone",
     "rebuilt-stock": "Przebudowano zapas",
     "reconstructed-movements": "Odbudowane ruchy zapasów",
     "start-with-one-stock": "Zacznij od zapasu jeden",
