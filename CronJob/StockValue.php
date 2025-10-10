@@ -21,6 +21,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 
 use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Dinamic\Lib\StockValueManager;
 
 final class StockValue extends CronJobClass
 {

@@ -19,8 +19,8 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
+use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Controller\EditAlmacen as ParentController;
-use FacturaScripts\Core\Where;
 
 /**
  * @deprecated 2024.93 quitar en la 2025
@@ -33,7 +33,8 @@ class EditAlmacen extends ParentController
         switch ($viewName) {
             case 'ListStock':
                 $code = $this->getViewModelValue($this->getMainViewName(), 'codalmacen');
-                $where = [Where::column('stocks.codalmacen', $code)];
+                //$where = [Where::column('stocks.codalmacen', $code)];
+                $where = [new DataBaseWhere('stocks.codalmacen', $code)];
                 $view->loadData('', $where);
                 break;
 
