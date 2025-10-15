@@ -97,7 +97,6 @@ class ConteoStock extends ModelClass
     {
         parent::clear();
         $this->completed = false;
-        $this->fechafin = Tools::date();
         $this->fechainicio = Tools::date();
         $this->nick = Session::user()->nick;
     }
