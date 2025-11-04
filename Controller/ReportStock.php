@@ -19,9 +19,9 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
+use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\ListController;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\ProductType;
 
 /**
@@ -90,11 +90,11 @@ class ReportStock extends ListController
             ],
             [
                 'label' => Tools::lang()->trans('under-minimums'),
-                'where' => [Where::column('disponible', 'field:stockmin', '<')]
+                'where' => [new DataBaseWhere('disponible', 'field:stockmin', '<')]
             ],
             [
                 'label' => Tools::lang()->trans('excess'),
-                'where' => [Where::column('disponible', 'field:stockmax', '>')]
+                'where' => [new DataBaseWhere('disponible', 'field:stockmax', '>')]
             ]
         ];
 
@@ -118,12 +118,12 @@ class ReportStock extends ListController
             ->addFilterSelectWhere('type', $values)
             ->addFilterSelectWhere('status', [
                 ['label' => Tools::lang()->trans('all'), 'where' => []],
-                ['label' => Tools::lang()->trans('only-active'), 'where' => [Where::column('productos.bloqueado', false)]],
-                ['label' => Tools::lang()->trans('blocked'), 'where' => [Where::column('productos.bloqueado', true)]],
-                ['label' => Tools::lang()->trans('public'), 'where' => [Where::column('productos.publico', true)]],
+                ['label' => Tools::lang()->trans('only-active'), 'where' => [new DataBaseWhere('productos.bloqueado', false)]],
+                ['label' => Tools::lang()->trans('blocked'), 'where' => [new DataBaseWhere('productos.bloqueado', true)]],
+                ['label' => Tools::lang()->trans('public'), 'where' => [new DataBaseWhere('productos.publico', true)]],
             ])
             ->addFilterSelect('tipo', 'type', 'tipo', $types)
-            ->addFilterSelect('codalmacen', 'warehouse', 'codalmacen', $warehouses)
+            ->addFilterSelect('codalmacen', 'warehouse', 'stocks.codalmacen', $warehouses)
             ->addFilterSelect('codfabricante', 'manufacturer', 'codfabricante', $manufacturers)
             ->addFilterSelect('codfamilia', 'family', 'codfamilia', $families)
             ->addFilterNumber('max-stock', 'quantity', 'stocks.cantidad', '>=')
