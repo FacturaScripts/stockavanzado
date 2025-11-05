@@ -36,8 +36,9 @@ final class InitialStockMovement extends CronJobClass
 
     public static function run(): void
     {
-        $messages = [];
         self::echo("\n\n* JOB: " . self::JOB_NAME . ' ...');
+
+        $messages = [];
         InitialStockMovementManager::initial(null, $messages, true);
 
         foreach ($messages as $message) {

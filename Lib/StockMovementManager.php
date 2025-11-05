@@ -29,7 +29,11 @@ use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\FacturaCliente;
 use FacturaScripts\Dinamic\Model\FacturaProveedor;
+use FacturaScripts\Dinamic\Model\LineaAlbaranCliente;
+use FacturaScripts\Dinamic\Model\LineaAlbaranProveedor;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
+use FacturaScripts\Dinamic\Model\LineaFacturaCliente;
+use FacturaScripts\Dinamic\Model\LineaFacturaProveedor;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Producto;
@@ -69,10 +73,10 @@ class StockMovementManager
 
         $movement = new MovimientoStock();
         $where = [
-            Where::column('codalmacen', $doc->codalmacen),
-            Where::column('docid', $doc->id()),
-            Where::column('docmodel', $doc->modelClassName()),
-            Where::column('referencia', $line->referencia)
+            Where::eq('codalmacen', $doc->codalmacen),
+            Where::eq('docid', $doc->id()),
+            Where::eq('docmodel', $doc->modelClassName()),
+            Where::eq('referencia', $line->referencia)
         ];
         if (false === $movement->loadWhere($where)) {
             $movement->codalmacen = $doc->codalmacen;
@@ -107,10 +111,10 @@ class StockMovementManager
 
         $movement = new MovimientoStock();
         $where = [
-            Where::column('codalmacen', $stockCount->codalmacen),
-            Where::column('docid', $docid),
-            Where::column('docmodel', $docmodel),
-            Where::column('referencia', $line->referencia)
+            Where::eq('codalmacen', $stockCount->codalmacen),
+            Where::eq('docid', $docid),
+            Where::eq('docmodel', $docmodel),
+            Where::eq('referencia', $line->referencia)
         ];
 
         if (false === $movement->loadWhere($where)) {
@@ -152,10 +156,10 @@ class StockMovementManager
 
         $movement = new MovimientoStock();
         $where = [
-            Where::column('codalmacen', $stockCount->codalmacen),
-            Where::column('docid', $docid),
-            Where::column('docmodel', $docmodel),
-            Where::column('referencia', $line->referencia)
+            Where::eq('codalmacen', $stockCount->codalmacen),
+            Where::eq('docid', $docid),
+            Where::eq('docmodel', $docmodel),
+            Where::eq('referencia', $line->referencia)
         ];
         if (false === $movement->loadWhere($where)) {
             return true;
@@ -184,14 +188,24 @@ class StockMovementManager
             return;
         }
 
-        // creamos los movimientos de los documentos de compra y venta
-        static::rebuildBusinessDocument();
+        if (empty(static::$idproducto)) {
+            // creamos los movimientos de los documentos de compra y venta
+            static::rebuildBusinessDocuments();
 
-        // creamos los movimientos de las transferencias de stock
-        static::rebuildTransferStock();
+            // creamos los movimientos de las transferencias de stock
+            static::rebuildTransferStock();
 
-        // creamos los movimientos de los conteos de stock
-        static::rebuildStockCounting();
+            // creamos los movimientos de los conteos de stock
+            static::rebuildStockCounting();
+        } else {
+            static::rebuildBusinessDocument();
+
+            // creamos los movimientos de las transferencias de stock
+            static::rebuildTransferStock();
+
+            // creamos los movimientos de los conteos de stock
+            static::rebuildStockCounting();
+        }
 
         // añadimos los mods para otros plugins
         foreach (static::$mods as $mod) {
@@ -213,10 +227,10 @@ class StockMovementManager
     {
         $movement = new MovimientoStock();
         $where = [
-            Where::column('codalmacen', $codalmacen),
-            Where::column('docid', $transfer->id()),
-            Where::column('docmodel', $transfer->modelClassName()),
-            Where::column('referencia', $line->referencia)
+            Where::eq('codalmacen', $codalmacen),
+            Where::eq('docid', $transfer->id()),
+            Where::eq('docmodel', $transfer->modelClassName()),
+            Where::eq('referencia', $line->referencia)
         ];
         if (false === $movement->loadWhere($where)) {
             $movement->documento = Tools::trans($transfer->modelClassName()) . ' ' . $transfer->id();
@@ -240,10 +254,10 @@ class StockMovementManager
     {
         $movement = new MovimientoStock();
         $where = [
-            Where::column('codalmacen', $fromCodalmacen),
-            Where::column('docid', $doc->id()),
-            Where::column('docmodel', $doc->modelClassName()),
-            Where::column('referencia', $line->referencia)
+            Where::eq('codalmacen', $fromCodalmacen),
+            Where::eq('docid', $doc->id()),
+            Where::eq('docmodel', $doc->modelClassName()),
+            Where::eq('referencia', $line->referencia)
         ];
         if ($movement->loadWhere($where)) {
             $movement->codalmacen = $toCodalmacen;
@@ -255,10 +269,10 @@ class StockMovementManager
     {
         $movement = new MovimientoStock();
         $where = [
-            Where::column('codalmacen', $codalmacen),
-            Where::column('docid', $stockCount->id()),
-            Where::column('docmodel', $stockCount->modelClassName()),
-            Where::column('referencia', $line->referencia)
+            Where::eq('codalmacen', $codalmacen),
+            Where::eq('docid', $stockCount->id()),
+            Where::eq('docmodel', $stockCount->modelClassName()),
+            Where::eq('referencia', $line->referencia)
         ];
         if ($movement->loadWhere($where) && false === $movement->delete()) {
             return false;
@@ -282,6 +296,7 @@ class StockMovementManager
     protected static function getProduct(string $reference): Producto
     {
         $variant = static::getVariant($reference);
+
         if (!isset(static::$products[$variant->idproducto])) {
             static::$products[$variant->idproducto] = $variant->getProducto();
         }
@@ -293,8 +308,7 @@ class StockMovementManager
     {
         if (!isset(static::$variants[$referencia])) {
             $variante = new Variante();
-            $where = [Where::column('referencia', $referencia)];
-            $variante->loadWhere($where);
+            $variante->loadWhereEq('referencia', $referencia);
             static::$variants[$referencia] = $variante;
         }
 
@@ -307,8 +321,8 @@ class StockMovementManager
         $targetTimestamp = strtotime($datetime);
 
         $where = [
-            Where::column('codalmacen', $codalmacen),
-            Where::column('referencia', $reference)
+            Where::eq('codalmacen', $codalmacen),
+            Where::eq('referencia', $reference)
         ];
 
         // Obtener todos los movimientos ordenados cronológicamente
@@ -346,11 +360,73 @@ class StockMovementManager
 
     protected static function rebuildBusinessDocument(): void
     {
-        $limit = 1000;
+        $limit = 500;
+        $models = [
+            new LineaAlbaranProveedor(), new LineaFacturaProveedor(), new LineaAlbaranCliente(),
+            new LineaFacturaCliente()
+        ];
+        foreach ($models as $model) {
+            $where = [
+                Where::notEq('actualizastock', 0),
+                Where::notEq('cantidad', 0),
+                Where::eq('idproducto', static::$idproducto),
+                Where::isNotNull('referencia'),
+            ];
+            $offset = 0;
+
+            $lines = $model->all($where, ['idlinea' => 'ASC'], $offset, $limit);
+            while (count($lines) > 0) {
+                foreach ($lines as $line) {
+                    // Omitir productos faltantes o productos sin gestión de stock
+                    $product = static::getProduct($line->referencia);
+                    if (empty($product->idproducto) || $product->nostock) {
+                        continue;
+                    }
+
+                    $doc = $line->getDocument();
+
+                    // En rebuild, creamos movimientos nuevos directamente
+                    $movement = new MovimientoStock();
+                    $where = [
+                        Where::eq('codalmacen', $doc->codalmacen),
+                        Where::eq('docid', $doc->id()),
+                        Where::eq('docmodel', $doc->modelClassName()),
+                        Where::eq('referencia', $line->referencia)
+                    ];
+
+                    if (false === $movement->loadWhere($where)) {
+                        // no existe, lo creamos
+                        $movement->codalmacen = $doc->codalmacen;
+                        $movement->docid = $doc->id();
+                        $movement->docmodel = $doc->modelClassName();
+                        $movement->idproducto = $line->idproducto ?? $line->getProducto()->idproducto;
+                        $movement->referencia = $line->referencia;
+                        $movement->cantidad = $line->actualizastock * $line->cantidad;
+                        $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
+                        $movement->fecha = $doc->fecha;
+                        $movement->hora = $doc->hora;
+                        $movement->save();
+                        continue;
+                    }
+
+                    // ya existe, actualizamos la cantidad
+                    $movement->cantidad += $line->actualizastock * $line->cantidad;
+                    $movement->save();
+                }
+
+                $offset += $limit;
+                $lines = $model->all($where, ['idlinea' => 'ASC'], $offset, $limit);
+            }
+        }
+    }
+
+    protected static function rebuildBusinessDocuments(): void
+    {
+        $limit = 500;
         $models = [new AlbaranProveedor(), new FacturaProveedor(), new AlbaranCliente(), new FacturaCliente()];
         foreach ($models as $model) {
             $offset = 0;
-            $docs = $model->all([], ['fecha' => 'DESC'], $offset, $limit);
+            $docs = $model->all([], ['fecha' => 'ASC'], $offset, $limit);
 
             while (count($docs) > 0) {
                 foreach ($docs as $doc) {
@@ -379,10 +455,10 @@ class StockMovementManager
                         // En rebuild, creamos movimientos nuevos directamente
                         $movement = new MovimientoStock();
                         $where = [
-                            Where::column('codalmacen', $doc->codalmacen),
-                            Where::column('docid', $doc->id()),
-                            Where::column('docmodel', $doc->modelClassName()),
-                            Where::column('referencia', $line->referencia)
+                            Where::eq('codalmacen', $doc->codalmacen),
+                            Where::eq('docid', $doc->id()),
+                            Where::eq('docmodel', $doc->modelClassName()),
+                            Where::eq('referencia', $line->referencia)
                         ];
 
                         // Solo crear si no existe ya
@@ -412,7 +488,7 @@ class StockMovementManager
 
     protected static function rebuildStockCounting(): void
     {
-        $where = [Where::column('completed', true)];
+        $where = [Where::eq('completed', true)];
         foreach (ConteoStock::all($where, ['idconteo' => 'ASC']) as $conteo) {
             // primero recorremos las líneas para obtener el stock actual por referencia
             $stocks = [];
@@ -440,7 +516,7 @@ class StockMovementManager
 
     protected static function rebuildTransferStock(): void
     {
-        $where = [Where::column('completed', true)];
+        $where = [Where::eq('completed', true)];
         foreach (TransferenciaStock::all($where, ['idtrans' => 'ASC']) as $transfer) {
             foreach ($transfer->getLines() as $line) {
                 $variant = $line->getVariant();

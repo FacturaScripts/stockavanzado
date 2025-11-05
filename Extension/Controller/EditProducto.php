@@ -27,6 +27,7 @@ use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
+use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 
 /**
@@ -117,8 +118,6 @@ class EditProducto
             }
 
             // desactivamos los botones de nuevo, eliminar y checkbox
-
-
             if ($this->user->admin) {
                 $this->addButton($viewName, [
                     'action' => 'rebuild-movements',
@@ -164,7 +163,7 @@ class EditProducto
             $id = $this->getViewModelValue('EditProducto', 'idproducto');
 
             if ($viewName == 'ListMovimientoStock') {
-                $where = [Where::column('idproducto', $id)];
+                $where = [Where::eq('idproducto', $id)];
                 $view->loadData('', $where);
                 $view->setSettings('active', $view->model->count($where) > 0);
             }
@@ -181,12 +180,13 @@ class EditProducto
                 return;
             }
 
-            $product = $this->getModel();
+            $product = new Producto();
             if (false === $product->load($this->request->get('code'))) {
                 return;
             }
 
             StockMovementManager::rebuild($product->idproducto);
+
             Tools::log()->notice('rebuilt-movements');
         };
     }

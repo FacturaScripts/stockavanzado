@@ -34,8 +34,9 @@ final class StockMovement extends CronJobClass
 
     public static function run(): void
     {
-        $messages = [];
         self::echo("\n\n* JOB: " . self::JOB_NAME . ' ...');
+
+        $messages = [];
         StockMovementManager::rebuild(null, $messages, true);
         StockRebuildManager::rebuild(null, $messages, true);
 

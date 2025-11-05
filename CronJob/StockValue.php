@@ -30,8 +30,9 @@ final class StockValue extends CronJobClass
 
     public static function run(?string $codalmacen = null): void
     {
-        $messages = [];
         self::echo("\n\n* JOB: " . self::JOB_NAME . ' ...');
+
+        $messages = [];
         StockValueManager::calculate($codalmacen, $messages, true);
 
         foreach ($messages as $message) {

@@ -32,8 +32,9 @@ final class StockMinMax extends CronJobClass
 
     public static function run(): void
     {
-        $messages = [];
         self::echo("\n\n* JOB: " . self::JOB_NAME . ' ...');
+
+        $messages = [];
         StockMinMaxManager::notify($messages, true);
 
         foreach ($messages as $message) {
