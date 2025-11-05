@@ -35,7 +35,7 @@ final class StockValue extends CronJobClass
         StockValueManager::calculate($codalmacen, $messages, true);
 
         foreach ($messages as $message) {
-            self::echo("\n- " . Tools::lang()->trans($message));
+            self::echo("\n- " . Tools::trans($message));
         }
 
         self::saveEcho();

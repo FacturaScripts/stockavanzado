@@ -87,7 +87,7 @@ class StockMovementManager
 
         $movement->cantidad -= $line->getOriginal('actualizastock') * $line->getOriginal('cantidad');
         $movement->cantidad += $line->actualizastock * $line->cantidad;
-        $movement->documento = Tools::lang()->trans($doc->modelClassName()) . ' ' . $doc->codigo;
+        $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
         empty($movement->cantidad) ? $movement->delete() : $movement->save();
@@ -114,7 +114,7 @@ class StockMovementManager
         ];
 
         if (false === $movement->loadWhere($where)) {
-            $movement->documento = Tools::lang()->trans($stockCount->modelClassName()) . ' ' . $stockCount->id();
+            $movement->documento = Tools::trans($stockCount->modelClassName()) . ' ' . $stockCount->id();
             $movement->fecha = Tools::date($stockCount->fechafin);
             $movement->hora = Tools::hour($stockCount->fechafin);
             $movement->codalmacen = $stockCount->codalmacen;
@@ -219,7 +219,7 @@ class StockMovementManager
             Where::column('referencia', $line->referencia)
         ];
         if (false === $movement->loadWhere($where)) {
-            $movement->documento = Tools::lang()->trans($transfer->modelClassName()) . ' ' . $transfer->id();
+            $movement->documento = Tools::trans($transfer->modelClassName()) . ' ' . $transfer->id();
             $movement->fecha = Tools::date($transfer->fecha);
             $movement->hora = Tools::hour($transfer->fecha);
             $movement->codalmacen = $codalmacen;
@@ -393,7 +393,7 @@ class StockMovementManager
                             $movement->idproducto = $line->idproducto ?? $line->getProducto()->idproducto;
                             $movement->referencia = $line->referencia;
                             $movement->cantidad = $line->actualizastock * $line->cantidad;
-                            $movement->documento = Tools::lang()->trans($doc->modelClassName()) . ' ' . $doc->codigo;
+                            $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
                             $movement->fecha = $doc->fecha;
                             $movement->hora = $doc->hora;
 

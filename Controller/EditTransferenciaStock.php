@@ -117,7 +117,7 @@ class EditTransferenciaStock extends EditController
         }
 
         if (empty($list)) {
-            $list[] = ['key' => null, 'value' => Tools::lang()->trans('no-data')];
+            $list[] = ['key' => null, 'value' => Tools::trans('no-data')];
         }
 
         return [
@@ -199,13 +199,13 @@ class EditTransferenciaStock extends EditController
                 $where = [Where::column('idtrans', $this->views[$this->active]->model->id())];
                 foreach (LineaTransferenciaStock::all($where) as $line) {
                     $row = [
-                        Tools::lang()->trans('reference') => $line->referencia,
-                        Tools::lang()->trans('quantity') => $line->cantidad,
-                        Tools::lang()->trans('date') => $line->fecha,
+                        Tools::trans('reference') => $line->referencia,
+                        Tools::trans('quantity') => $line->cantidad,
+                        Tools::trans('date') => $line->fecha,
                     ];
 
                     if (Plugins::isEnabled('Trazabilidad')) {
-                        $row[Tools::lang()->trans('traceability')] = $line->numserie;
+                        $row[Tools::trans('traceability')] = $line->numserie;
                     }
 
                     $lines[] = $row;
@@ -215,7 +215,7 @@ class EditTransferenciaStock extends EditController
                     continue;
                 }
 
-                $this->exportManager->addTablePage(array_keys($lines[0]), $lines, [], Tools::lang()->trans('lines'));
+                $this->exportManager->addTablePage(array_keys($lines[0]), $lines, [], Tools::trans('lines'));
                 continue;
             }
 
@@ -319,10 +319,10 @@ class EditTransferenciaStock extends EditController
         }
 
         $tableHead = [
-            '<th>' . Tools::lang()->trans('reference') . '</th>',
-            '<th class="text-center" style="width: 15%;">' . Tools::lang()->trans('quantity') . '</th>',
-            '<th class="text-end">' . Tools::lang()->trans('user') . '</th>',
-            '<th class="text-end">' . Tools::lang()->trans('date') . '</th>',
+            '<th>' . Tools::trans('reference') . '</th>',
+            '<th class="text-center" style="width: 15%;">' . Tools::trans('quantity') . '</th>',
+            '<th class="text-end">' . Tools::trans('user') . '</th>',
+            '<th class="text-end">' . Tools::trans('date') . '</th>',
         ];
 
         $resultHead = $this->pipe('renderLinesTableHead', $tableHead, $transferencia);
@@ -349,10 +349,10 @@ class EditTransferenciaStock extends EditController
                 $dataLine[] = '<td class="text-center align-middle">'
                     . '<div class="input-group">'
                     . '<button class="btn btn-outline-danger delete-line btn-spin-action" title="'
-                    . Tools::lang()->trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fa-solid fa-trash-alt"></i></button>'
+                    . Tools::trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fa-solid fa-trash-alt"></i></button>'
                     . '<input type="number" name="cantidad" id="lineaCantidad' . $line->idlinea . '" class="form-control text-center qty-line" value="' . $line->cantidad . '"/>'
                     . '<button class="btn btn-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
-                    . $line->idlinea . '\')" title="' . Tools::lang()->trans('update') . '"><i class="fa-solid fa-save"></i></button>'
+                    . $line->idlinea . '\')" title="' . Tools::trans('update') . '"><i class="fa-solid fa-save"></i></button>'
                     . '</div>'
                     . '</td>';
             }

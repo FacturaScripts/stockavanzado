@@ -19,9 +19,8 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 
+use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Template\CronJobClass;
-use FacturaScripts\Core\Tools;
-use FacturaScripts\Dinamic\Lib\FixedIdProductManager;
 
 /**
  * @author Daniel Fernández Giménez <hola@danielfg.es>
@@ -31,16 +30,110 @@ final class FixedIdProduct extends CronJobClass
     const JOB_NAME = 'fixed-id-product';
     const JOB_PERIOD = '1 year';
 
+    private static $db;
+
     public static function run(): void
     {
-        $messages = [];
         self::echo("\n\n* JOB: " . self::JOB_NAME . ' ...');
-        FixedIdProductManager::fixed($messages, true);
 
-        foreach ($messages as $message) {
-            self::echo("\n- " . Tools::lang()->trans($message));
-        }
+        self::checkLinesIDs('lineaspresupuestosprov');
+        self::checkLinesIDs('lineaspedidosprov');
+        self::checkLinesIDs('lineasalbaranesprov');
+        self::checkLinesIDs('lineasfacturasprov');
+
+        self::checkLinesIDs('lineaspresupuestoscli');
+        self::checkLinesIDs('lineaspedidoscli');
+        self::checkLinesIDs('lineasalbaranescli');
+        self::checkLinesIDs('lineasfacturascli');
+
+        self::checkLinesIDs('stocks_lineasconteos');
+        self::checkLinesIDs('stocks_lineastransferencias');
+        self::checkIDs('stocks_movimientos');
 
         self::saveEcho();
+    }
+
+    protected static function checkIDs(string $table): void
+    {
+        // si la tabla no existe, salimos
+        if (!self::db()->tableExists($table)) {
+            return;
+        }
+
+        // creamos la sql
+        $sql = 'SELECT lf.id,'
+            . ' lf.idproducto AS idproducto_linea,'
+            . ' v.idproducto AS idproducto_variante,'
+            . ' lf.referencia'
+            . ' FROM ' . $table . ' lf'
+            . ' JOIN variantes v ON v.referencia = lf.referencia'
+            . ' WHERE lf.idproducto <> v.idproducto;';
+
+        // si no hay datos, salimos
+        $result = self::db()->select($sql);
+        if (empty($result)) {
+            return;
+        }
+
+        // recorremos los datos
+        foreach ($result as $row) {
+            $update = self::db()->exec('UPDATE ' . $table . ' SET idproducto = ' . $row['idproducto_variante']
+                . ' WHERE id = ' . $row['id'] . ';');
+
+            if (!$update) {
+                self::echo("\n-- Error al actualizar el id del producto en el movimiento " . $row['id'] . ' de la tabla ' . $table);
+                continue;
+            }
+
+            self::echo("\n-- Corregido id del producto " . $row['referencia'] . ' en el movimiento ' . $row['id']
+                . ' de la tabla ' . $table);
+        }
+    }
+
+    protected static function checkLinesIDs(string $table): void
+    {
+        // si la tabla no existe, salimos
+        if (!self::db()->tableExists($table)) {
+            return;
+        }
+
+        // buscamos líneas con idproducto incorrecto
+        $sql = 'SELECT lf.idlinea,'
+            . ' lf.idproducto AS idproducto_linea,'
+            . ' v.idproducto AS idproducto_variante,'
+            . ' lf.referencia'
+            . ' FROM ' . $table . ' lf'
+            . ' JOIN variantes v ON v.referencia = lf.referencia'
+            . ' WHERE lf.idproducto <> v.idproducto;';
+
+        // si no hay datos, salimos
+        $result = self::db()->select($sql);
+        if (empty($result)) {
+            return;
+        }
+
+        // recorremos los datos
+        foreach ($result as $row) {
+            $update = self::db()->exec('UPDATE ' . $table . ' SET idproducto = ' . $row['idproducto_variante']
+                . ' WHERE idlinea = ' . $row['idlinea'] . ';');
+
+            if (!$update) {
+                self::echo("\n-- Error al actualizar el id del producto en la línea " . $row['idlinea'] . ' de la tabla ' . $table);
+                continue;
+            }
+
+            self::echo("\n-- Corregido id del producto " . $row['referencia'] . ' en la línea ' . $row['idlinea']
+                . ' de la tabla ' . $table);
+        }
+    }
+
+    protected static function db(): DataBase
+    {
+        if (self::$db === null) {
+            self::$db = new DataBase();
+            self::$db->connect();
+        }
+
+        return self::$db;
     }
 }

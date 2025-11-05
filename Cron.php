@@ -22,14 +22,23 @@ namespace FacturaScripts\Plugins\StockAvanzado;
 use FacturaScripts\Core\Template\CronClass;
 use FacturaScripts\Plugins\StockAvanzado\CronJob\FixedIdProduct;
 use FacturaScripts\Plugins\StockAvanzado\CronJob\InitialStockMovement;
-use FacturaScripts\Plugins\StockAvanzado\CronJob\StockMovement;
 use FacturaScripts\Plugins\StockAvanzado\CronJob\StockMinMax;
+use FacturaScripts\Plugins\StockAvanzado\CronJob\StockMovement;
 use FacturaScripts\Plugins\StockAvanzado\CronJob\StockValue;
 
 final class Cron extends CronClass
 {
     public function run(): void
     {
+        // con este proceso rectificamos los IDs de productos que no estén bien enlazados con el ID producto de la variante
+        $this->job(FixedIdProduct::JOB_NAME)
+            ->every(FixedIdProduct::JOB_PERIOD)
+            ->run(function () {
+                FixedIdProduct::run();
+            });
+
+        return;
+
         // añadimos este proceso al cron para no tener que hacerlo durante la instalación del plugin
         $this->job(StockMovement::JOB_NAME)
             ->every(StockMovement::JOB_PERIOD)
@@ -60,13 +69,6 @@ final class Cron extends CronClass
             ->withoutOverlapping()
             ->run(function () {
                 StockMinMax::run();
-            });
-
-        // con este proceso rectificamos los IDs de productos que no estén bien enlazados con el ID producto de la variante
-        $this->job(FixedIdProduct::JOB_NAME)
-            ->every(FixedIdProduct::JOB_PERIOD)
-            ->run(function () {
-                FixedIdProduct::run();
             });
     }
 }

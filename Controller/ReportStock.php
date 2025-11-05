@@ -85,22 +85,22 @@ class ReportStock extends ListController
     {
         $values = [
             [
-                'label' => Tools::lang()->trans('all'),
+                'label' => Tools::trans('all'),
                 'where' => []
             ],
             [
-                'label' => Tools::lang()->trans('under-minimums'),
+                'label' => Tools::trans('under-minimums'),
                 'where' => [new DataBaseWhere('disponible', 'field:stockmin', '<')]
             ],
             [
-                'label' => Tools::lang()->trans('excess'),
+                'label' => Tools::trans('excess'),
                 'where' => [new DataBaseWhere('disponible', 'field:stockmax', '>')]
             ]
         ];
 
         $types = [];
         foreach (ProductType::all() as $key => $key) {
-            $types[$key] = Tools::lang()->trans($key);
+            $types[$key] = Tools::trans($key);
         }
 
         $warehouses = $this->codeModel->all('almacenes', 'codalmacen', 'nombre');
@@ -117,10 +117,10 @@ class ReportStock extends ListController
             ->addSearchFields(['productos.descripcion', 'stocks.referencia'])
             ->addFilterSelectWhere('type', $values)
             ->addFilterSelectWhere('status', [
-                ['label' => Tools::lang()->trans('all'), 'where' => []],
-                ['label' => Tools::lang()->trans('only-active'), 'where' => [new DataBaseWhere('productos.bloqueado', false)]],
-                ['label' => Tools::lang()->trans('blocked'), 'where' => [new DataBaseWhere('productos.bloqueado', true)]],
-                ['label' => Tools::lang()->trans('public'), 'where' => [new DataBaseWhere('productos.publico', true)]],
+                ['label' => Tools::trans('all'), 'where' => []],
+                ['label' => Tools::trans('only-active'), 'where' => [new DataBaseWhere('productos.bloqueado', false)]],
+                ['label' => Tools::trans('blocked'), 'where' => [new DataBaseWhere('productos.bloqueado', true)]],
+                ['label' => Tools::trans('public'), 'where' => [new DataBaseWhere('productos.publico', true)]],
             ])
             ->addFilterSelect('tipo', 'type', 'tipo', $types)
             ->addFilterSelect('codalmacen', 'warehouse', 'stocks.codalmacen', $warehouses)

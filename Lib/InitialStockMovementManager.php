@@ -58,7 +58,7 @@ class InitialStockMovementManager
             // creamos un conteo inicial de stock
             $count = new ConteoStock();
             $count->codalmacen = $warehouse->codalmacen;
-            $count->observaciones = Tools::lang()->trans('initial-stock-movements');
+            $count->observaciones = Tools::trans('initial-stock-movements');
             if (false === $count->save()) {
                 continue;
             }

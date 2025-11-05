@@ -47,10 +47,10 @@ class ReportProducto
                 ->setSettings('checkBoxes', false)
                 ->addFilterPeriod('fecha', 'date', 'sm.fecha')
                 ->addFilterSelectWhere('type', [
-                    ['label' => Tools::lang()->trans('all'), 'where' => []],
+                    ['label' => Tools::trans('all'), 'where' => []],
                     ['label' => '------', 'where' => []],
-                    ['label' => Tools::lang()->trans('purchases'), 'where' => [Where::column('sm.cantidad', 0, '>')]],
-                    ['label' => Tools::lang()->trans('sales'), 'where' => [Where::column('sm.cantidad', 0, '<')]],
+                    ['label' => Tools::trans('purchases'), 'where' => [Where::column('sm.cantidad', 0, '>')]],
+                    ['label' => Tools::trans('sales'), 'where' => [Where::column('sm.cantidad', 0, '<')]],
                 ])
                 ->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=')
                 ->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=')
