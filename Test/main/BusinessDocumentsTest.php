@@ -20,6 +20,7 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Model\AlbaranCliente;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
@@ -90,8 +91,8 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que hay un movimiento de stock
         $movement = new MovimientoStock();
         $whereRef = [
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals(-10, $movement->cantidad);
@@ -136,8 +137,8 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertTrue($stock->loadWhere($whereRef));
         $this->assertEquals(10, $stock->cantidad);
@@ -190,8 +191,8 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertTrue($stock->loadWhere($whereRef));
         $this->assertEquals(0, $stock->cantidad);
@@ -240,8 +241,8 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertTrue($stock->loadWhere($whereRef));
         $this->assertEquals(0, $stock->cantidad);
@@ -290,8 +291,8 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertFalse($stock->loadWhere($whereRef));
 
@@ -336,8 +337,8 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que no hay stock del producto en el almacén
         $stock = new Stock();
         $whereRef = [
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertFalse($stock->loadWhere($whereRef));
 

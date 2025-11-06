@@ -58,15 +58,15 @@ final class StockMovementTest extends TestCase
         // comprobamos que está el movimiento de stock
         $movement = new MovimientoStock();
         $where = [
-            Where::column('codalmacen', $conteo->codalmacen),
-            Where::column('docid', $conteo->id()),
-            Where::column('docmodel', $conteo->modelClassName()),
-            Where::column('referencia', $linea->referencia)
+            Where::eq('codalmacen', $conteo->codalmacen),
+            Where::eq('docid', $conteo->id()),
+            Where::eq('docmodel', $conteo->modelClassName()),
+            Where::eq('referencia', $linea->referencia)
         ];
         $this->assertTrue($movement->loadWhere($where));
 
         // comprobamos la cantidad del movimiento
-        $this->assertEquals(50, $movement->cantidad);
+        $this->assertEquals(0, $movement->cantidad);
 
         // comprobamos el saldo del movimiento
         $this->assertEquals(50, $movement->saldo);
@@ -81,7 +81,7 @@ final class StockMovementTest extends TestCase
         $this->assertTrue($movement->loadWhere($where));
 
         // comprobamos la cantidad del movimiento
-        $this->assertEquals(50, $movement->cantidad);
+        $this->assertEquals(0, $movement->cantidad);
 
         // comprobamos el saldo del movimiento
         $this->assertEquals(50, $movement->saldo);

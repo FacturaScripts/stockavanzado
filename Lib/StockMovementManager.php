@@ -95,6 +95,10 @@ class StockMovementManager
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
 
+        // actualizamos el saldo
+        $previousSaldo = static::getPreviousSaldo($movement->codalmacen, $movement->referencia, $movement->fecha, $movement->hora);
+        $movement->saldo = $previousSaldo + $movement->cantidad;
+
         empty($movement->cantidad) ? $movement->delete() : $movement->save();
     }
 
@@ -217,6 +221,7 @@ class StockMovementManager
 
     protected static function addLineTransferStockMovement(string $codalmacen, float $cantidad, TransferenciaStock $transfer, LineaTransferenciaStock $line): bool
     {
+        // buscamos el movimiento existente
         $movement = new MovimientoStock();
         $where = [
             Where::eq('codalmacen', $codalmacen),
@@ -225,6 +230,7 @@ class StockMovementManager
             Where::eq('referencia', $line->referencia)
         ];
         if (false === $movement->loadWhere($where)) {
+            // no existe, lo creamos
             $movement->documento = Tools::trans($transfer->modelClassName()) . ' ' . $transfer->id();
             $movement->fecha = Tools::date($transfer->fecha);
             $movement->hora = Tools::hour($transfer->fecha);
@@ -238,7 +244,13 @@ class StockMovementManager
             }
         }
 
+        // actualizamos la cantidad
         $movement->cantidad += $cantidad;
+
+        // actualizamos el saldo
+        $previousSaldo = static::getPreviousSaldo($movement->codalmacen, $movement->referencia, $movement->fecha, $movement->hora);
+        $movement->saldo = $previousSaldo + $movement->cantidad;
+
         return empty($movement->cantidad) ? $movement->delete() : $movement->save();
     }
 
@@ -285,6 +297,25 @@ class StockMovementManager
         return $db->exec($sql);
     }
 
+    protected static function getPreviousSaldo(string $codalmacen, string $referencia, string $fecha, string $hora): float
+    {
+        // buscamos el último movimiento anterior
+        $where = [
+            Where::eq('codalmacen', $codalmacen),
+            Where::eq('referencia', $referencia),
+            Where::lte('fecha', $fecha)
+        ];
+        $order = ['fecha' => 'DESC', 'hora' => 'DESC'];
+        foreach (MovimientoStock::all($where, $order, 0, 50) as $movement) {
+            // nos aseguramos de que la hora también sea anterior
+            if (strtotime($fecha . ' ' . $hora) < strtotime($movement->fecha . ' ' . $movement->hora)) {
+                return $movement->saldo;
+            }
+        }
+
+        return 0;
+    }
+
     protected static function getProduct(string $reference): Producto
     {
         $variant = static::getVariant($reference);
@@ -305,38 +336,6 @@ class StockMovementManager
         }
 
         return static::$variants[$referencia];
-    }
-
-    protected static function getStockSum(string $reference, string $codalmacen, int $docid, string $docmodel, string $datetime): float
-    {
-        $sum = 0.0;
-        $targetTimestamp = strtotime($datetime);
-
-        $where = [
-            Where::eq('codalmacen', $codalmacen),
-            Where::eq('referencia', $reference)
-        ];
-
-        // Obtener todos los movimientos ordenados cronológicamente
-        $movements = MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC']);
-
-        foreach ($movements as $move) {
-            $moveTimestamp = strtotime($move->fecha . ' ' . $move->hora);
-
-            // Excluir el movimiento actual (mismo documento) ANTES de verificar la fecha
-            if ($move->docid == $docid && $move->docmodel == $docmodel) {
-                continue;
-            }
-
-            // Solo procesar movimientos anteriores al datetime objetivo
-            if ($moveTimestamp > $targetTimestamp) {
-                break; // Como está ordenado, ya no hay movimientos anteriores
-            }
-
-            $sum += $move->cantidad;
-        }
-
-        return $sum;
     }
 
     protected static function rebuildBusinessDocument(): void

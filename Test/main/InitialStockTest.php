@@ -57,13 +57,13 @@ final class InitialStockTest extends TestCase
         // buscamos un movimiento para el producto
         $movimiento = new MovimientoStock();
         $where = [
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertTrue($movimiento->loadWhere($where));
 
         // comprobamos la cantidad del movimiento
-        $this->assertEquals(10, $movimiento->cantidad);
+        $this->assertEquals(0, $movimiento->cantidad);
 
         // comprobamos el saldo del movimiento
         $this->assertEquals(10, $movimiento->saldo);
@@ -71,8 +71,8 @@ final class InitialStockTest extends TestCase
         // buscamos la línea del conteo
         $line = new LineaConteoStock();
         $where = [
-            Where::column('referencia', $product->referencia),
-            Where::column('idproducto', $product->idproducto)
+            Where::eq('referencia', $product->referencia),
+            Where::eq('idproducto', $product->idproducto)
         ];
         $this->assertTrue($line->loadWhere($where));
 

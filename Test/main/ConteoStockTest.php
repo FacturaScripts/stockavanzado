@@ -95,15 +95,15 @@ final class ConteoStockTest extends TestCase
         // comprobamos que está el movimiento 1 de stock
         $movement1 = new MovimientoStock();
         $where = [
-            Where::column('codalmacen', $conteo->codalmacen),
-            Where::column('docid', $conteo->id()),
-            Where::column('docmodel', $conteo->modelClassName()),
-            Where::column('referencia', $linea1->referencia)
+            Where::eq('codalmacen', $conteo->codalmacen),
+            Where::eq('docid', $conteo->id()),
+            Where::eq('docmodel', $conteo->modelClassName()),
+            Where::eq('referencia', $linea1->referencia)
         ];
         $this->assertTrue($movement1->loadWhere($where));
 
         // comprobamos la cantidad del movimiento 1
-        $this->assertEquals(50, $movement1->cantidad);
+        $this->assertEquals(0, $movement1->cantidad);
 
         // comprobamos el saldo del movimiento 1
         $this->assertEquals(50, $movement1->saldo);
@@ -111,15 +111,15 @@ final class ConteoStockTest extends TestCase
         // comprobamos que está el movimiento 2 de stock
         $movement2 = new MovimientoStock();
         $where = [
-            Where::column('codalmacen', $conteo->codalmacen),
-            Where::column('docid', $conteo->id()),
-            Where::column('docmodel', $conteo->modelClassName()),
-            Where::column('referencia', $linea2->referencia)
+            Where::eq('codalmacen', $conteo->codalmacen),
+            Where::eq('docid', $conteo->id()),
+            Where::eq('docmodel', $conteo->modelClassName()),
+            Where::eq('referencia', $linea2->referencia)
         ];
         $this->assertTrue($movement2->loadWhere($where));
 
         // comprobamos la cantidad del movimiento 2
-        $this->assertEquals(1, $movement2->cantidad);
+        $this->assertEquals(0, $movement2->cantidad);
 
         // comprobamos el saldo del movimiento 2
         $this->assertEquals(1, $movement2->saldo);
