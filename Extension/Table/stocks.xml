@@ -2,10 +2,10 @@
 <table>
     <column>
         <name>sa_notification_min</name>
-        <type>datetime</type>
+        <type>timestamp</type>
     </column>
     <column>
         <name>sa_notification_max</name>
-        <type>datetime</type>
+        <type>timestamp</type>
     </column>
 </table>
