@@ -20,13 +20,12 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Model\Base\ProductRelationTrait;
+use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Template\ModelClass;
 use FacturaScripts\Core\Template\ModelTrait;
-use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\ConteoStock as DinConteoStock;
-use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
 
@@ -75,8 +74,8 @@ class LineaConteoStock extends ModelClass
     {
         $stock = new Stock();
         $where = [
-            Where::column('codalmacen', $this->getConteo()->codalmacen),
-            Where::column('referencia', $this->referencia)
+            Where::eq('codalmacen', $this->getConteo()->codalmacen),
+            Where::eq('referencia', $this->referencia)
         ];
         $stock->loadWhere($where);
         return $stock;
@@ -85,15 +84,16 @@ class LineaConteoStock extends ModelClass
     public function getVariant(): Variante
     {
         $variante = new Variante();
-        $where = [Where::column('referencia', $this->referencia)];
-        $variante->loadWhere($where);
+        $variante->loadWhereEq('referencia', $this->referencia);
         return $variante;
     }
 
     public function install(): string
     {
+        // dependencias
         new Variante();
         new DinConteoStock();
+
         return parent::install();
     }
 
@@ -113,8 +113,7 @@ class LineaConteoStock extends ModelClass
         $this->nick = Session::user()->nick;
 
         if (empty($this->idproducto)) {
-            $variant = $this->getVariant();
-            $this->idproducto = $variant->idproducto;
+            $this->idproducto = $this->getVariant()->idproducto;
         }
 
         return parent::test();

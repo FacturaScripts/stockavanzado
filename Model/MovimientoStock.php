@@ -81,8 +81,7 @@ class MovimientoStock extends ModelClass
     public function getVariant(): Variante
     {
         $variant = new Variante();
-        $where = [Where::column('referencia', $this->referencia)];
-        $variant->loadWhere($where);
+        $variant->loadWhereEq('referencia', $this->referencia);
         return $variant;
     }
 
@@ -95,14 +94,11 @@ class MovimientoStock extends ModelClass
 
     public function install(): string
     {
+        // dependencias
         new Almacen();
         new Variante();
-        return parent::install();
-    }
 
-    public static function primaryColumn(): string
-    {
-        return 'id';
+        return parent::install();
     }
 
     public static function tableName(): string
@@ -115,18 +111,6 @@ class MovimientoStock extends ModelClass
         $this->documento = Tools::noHtml($this->documento);
 
         return parent::test();
-    }
-
-    public function saveInsert(): bool
-    {
-        if (!parent::saveInsert()) {
-            return false;
-        }
-
-        // Calculamos el saldo antes de guardar
-        $this->calculateSaldo();
-
-        return true;
     }
 
     public function url(string $type = 'auto', string $list = 'List'): string
@@ -150,8 +134,8 @@ class MovimientoStock extends ModelClass
     {
         // Filtrar por producto y almacén
         $where = [
-            Where::column('codalmacen', $this->codalmacen),
-            Where::column('referencia', $this->referencia)
+            Where::eq('codalmacen', $this->codalmacen),
+            Where::eq('referencia', $this->referencia)
         ];
 
         // Seleccionar todos los movimientos en orden cronológico

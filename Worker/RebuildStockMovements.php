@@ -21,13 +21,17 @@ namespace FacturaScripts\Plugins\StockAvanzado\Worker;
 
 use FacturaScripts\Core\Model\WorkEvent;
 use FacturaScripts\Core\Template\WorkerClass;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 
-class RebuildProductStockMovements extends WorkerClass
+class RebuildStockMovements extends WorkerClass
 {
     public function run(WorkEvent $event): bool
     {
         StockMovementManager::rebuild($event->value);
+
+        // lanzamos el evento para el otro worker
+        WorkQueue::send('Model.Producto.updateStockMovements', $event->value);
 
         return $this->done();
     }

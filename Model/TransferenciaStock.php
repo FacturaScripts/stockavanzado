@@ -19,9 +19,9 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
+use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Template\ModelClass;
 use FacturaScripts\Core\Template\ModelTrait;
-use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
@@ -67,8 +67,8 @@ class TransferenciaStock extends ModelClass
     {
         $line = new LineaTransferenciaStock();
         $where = [
-            Where::column('idtrans', $this->idtrans),
-            Where::column('referencia', $referencia)
+            Where::eq('idtrans', $this->idtrans),
+            Where::eq('referencia', $referencia)
         ];
         $orderBy = ['idlinea' => 'DESC'];
 
@@ -136,8 +136,8 @@ class TransferenciaStock extends ModelClass
             // cargamos el stock de la línea
             $stock = new Stock();
             $where = [
-                Where::column('codalmacen', $transfer->codalmacenorigen),
-                Where::column('referencia', $line->referencia)
+                Where::eq('codalmacen', $transfer->codalmacenorigen),
+                Where::eq('referencia', $line->referencia)
             ];
             if (false === $stock->loadWhere($where)) {
                 if ($newTransaction) {
@@ -179,7 +179,7 @@ class TransferenciaStock extends ModelClass
 
     public function getLines(array $order = []): array
     {
-        $where = [Where::column('idtrans', $this->id())];
+        $where = [Where::eq('idtrans', $this->id())];
         return LineaTransferenciaStock::all($where, $order);
     }
 
@@ -199,7 +199,9 @@ class TransferenciaStock extends ModelClass
 
     public function install(): string
     {
+        // dependencias
         new Almacen();
+
         return parent::install();
     }
 
@@ -250,8 +252,8 @@ class TransferenciaStock extends ModelClass
             // cargamos el stock de la línea
             $stock = new Stock();
             $where = [
-                Where::column('codalmacen', $transfer->codalmacenorigen),
-                Where::column('referencia', $line->referencia)
+                Where::eq('codalmacen', $transfer->codalmacenorigen),
+                Where::eq('referencia', $line->referencia)
             ];
             if (false === $stock->loadWhere($where) || $stock->cantidad < $line->cantidad) {
                 Tools::log()->warning('not-enough-stock', ['%reference%' => $line->referencia]);

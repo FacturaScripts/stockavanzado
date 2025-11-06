@@ -188,7 +188,7 @@ class EditProducto
 
             WorkQueue::send('Model.Producto.rebuildStockMovements', $product->id());
 
-            Tools::log()->info('rebuilding-movements');
+            Tools::log()->notice('rebuilt-movements');
         };
     }
 

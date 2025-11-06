@@ -20,6 +20,7 @@
 namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 
 use FacturaScripts\Core\Template\CronJobClass;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuildManager;
@@ -46,14 +47,18 @@ final class StockMovement extends CronJobClass
         }
 
         // creamos un evento para regenerar los movimientos de stock de cada producto
+        $where = [Where::eq('nostock', false)];
         $orderBy = ['idproducto' => 'ASC'];
         $offset = 0;
         $limit = 50;
         do {
-            $products = Producto::all([], $orderBy, $offset, $limit);
+            $delay = 1;
+            $products = Producto::all($where, $orderBy, $offset, $limit);
             foreach ($products as $product) {
                 // enviamos a la cola de trabajo la reconstrucción de los movimientos de stock
-                WorkQueue::send('Model.Producto.rebuildStockMovements', $product->id());
+                WorkQueue::sendFuture($delay, 'Model.Producto.rebuildStockMovements', $product->id());
+
+                $delay += 2; // incrementamos el retardo para no saturar el sistema
             }
 
             $offset += $limit;

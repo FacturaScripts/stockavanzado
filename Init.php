@@ -63,7 +63,8 @@ class Init extends InitClass
         ApiRoot::addCustomResource('transfer-execute');
 
         // workers
-        WorkQueue::addWorker('RebuildProductStockMovements', 'Model.Producto.rebuildStockMovements');
+        WorkQueue::addWorker('RebuildStockMovements', 'Model.Producto.rebuildStockMovements');
+        WorkQueue::addWorker('UpdateStockMovements', 'Model.Producto.updateStockMovements');
     }
 
     public function uninstall(): void

@@ -24,11 +24,7 @@ use FacturaScripts\Core\Model\Base\BusinessDocumentLine;
 use FacturaScripts\Core\Model\Base\TransformerDocument;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
-use FacturaScripts\Dinamic\Model\AlbaranCliente;
-use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\ConteoStock;
-use FacturaScripts\Dinamic\Model\FacturaCliente;
-use FacturaScripts\Dinamic\Model\FacturaProveedor;
 use FacturaScripts\Dinamic\Model\LineaAlbaranCliente;
 use FacturaScripts\Dinamic\Model\LineaAlbaranProveedor;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
@@ -98,6 +94,7 @@ class StockMovementManager
         $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
+
         empty($movement->cantidad) ? $movement->delete() : $movement->save();
     }
 
@@ -106,13 +103,7 @@ class StockMovementManager
         $docid = $stockCount->id();
         $docmodel = $stockCount->modelClassName();
 
-        // Calculamos el stock acumulado hasta la fecha del conteo (excluyendo el conteo actual)
-        $stockSum = static::getStockSum($line->referencia, $stockCount->codalmacen, $docid, $docmodel, $stockCount->fechafin);
-
-        // El movimiento del conteo debe ajustar el stock para que quede exactamente en el valor contado
-        // Fórmula: cantidad_movimiento = stock_objetivo - stock_calculado_antes_del_conteo
-        $cantidad = $stock - $stockSum;
-
+        // buscamos el movimiento existente
         $movement = new MovimientoStock();
         $where = [
             Where::eq('codalmacen', $stockCount->codalmacen),
@@ -122,6 +113,7 @@ class StockMovementManager
         ];
 
         if (false === $movement->loadWhere($where)) {
+            // no existe, lo creamos
             $movement->documento = Tools::trans($stockCount->modelClassName()) . ' ' . $stockCount->id();
             $movement->fecha = Tools::date($stockCount->fechafin);
             $movement->hora = Tools::hour($stockCount->fechafin);
@@ -132,12 +124,9 @@ class StockMovementManager
             $movement->referencia = $line->referencia;
         }
 
-        $movement->cantidad = $cantidad;
-
-        // Solo guardar si hay cantidad diferente de 0, si no eliminar el movimiento
-        if ($cantidad == 0) {
-            return $movement->exists() ? $movement->delete() : true;
-        }
+        // actualizamos la cantidad y el saldo
+        $movement->cantidad = 0;
+        $movement->saldo = $stock;
 
         return $movement->save();
     }
@@ -192,16 +181,7 @@ class StockMovementManager
             return;
         }
 
-        if (empty(static::$idproducto)) {
-            // creamos los movimientos de los documentos de compra y venta
-            static::rebuildBusinessDocuments();
-
-            // creamos los movimientos de las transferencias de stock
-            static::rebuildTransferStock();
-
-            // creamos los movimientos de los conteos de stock
-            static::rebuildStockCounting();
-        } else {
+        if (!empty(static::$idproducto)) {
             static::rebuildBusinessDocument();
 
             // creamos los movimientos de las transferencias de stock
@@ -215,6 +195,9 @@ class StockMovementManager
         foreach (static::$mods as $mod) {
             $mod->run(static::$idproducto);
         }
+
+        // reseteamos el idproducto
+        self::setIdProducto(null);
 
         // si hemos ejecutado la clase desde el cron, terminamos
         if ($cron) {
@@ -356,17 +339,6 @@ class StockMovementManager
         return $sum;
     }
 
-    protected static function ignoredBusinessDocumentState(TransformerDocument $doc): bool
-    {
-        // comprobar o agregar el estado a la lista
-        if (!isset(static::$docStates[$doc->idestado])) {
-            static::$docStates[$doc->idestado] = $doc->getStatus();
-        }
-
-        // Ignorar estado con actualizastock == 0
-        return empty(static::$docStates[$doc->idestado]->actualizastock);
-    }
-
     protected static function rebuildBusinessDocument(): void
     {
         $limit = 250;
@@ -433,130 +405,34 @@ class StockMovementManager
         }
     }
 
-    protected static function rebuildBusinessDocuments(): void
-    {
-        $limit = 250;
-        $models = [new AlbaranProveedor(), new FacturaProveedor(), new AlbaranCliente(), new FacturaCliente()];
-        foreach ($models as $model) {
-            $status = [];
-            foreach ($model->getAvailableStatus() as $item) {
-                if (!empty($item->actualizastock)) {
-                    $status[] = $item->idestado;
-                }
-            }
-
-            $where = [Where::in('idestado', $status)];
-            $offset = 0;
-            $docs = $model->all($where, ['fecha' => 'ASC'], $offset, $limit);
-
-            while (count($docs) > 0) {
-                foreach ($docs as $doc) {
-
-                    echo '.';
-                    ob_flush();
-
-                    foreach ($doc->getLines() as $line) {
-                        // saltamos líneas sin referencia
-                        if (empty($line->referencia)) {
-                            continue;
-                        }
-
-                        // Omitir productos faltantes o productos sin gestión de stock
-                        $product = static::getProduct($line->referencia);
-                        if (empty($product->idproducto) || $product->nostock) {
-                            continue;
-                        }
-
-                        // omitimos el producto si no es el que buscamos
-                        if (null !== static::$idproducto && $product->idproducto !== static::$idproducto) {
-                            continue;
-                        }
-
-                        // buscamos si ya existe el movimiento
-                        $movement = new MovimientoStock();
-                        $whereMov = [
-                            Where::eq('codalmacen', $doc->codalmacen),
-                            Where::eq('docid', $doc->id()),
-                            Where::eq('docmodel', $doc->modelClassName()),
-                            Where::eq('referencia', $line->referencia)
-                        ];
-
-                        if (false === $movement->loadWhere($whereMov)) {
-                            // no existe, lo creamos
-                            $movement->codalmacen = $doc->codalmacen;
-                            $movement->docid = $doc->id();
-                            $movement->docmodel = $doc->modelClassName();
-                            $movement->idproducto = $line->idproducto ?? $line->getProducto()->idproducto;
-                            $movement->referencia = $line->referencia;
-                            $movement->cantidad = $line->actualizastock * $line->cantidad;
-                            $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
-                            $movement->fecha = $doc->fecha;
-                            $movement->hora = $doc->hora;
-                            if (!empty($movement->cantidad)) {
-                                $movement->save();
-                            }
-                            continue;
-                        }
-
-                        // ya existe, actualizamos la cantidad
-                        $movement->cantidad += $line->actualizastock * $line->cantidad;
-                        if (empty($movement->cantidad)) {
-                            $movement->delete();
-                        } else {
-                            $movement->save();
-                        }
-                    }
-                }
-
-                $offset += $limit;
-                $docs = $model->all([], ['fecha' => 'DESC'], $offset, $limit);
-            }
-        }
-    }
-
     protected static function rebuildStockCounting(): void
     {
-        $where = [Where::eq('completed', true)];
-        foreach (ConteoStock::all($where, ['idconteo' => 'ASC']) as $conteo) {
-            // primero recorremos las líneas para obtener el stock actual por referencia
-            $stocks = [];
-            foreach ($conteo->getLines() as $line) {
-                if (false === isset($stocks[$line->referencia])) {
-                    $stocks[$line->referencia] = $line->cantidad;
-                    continue;
-                }
-                $stocks[$line->referencia] += $line->cantidad;
+        // recorremos todas las líneas de conteo de stock
+        $where = [Where::eq('idproducto', static::$idproducto)];
+        foreach (LineaConteoStock::all($where, ['idlinea' => 'ASC']) as $line) {
+            // si el conteo no está finalizado, lo omitimos
+            $conteo = $line->getConteo();
+            if (!$conteo->completed) {
+                continue;
             }
 
-            // ahora generamos los movimientos de stock
-            foreach ($conteo->getLines(['fecha' => 'ASC']) as $line) {
-                $product = $line->getProducto();
-
-                // omitimos el producto si no es el que buscamos
-                if (null !== static::$idproducto && $product->idproducto !== static::$idproducto) {
-                    continue;
-                }
-
-                static::addLineCounting($line, $conteo, $stocks[$line->referencia]);
-            }
+            // ahora generamos el movimiento de stock
+            static::addLineCounting($line, $conteo, $line->cantidad);
         }
     }
 
     protected static function rebuildTransferStock(): void
     {
-        $where = [Where::eq('completed', true)];
-        foreach (TransferenciaStock::all($where, ['idtrans' => 'ASC']) as $transfer) {
-            foreach ($transfer->getLines() as $line) {
-                $variant = $line->getVariant();
-                $product = $variant->getProducto();
-
-                // omitimos el producto si no es el que buscamos
-                if (null !== static::$idproducto && $product->idproducto !== static::$idproducto) {
-                    continue;
-                }
-
-                static::addLineTransferStock($line, $transfer);
+        // recorremos todas las líneas de transferencias de stock
+        $where = [Where::eq('idproducto', static::$idproducto)];
+        foreach (LineaTransferenciaStock::all($where, ['idlinea' => 'ASC']) as $line) {
+            // si la transferencia no está finalizada, la omitimos
+            $transfer = $line->getTransference();
+            if (!$transfer->completed) {
+                continue;
             }
+
+            static::addLineTransferStock($line, $transfer);
         }
     }
 }

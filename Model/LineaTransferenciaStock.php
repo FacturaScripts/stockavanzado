@@ -20,11 +20,10 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Model;
 
 use FacturaScripts\Core\Model\Base\ProductRelationTrait;
+use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Template\ModelClass;
 use FacturaScripts\Core\Template\ModelTrait;
-use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\TransferenciaStock as DinTransferenciaStock;
 use FacturaScripts\Dinamic\Model\Variante;
 
@@ -73,15 +72,16 @@ class LineaTransferenciaStock extends ModelClass
     public function getVariant(): Variante
     {
         $variant = new Variante();
-        $where = [Where::column('referencia', $this->referencia)];
-        $variant->loadWhere($where);
+        $variant->loadWhereEq('referencia', $this->referencia);
         return $variant;
     }
 
     public function install(): string
     {
+        // dependencias
         new DinTransferenciaStock();
         new Variante();
+
         return parent::install();
     }
 
@@ -96,8 +96,7 @@ class LineaTransferenciaStock extends ModelClass
         $this->nick = Session::user()->nick;
 
         if (empty($this->idproducto)) {
-            $variant = $this->getVariant();
-            $this->idproducto = $variant->idproducto;
+            $this->idproducto = $this->getVariant()->idproducto;
         }
 
         return parent::test();
