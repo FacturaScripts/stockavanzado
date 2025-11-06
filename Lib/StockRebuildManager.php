@@ -41,22 +41,22 @@ class StockRebuildManager
 
     public static function rebuild(?int $idproducto = null, array &$messages = [], bool $cron = false): void
     {
-        if (false === static::dataBase()->tableExists('stocks_movimientos')) {
+        if (false === static::db()->tableExists('stocks_movimientos')) {
             $messages[] = 'stock-rebuild-no-table-movements';
             return;
         }
 
-        static::$idproducto = $idproducto;
+        self::setIdProducto($idproducto);
 
-        $newTransaction = false === static::dataBase()->inTransaction() && static::dataBase()->beginTransaction();
+        $newTransaction = false === static::db()->inTransaction() && static::db()->beginTransaction();
         static::clear();
 
         foreach (Almacenes::all() as $war) {
             foreach (static::calculateStockData($war->codalmacen) as $data) {
                 $stock = new Stock();
                 $where = [
-                    Where::column('codalmacen', $data['codalmacen']),
-                    Where::column('referencia', $data['referencia'])
+                    Where::eq('codalmacen', $data['codalmacen']),
+                    Where::eq('referencia', $data['referencia'])
                 ];
                 if ($stock->loadWhere($where)) {
                     // el stock ya existe
@@ -69,7 +69,7 @@ class StockRebuildManager
                 if (false === $stock->save()) {
                     $messages[] = 'error-saving-stock';
                     if ($newTransaction) {
-                        static::dataBase()->rollBack();
+                        static::db()->rollBack();
                     }
                     return;
                 }
@@ -77,8 +77,10 @@ class StockRebuildManager
         }
 
         if ($newTransaction) {
-            static::dataBase()->commit();
+            static::db()->commit();
         }
+
+        self::setIdProducto(null);
 
         // si hemos ejecutado la clase desde el cron, terminamos
         if ($cron) {
@@ -93,7 +95,7 @@ class StockRebuildManager
 
     protected static function clear(): void
     {
-        if (false === static::dataBase()->tableExists('stocks')) {
+        if (false === static::db()->tableExists('stocks')) {
             return;
         }
 
@@ -101,14 +103,14 @@ class StockRebuildManager
         $sqlVariante = "UPDATE variantes SET stockfis = '0'";
         $sqlProducto = "UPDATE productos SET stockfis = '0'";
         if (null !== static::$idproducto) {
-            $sqlStock .= " WHERE idproducto = " . static::dataBase()->var2str(static::$idproducto) . ";";
-            $sqlVariante .= " WHERE idproducto = " . static::dataBase()->var2str(static::$idproducto) . ";";
-            $sqlProducto .= " WHERE idproducto = " . static::dataBase()->var2str(static::$idproducto) . ";";
+            $sqlStock .= " WHERE idproducto = " . static::db()->var2str(static::$idproducto) . ";";
+            $sqlVariante .= " WHERE idproducto = " . static::db()->var2str(static::$idproducto) . ";";
+            $sqlProducto .= " WHERE idproducto = " . static::db()->var2str(static::$idproducto) . ";";
         }
 
-        static::dataBase()->exec($sqlStock);
-        static::dataBase()->exec($sqlVariante);
-        static::dataBase()->exec($sqlProducto);
+        static::db()->exec($sqlStock);
+        static::db()->exec($sqlVariante);
+        static::db()->exec($sqlProducto);
     }
 
     protected static function calculateStockData(string $codalmacen): array
@@ -116,12 +118,12 @@ class StockRebuildManager
         // obtenemos un array de referencias únicas
         $sql = "SELECT referencia"
             . " FROM stocks_movimientos"
-            . " WHERE codalmacen = " . static::dataBase()->var2str($codalmacen);
+            . " WHERE codalmacen = " . static::db()->var2str($codalmacen);
         if (null !== static::$idproducto) {
-            $sql .= " AND idproducto = " . static::dataBase()->var2str(static::$idproducto);
+            $sql .= " AND idproducto = " . static::db()->var2str(static::$idproducto);
         }
         $sql .= " GROUP BY 1";
-        $rows = static::dataBase()->select($sql);
+        $rows = static::db()->select($sql);
 
         // si no hay referencias, devolvemos array vacío
         if (empty($rows)) {
@@ -131,32 +133,17 @@ class StockRebuildManager
         $stockData = [];
         foreach ($rows as $row) {
             $where = [
-                Where::column('codalmacen', $codalmacen),
-                Where::column('referencia', $row['referencia'])
+                Where::eq('codalmacen', $codalmacen),
+                Where::eq('referencia', $row['referencia'])
             ];
 
             // obtenemos el último movimiento de cada referencia
             $lastMovement = new MovimientoStock();
             $lastMovement->loadWhere($where, ['fecha' => 'DESC', 'hora' => 'DESC', 'id' => 'DESC']);
 
-            // sumamos todos los movimientos de cada referencia para obtener el stock actual
-            $stockSumMovements = 0.0;
-            foreach (MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC']) as $movement) {
-                $stockSumMovements += $movement->cantidad;
-            }
-
-            // si hay último movimiento, y la suma de movimientos es distinta al saldo del último movimiento, avisamos
-            if ($lastMovement->id() && $lastMovement->saldo !== $stockSumMovements) {
-                $stock = $lastMovement->saldo;
-                Tools::log()->warning('stock-rebuild-inconsistency-detected', ['%referencia%' => $row['referencia'], '%codalmacen%' => $codalmacen, '%last_saldo%' => $lastMovement->saldo, '%sum_movements%' => $stockSumMovements]);
-                Tools::log('audit')->warning('stock-rebuild-inconsistency-detected', ['%referencia%' => $row['referencia'], '%codalmacen%' => $codalmacen, '%last_saldo%' => $lastMovement->saldo, '%sum_movements%' => $stockSumMovements]);
-            } else {
-                $stock = $stockSumMovements;
-            }
-
             $ref = trim($row['referencia']);
             $stockData[$ref] = [
-                'cantidad' => $stock,
+                'cantidad' => $lastMovement->saldo,
                 'codalmacen' => $codalmacen,
                 'pterecibir' => 0,
                 'referencia' => $ref,
@@ -166,10 +153,11 @@ class StockRebuildManager
 
         static::setPterecibir($stockData, $codalmacen);
         static::setReservada($stockData, $codalmacen);
+
         return $stockData;
     }
 
-    protected static function dataBase(): DataBase
+    protected static function db(): DataBase
     {
         if (!isset(static::$db)) {
             static::$db = new DataBase();
@@ -178,9 +166,14 @@ class StockRebuildManager
         return static::$db;
     }
 
+    public static function setIdProducto(?int $idproducto): void
+    {
+        static::$idproducto = $idproducto;
+    }
+
     protected static function setPterecibir(array &$stockData, string $codalmacen): void
     {
-        if (false === static::dataBase()->tableExists('lineaspedidosprov')) {
+        if (false === static::db()->tableExists('lineaspedidosprov')) {
             return;
         }
 
@@ -192,13 +185,13 @@ class StockRebuildManager
             . " WHERE l.referencia IS NOT NULL";
 
         if (null !== static::$idproducto) {
-            $sql .= " AND l.idproducto = " . static::dataBase()->var2str(static::$idproducto);
+            $sql .= " AND l.idproducto = " . static::db()->var2str(static::$idproducto);
         }
 
         $sql .= " AND l.actualizastock = '2'"
-            . " AND p.codalmacen = " . static::dataBase()->var2str($codalmacen)
+            . " AND p.codalmacen = " . static::db()->var2str($codalmacen)
             . " GROUP BY 1;";
-        foreach (static::dataBase()->select($sql) as $row) {
+        foreach (static::db()->select($sql) as $row) {
             $ref = trim($row['referencia']);
             if (!isset($stockData[$ref])) {
                 $stockData[$ref] = [
@@ -215,7 +208,7 @@ class StockRebuildManager
 
     protected static function setReservada(array &$stockData, string $codalmacen): void
     {
-        if (false === static::dataBase()->tableExists('lineaspedidoscli')) {
+        if (false === static::db()->tableExists('lineaspedidoscli')) {
             return;
         }
 
@@ -227,13 +220,13 @@ class StockRebuildManager
             . " WHERE l.referencia IS NOT NULL";
 
         if (null !== static::$idproducto) {
-            $sql .= " AND l.idproducto = " . static::dataBase()->var2str(static::$idproducto);
+            $sql .= " AND l.idproducto = " . static::db()->var2str(static::$idproducto);
         }
 
         $sql .= " AND l.actualizastock = '-2'"
-            . " AND p.codalmacen = " . static::dataBase()->var2str($codalmacen)
+            . " AND p.codalmacen = " . static::db()->var2str($codalmacen)
             . " GROUP BY 1;";
-        foreach (static::dataBase()->select($sql) as $row) {
+        foreach (static::db()->select($sql) as $row) {
             $ref = trim($row['referencia']);
             if (!isset($stockData[$ref])) {
                 $stockData[$ref] = [
