@@ -66,11 +66,13 @@ class StockMovementManager
 
     public static function addLineBusinessDocument(BusinessDocumentLine $line, TransformerDocument $doc): void
     {
+        // si el estado del documento no actualiza stock, salimos
         if (false === in_array($line->actualizastock, [1, -1], true) &&
             false === in_array($line->getOriginal('actualizastock'), [1, -1], true)) {
             return;
         }
 
+        // buscamos si ya existe el movimiento
         $movement = new MovimientoStock();
         $where = [
             Where::eq('codalmacen', $doc->codalmacen),
@@ -79,6 +81,7 @@ class StockMovementManager
             Where::eq('referencia', $line->referencia)
         ];
         if (false === $movement->loadWhere($where)) {
+            // no existe, lo creamos
             $movement->codalmacen = $doc->codalmacen;
             $movement->docid = $doc->id();
             $movement->docmodel = $doc->modelClassName();
@@ -89,6 +92,7 @@ class StockMovementManager
             }
         }
 
+        // actualizamos la cantidad
         $movement->cantidad -= $line->getOriginal('actualizastock') * $line->getOriginal('cantidad');
         $movement->cantidad += $line->actualizastock * $line->cantidad;
         $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
@@ -179,7 +183,7 @@ class StockMovementManager
 
     public static function rebuild(?int $idproducto = null, array &$messages = [], bool $cron = false): void
     {
-        static::$idproducto = $idproducto;
+        self::setIdProducto($idproducto);
 
         // eliminamos todos los movimientos de stock
         if (!static::deleteMovements()) {
@@ -221,6 +225,11 @@ class StockMovementManager
         foreach ($messages as $message) {
             Tools::log('audit')->warning($message);
         }
+    }
+
+    public static function setIdProducto(?int $idproducto): void
+    {
+        static::$idproducto = $idproducto;
     }
 
     protected static function addLineTransferStockMovement(string $codalmacen, float $cantidad, TransferenciaStock $transfer, LineaTransferenciaStock $line): bool
@@ -281,7 +290,7 @@ class StockMovementManager
         return true;
     }
 
-    protected static function deleteMovements(): bool
+    public static function deleteMovements(): bool
     {
         $db = new DataBase();
 
@@ -360,7 +369,7 @@ class StockMovementManager
 
     protected static function rebuildBusinessDocument(): void
     {
-        $limit = 500;
+        $limit = 250;
         $models = [
             new LineaAlbaranProveedor(), new LineaFacturaProveedor(), new LineaAlbaranCliente(),
             new LineaFacturaCliente()
@@ -387,14 +396,14 @@ class StockMovementManager
 
                     // En rebuild, creamos movimientos nuevos directamente
                     $movement = new MovimientoStock();
-                    $where = [
+                    $whereMov = [
                         Where::eq('codalmacen', $doc->codalmacen),
                         Where::eq('docid', $doc->id()),
                         Where::eq('docmodel', $doc->modelClassName()),
                         Where::eq('referencia', $line->referencia)
                     ];
 
-                    if (false === $movement->loadWhere($where)) {
+                    if (false === $movement->loadWhere($whereMov)) {
                         // no existe, lo creamos
                         $movement->codalmacen = $doc->codalmacen;
                         $movement->docid = $doc->id();
@@ -411,7 +420,11 @@ class StockMovementManager
 
                     // ya existe, actualizamos la cantidad
                     $movement->cantidad += $line->actualizastock * $line->cantidad;
-                    $movement->save();
+                    if (empty($model->cantidad)) {
+                        $movement->delete();
+                    } else {
+                        $movement->save();
+                    }
                 }
 
                 $offset += $limit;
@@ -422,18 +435,25 @@ class StockMovementManager
 
     protected static function rebuildBusinessDocuments(): void
     {
-        $limit = 500;
+        $limit = 250;
         $models = [new AlbaranProveedor(), new FacturaProveedor(), new AlbaranCliente(), new FacturaCliente()];
         foreach ($models as $model) {
+            $status = [];
+            foreach ($model->getAvailableStatus() as $item) {
+                if (!empty($item->actualizastock)) {
+                    $status[] = $item->idestado;
+                }
+            }
+
+            $where = [Where::in('idestado', $status)];
             $offset = 0;
-            $docs = $model->all([], ['fecha' => 'ASC'], $offset, $limit);
+            $docs = $model->all($where, ['fecha' => 'ASC'], $offset, $limit);
 
             while (count($docs) > 0) {
                 foreach ($docs as $doc) {
-                    // Saltar estados que no modifican el stock
-                    if (static::ignoredBusinessDocumentState($doc)) {
-                        continue;
-                    }
+
+                    echo '.';
+                    ob_flush();
 
                     foreach ($doc->getLines() as $line) {
                         // saltamos líneas sin referencia
@@ -452,17 +472,17 @@ class StockMovementManager
                             continue;
                         }
 
-                        // En rebuild, creamos movimientos nuevos directamente
+                        // buscamos si ya existe el movimiento
                         $movement = new MovimientoStock();
-                        $where = [
+                        $whereMov = [
                             Where::eq('codalmacen', $doc->codalmacen),
                             Where::eq('docid', $doc->id()),
                             Where::eq('docmodel', $doc->modelClassName()),
                             Where::eq('referencia', $line->referencia)
                         ];
 
-                        // Solo crear si no existe ya
-                        if (false === $movement->loadWhere($where)) {
+                        if (false === $movement->loadWhere($whereMov)) {
+                            // no existe, lo creamos
                             $movement->codalmacen = $doc->codalmacen;
                             $movement->docid = $doc->id();
                             $movement->docmodel = $doc->modelClassName();
@@ -472,10 +492,18 @@ class StockMovementManager
                             $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
                             $movement->fecha = $doc->fecha;
                             $movement->hora = $doc->hora;
-
                             if (!empty($movement->cantidad)) {
                                 $movement->save();
                             }
+                            continue;
+                        }
+
+                        // ya existe, actualizamos la cantidad
+                        $movement->cantidad += $line->actualizastock * $line->cantidad;
+                        if (empty($movement->cantidad)) {
+                            $movement->delete();
+                        } else {
+                            $movement->save();
                         }
                     }
                 }

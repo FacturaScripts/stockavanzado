@@ -40,7 +40,6 @@ class InitialStockMovementManager
 
     public static function initial(?int $idproducto = null, array &$messages = [], bool $cron = false): void
     {
-        static::$db = new DataBase();
         static::$idproducto = $idproducto;
 
         // recorremos los almacénes
@@ -48,8 +47,6 @@ class InitialStockMovementManager
             // para cada almacén, obtenemos todos los stocks de cada variante
             // siempre que dicha variante no tenga movimientos de stock
             $stocks = static::getStocks($warehouse->codalmacen);
-
-            // si no hay stocks, continuamos
             if (empty($stocks)) {
                 continue;
             }
@@ -87,22 +84,32 @@ class InitialStockMovementManager
     {
         $sql = "SELECT *"
             . " FROM stocks"
-            . " WHERE codalmacen = " . static::$db->var2str($codalmacen);
+            . " WHERE codalmacen = " . self::db()->var2str($codalmacen);
 
         if (null !== static::$idproducto) {
-            $sql .= " AND idproducto = " . static::$db->var2str(static::$idproducto);
+            $sql .= " AND idproducto = " . self::db()->var2str(static::$idproducto);
         }
 
         $sql .= " AND cantidad <> 0"
             . " AND referencia NOT IN (SELECT referencia FROM stocks_movimientos WHERE codalmacen = "
-            . static::$db->var2str($codalmacen);
+            . self::db()->var2str($codalmacen);
 
         if (null !== static::$idproducto) {
-            $sql .= " AND idproducto = " . static::$db->var2str(static::$idproducto);
+            $sql .= " AND idproducto = " . self::db()->var2str(static::$idproducto);
         }
 
         $sql .= ")";
 
-        return static::$db->select($sql);
+        return self::db()->select($sql);
+    }
+
+    protected static function db(): DataBase
+    {
+        if (null === static::$db) {
+            static::$db = new DataBase();
+            static::$db->connect();
+        }
+
+        return static::$db;
     }
 }

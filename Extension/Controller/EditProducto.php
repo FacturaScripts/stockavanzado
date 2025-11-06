@@ -23,6 +23,7 @@ use Closure;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\ConteoStock;
@@ -185,9 +186,9 @@ class EditProducto
                 return;
             }
 
-            StockMovementManager::rebuild($product->idproducto);
+            WorkQueue::send('Model.Producto.rebuildStockMovements', $product->id());
 
-            Tools::log()->notice('rebuilt-movements');
+            Tools::log()->info('rebuilding-movements');
         };
     }
 
@@ -207,6 +208,7 @@ class EditProducto
             }
 
             StockRebuildManager::rebuild($product->idproducto);
+
             Tools::log()->notice('rebuilt-stock');
         };
     }

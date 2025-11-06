@@ -26,6 +26,7 @@ use FacturaScripts\Core\Model\Role;
 use FacturaScripts\Core\Model\RoleAccess;
 use FacturaScripts\Core\Template\InitClass;
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Lib\StockMinMaxManager;
 use FacturaScripts\Dinamic\Model\EmailNotification;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
@@ -41,8 +42,12 @@ class Init extends InitClass
 {
     const ROLE_NAME = 'StockAvanzado';
 
+    /** @var DataBase */
+    private $db;
+
     public function init(): void
     {
+        // extensiones
         $this->loadExtension(new Extension\Controller\EditAlmacen());
         $this->loadExtension(new Extension\Controller\EditProducto());
         $this->loadExtension(new Extension\Controller\ListAlmacen());
@@ -51,51 +56,51 @@ class Init extends InitClass
         $this->loadExtension(new Extension\Model\Stock());
         $this->loadExtension(new Extension\Model\Base\BusinessDocumentLine());
 
+        // API
         Kernel::addRoute('/api/3/counting-execute', 'ApiCountingExecute', -1);
-        ApiRoot::addCustomResource('counting-execute');
-
         Kernel::addRoute('/api/3/transfer-execute', 'ApiTransferExecute', -1);
+        ApiRoot::addCustomResource('counting-execute');
         ApiRoot::addCustomResource('transfer-execute');
+
+        // workers
+        WorkQueue::addWorker('RebuildProductStockMovements', 'Model.Producto.rebuildStockMovements');
     }
 
     public function uninstall(): void
     {
-
     }
 
     public function update(): void
     {
+        $this->unlinkUsers();
+
         new MovimientoStock();
 
-        $this->updateEmailNotifications();
         $this->createRoleForPlugin();
+        $this->updateEmailNotifications();
         $this->migrateData();
-        $this->unlinkUsers();
     }
 
     private function createRoleForPlugin(): void
     {
-        $dataBase = new DataBase();
-        $dataBase->beginTransaction();
-
         // creates the role if not exists
         $role = new Role();
         if (false === $role->load(self::ROLE_NAME)) {
             $role->codrole = $role->descripcion = self::ROLE_NAME;
             if (false === $role->save()) {
-                // exit and rollback on fail
-                $dataBase->rollback();
                 return;
             }
         }
+
+        $this->db()->beginTransaction();
 
         // check the role permissions
         $controllerNames = ['EditConteoStock', 'EditTransferenciaStock', 'ReportStock'];
         foreach ($controllerNames as $controllerName) {
             $roleAccess = new RoleAccess();
             $where = [
-                Where::column('codrole', self::ROLE_NAME),
-                Where::column('pagename', $controllerName)
+                Where::eq('codrole', self::ROLE_NAME),
+                Where::eq('pagename', $controllerName)
             ];
             if ($roleAccess->loadWhere($where)) {
                 continue;
@@ -109,13 +114,23 @@ class Init extends InitClass
             $roleAccess->onlyownerdata = false;
             if (false === $roleAccess->save()) {
                 // exit and rollback on fail
-                $dataBase->rollback();
+                $this->db()->rollback();
                 return;
             }
         }
 
         // commit if there is no problem
-        $dataBase->commit();
+        $this->db()->commit();
+    }
+
+    protected function db(): DataBase
+    {
+        if ($this->db === null) {
+            $this->db = new DataBase();
+            $this->db->connect();
+        }
+
+        return $this->db;
     }
 
     /**
@@ -124,12 +139,11 @@ class Init extends InitClass
      */
     private function migrateData(): void
     {
-        $database = new DataBase();
-        if (false === $database->tableExists('transferenciasstock')) {
+        if (false === $this->db()->tableExists('transferenciasstock')) {
             return;
         }
 
-        foreach ($database->select('SELECT * FROM transferenciasstock') as $row) {
+        foreach ($this->db()->select('SELECT * FROM transferenciasstock') as $row) {
             $trans = new TransferenciaStock($row);
             $trans->completed = true;
             if (false === $trans->save()) {
@@ -137,35 +151,34 @@ class Init extends InitClass
             }
         }
 
-        if (false === $database->tableExists('lineastransferenciasstock')) {
-            $database->exec('DROP TABLE transferenciasstock;');
+        if (false === $this->db()->tableExists('lineastransferenciasstock')) {
+            $this->db()->exec('DROP TABLE transferenciasstock;');
             return;
         }
 
-        foreach ($database->select('SELECT * FROM lineastransferenciasstock') as $row) {
+        foreach ($this->db()->select('SELECT * FROM lineastransferenciasstock') as $row) {
             $line = new LineaTransferenciaStock($row);
             if (false === $line->save()) {
                 return;
             }
         }
 
-        $database->exec('DROP TABLE lineastransferenciasstock;');
-        $database->exec('DROP TABLE transferenciasstock;');
+        $this->db()->exec('DROP TABLE lineastransferenciasstock;');
+        $this->db()->exec('DROP TABLE transferenciasstock;');
     }
 
     private function unlinkUsers(): void
     {
-        $database = new DataBase();
-
         $tables = ['stocks_conteos', 'stocks_lineasconteos', 'stocks_transferencias'];
         foreach ($tables as $table) {
-            if (false === $database->tableExists($table)) {
+            if (false === $this->db()->tableExists($table)) {
                 continue;
             }
 
             $sqlUnlink = 'update ' . $table . ' set nick = null'
                 . ' where nick is not null and nick not in (select nick from users)';
-            $database->exec($sqlUnlink);
+
+            $this->db()->exec($sqlUnlink);
         }
     }
 

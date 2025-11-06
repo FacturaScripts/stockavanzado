@@ -33,6 +33,7 @@ final class Cron extends CronClass
         // con este proceso rectificamos los IDs de productos que no estén bien enlazados con el ID producto de la variante
         $this->job(FixedIdProduct::JOB_NAME)
             ->every(FixedIdProduct::JOB_PERIOD)
+            ->withoutOverlapping()
             ->run(function () {
                 FixedIdProduct::run();
             });

@@ -20,9 +20,10 @@
 namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 
 use FacturaScripts\Core\Template\CronJobClass;
-use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuildManager;
+use FacturaScripts\Dinamic\Model\Producto;
 
 /**
  * @author Daniel Fernández Giménez <hola@danielfg.es>
@@ -36,13 +37,27 @@ final class StockMovement extends CronJobClass
     {
         self::echo("\n\n* JOB: " . self::JOB_NAME . ' ...');
 
-        $messages = [];
-        StockMovementManager::rebuild(null, $messages, true);
-        StockRebuildManager::rebuild(null, $messages, true);
-
-        foreach ($messages as $message) {
-            self::echo("\n- " . Tools::trans($message));
+        // limpiamos todos los movimientos de stock
+        StockMovementManager::setIdProducto(null);
+        if (false === StockMovementManager::deleteMovements()) {
+            self::echo("\n- Error al eliminar los movimientos de stock.");
+            self::saveEcho();
+            return;
         }
+
+        // creamos un evento para regenerar los movimientos de stock de cada producto
+        $orderBy = ['idproducto' => 'ASC'];
+        $offset = 0;
+        $limit = 50;
+        do {
+            $products = Producto::all([], $orderBy, $offset, $limit);
+            foreach ($products as $product) {
+                // enviamos a la cola de trabajo la reconstrucción de los movimientos de stock
+                WorkQueue::send('Model.Producto.rebuildStockMovements', $product->id());
+            }
+
+            $offset += $limit;
+        } while (count($products) > 0);
 
         self::saveEcho();
     }
