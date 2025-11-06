@@ -65,8 +65,8 @@ class ConteoStock extends ModelClass
     {
         $line = new LineaConteoStock();
         $where = [
-            Where::column('idconteo', $this->idconteo),
-            Where::column('referencia', $referencia)
+            Where::eq('idconteo', $this->idconteo),
+            Where::eq('referencia', $referencia)
         ];
         $orderBy = ['idlinea' => 'DESC'];
 
@@ -166,7 +166,7 @@ class ConteoStock extends ModelClass
 
     public function getLines(array $order = []): array
     {
-        $where = [Where::column('idconteo', $this->idconteo)];
+        $where = [Where::eq('idconteo', $this->idconteo)];
         return LineaConteoStock::all($where, $order);
     }
 
