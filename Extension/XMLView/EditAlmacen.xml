@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <view>
     <columns>
-        <group name="data" numcolumns="12">
-            <column name="valued-stock-cost" numcolumns="2" order="200">
+        <group name="valued" numcolumns="12">
+            <column name="valued-stock-cost" numcolumns="2" order="100">
                 <widget type="money" fieldname="stock_valorado_coste" readonly="true"/>
             </column>
-            <column name="valued-stock-price" numcolumns="2" order="210">
+            <column name="valued-stock-price" numcolumns="2" order="110">
                 <widget type="money" fieldname="stock_valorado_precio" readonly="true"/>
             </column>
         </group>

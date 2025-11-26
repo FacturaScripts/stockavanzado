@@ -89,8 +89,10 @@ class StockMovementManager
         }
 
         // actualizamos la cantidad
-        $movement->cantidad -= $line->getOriginal('actualizastock') * $line->getOriginal('cantidad');
-        $movement->cantidad += $line->actualizastock * $line->cantidad;
+        $movement->cantidad -= in_array($line->getOriginal('actualizastock'), [-1, 0, 1]) ?
+            $line->getOriginal('actualizastock') * $line->getOriginal('cantidad') : 0;
+        $movement->cantidad += in_array($line->actualizastock, [-1, 0, 1]) ?
+            $line->actualizastock * $line->cantidad : 0;
         $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
@@ -144,6 +146,21 @@ class StockMovementManager
     public static function addMod(StockMovementModInterface $mod): void
     {
         static::$mods[] = $mod;
+    }
+
+    public static function addTransferLine(BusinessDocumentLine $line, TransformerDocument $doc, string $fromCodalmacen, string $toCodalmacen): void
+    {
+        $movement = new MovimientoStock();
+        $where = [
+            Where::eq('codalmacen', $fromCodalmacen),
+            Where::eq('docid', $doc->id()),
+            Where::eq('docmodel', $doc->modelClassName()),
+            Where::eq('referencia', $line->referencia)
+        ];
+        if ($movement->loadWhere($where)) {
+            $movement->codalmacen = $toCodalmacen;
+            $movement->save();
+        }
     }
 
     public static function deleteLineCounting(LineaConteoStock $line, ConteoStock $stockCount): bool
@@ -252,21 +269,6 @@ class StockMovementManager
         $movement->saldo = $previousSaldo + $movement->cantidad;
 
         return empty($movement->cantidad) ? $movement->delete() : $movement->save();
-    }
-
-    public static function addTransferLine(BusinessDocumentLine $line, TransformerDocument $doc, string $fromCodalmacen, string $toCodalmacen): void
-    {
-        $movement = new MovimientoStock();
-        $where = [
-            Where::eq('codalmacen', $fromCodalmacen),
-            Where::eq('docid', $doc->id()),
-            Where::eq('docmodel', $doc->modelClassName()),
-            Where::eq('referencia', $line->referencia)
-        ];
-        if ($movement->loadWhere($where)) {
-            $movement->codalmacen = $toCodalmacen;
-            $movement->save();
-        }
     }
 
     protected static function deleteLineTransferMovement(string $codalmacen, LineaTransferenciaStock $line, TransferenciaStock $stockCount): bool
