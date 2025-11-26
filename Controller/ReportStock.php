@@ -89,12 +89,16 @@ class ReportStock extends ListController
                 'where' => []
             ],
             [
+                'label' => '------',
+                'where' => []
+            ],
+            [
                 'label' => Tools::trans('under-minimums'),
-                'where' => [new DataBaseWhere('disponible', 'field:stockmin', '<')]
+                'where' => [new DataBaseWhere('disponible', 'field:stockmin', '<', 'AND', true)]
             ],
             [
                 'label' => Tools::trans('excess'),
-                'where' => [new DataBaseWhere('disponible', 'field:stockmax', '>')]
+                'where' => [new DataBaseWhere('disponible', 'field:stockmax', '>', 'AND', true)]
             ]
         ];
 

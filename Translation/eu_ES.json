@@ -10,7 +10,7 @@
     "reason-for-change": "Aldaketaren arrazoia",
     "rebuild-movements": "Mugimenduak berritu",
     "rebuilding-movements": "Produktuaren %reference% mugimenduak berreskuratzea (%offset%\/%total%)",
-    "rebuilding-movements-finished": "Reconstrucción de movimientos finalizada con %total% productos",
+    "rebuilding-movements-finished": "Mugimenduen berreraikitzea amaitu da, %total% produkturekin",
     "rebuilding-stock": "%reference% produktuaren stock-a (%%offset%\/%total%) berreraikitzen",
     "rebuilding-stock-finished": "Stockaren berreraikitzea amaitu da: %total% produktu",
     "rebuilt-movements": "Mugimenduak berreraiki dira",
