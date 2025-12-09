@@ -383,7 +383,13 @@ class StockMovementManager
                         $movement->docmodel = $doc->modelClassName();
                         $movement->idproducto = $line->idproducto ?? $line->getProducto()->idproducto;
                         $movement->referencia = $line->referencia;
-                        $movement->cantidad = $line->actualizastock * $line->cantidad;
+
+                        $movement->cantidad = in_array($line->actualizastock, [-1, 0, 1]) ?
+                            $line->actualizastock * $line->cantidad : 0;
+                        if (empty($movement->cantidad)) {
+                            continue;
+                        }
+
                         $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
                         $movement->fecha = $doc->fecha;
                         $movement->hora = $doc->hora;

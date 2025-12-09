@@ -26,6 +26,7 @@ use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\Email\MailNotifier;
 use FacturaScripts\Dinamic\Lib\Email\TextBlock;
 use FacturaScripts\Dinamic\Lib\Email\TitleBlock;
+use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\User;
 
 /**
@@ -44,6 +45,10 @@ class StockMinMaxManager
     public static function notify(array &$messages = [], bool $cron = false): void
     {
         static::$db = new DataBase();
+
+        // forzamos la comprobación de la tabla stocks
+        new Stock();
+
         static::stockMin($messages);
         static::stockMax($messages);
 
@@ -89,9 +94,10 @@ class StockMinMaxManager
 
     private static function getUsers(): array
     {
-        $where = [Where::column('admin', true)];
+        $where = [Where::eq('admin', true)];
         return User::all($where);
     }
+
     private static function stockMax(array &$messages): void
     {
         $messages[] = '- Búsqueda de productos con stock máximo ...';
