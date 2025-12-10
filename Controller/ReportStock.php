@@ -81,7 +81,7 @@ class ReportStock extends ListController
             ->setSettings('checkBoxes', false);
     }
 
-    protected function createViewsStock(string $viewName = 'StockProducto'): void
+    protected function createViewsStock(string $viewName = 'StockVariante'): void
     {
         $values = [
             [

@@ -21,8 +21,6 @@ namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
 use FacturaScripts\Core\DataSrc\Almacenes;
-use FacturaScripts\Core\Tools;
-use FacturaScripts\Dinamic\Lib\StockMovementManager;
 
 /**
  * Description of ListAlmacen
@@ -76,16 +74,6 @@ class ListAlmacen
             if (count($warehouses) > 2) {
                 $this->addFilterSelect($viewName, 'codalmacen', 'warehouse', 'codalmacen', $warehouses);
             }
-
-            if ($this->user->admin) {
-                $this->addButton($viewName, [
-                    'action' => 'rebuild-movements',
-                    'color' => 'warning',
-                    'confirm' => true,
-                    'icon' => 'fa-solid fa-magic',
-                    'label' => 'rebuild-movements'
-                ]);
-            }
         };
     }
 
@@ -104,29 +92,6 @@ class ListAlmacen
                 $this->addFilterSelect($viewName, 'codalmacenorigen', 'origin-warehouse', 'codalmacenorigen', $warehouses);
                 $this->addFilterSelect($viewName, 'codalmacendestino', 'destination-warehouse', 'codalmacendestino', $warehouses);
             }
-        };
-    }
-
-    protected function execPreviousAction(): Closure
-    {
-        return function ($action) {
-            if ($action === 'rebuild-movements') {
-                $this->rebuildMovementsAction();
-            }
-        };
-    }
-
-    protected function rebuildMovementsAction(): Closure
-    {
-        return function () {
-            if (false === $this->user->admin) {
-                Tools::log()->warning('not-allowed-modify');
-                return;
-            } elseif (false === $this->validateFormToken()) {
-                return;
-            }
-
-            StockMovementManager::rebuild();
         };
     }
 }

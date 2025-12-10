@@ -21,7 +21,6 @@ namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Producto;
@@ -36,19 +35,7 @@ class ListProducto
     protected function createViews(): Closure
     {
         return function () {
-            $viewName = 'ListStock';
-            $this->addFilterNumber($viewName, 'min-stock', 'quantity', 'stocks.cantidad', '>=');
-            $this->addFilterNumber($viewName, 'max-stock', 'quantity', 'stocks.cantidad', '<=');
-
             if ($this->user->admin) {
-                $this->addButton('ListStock', [
-                    'action' => 'rebuild-movements',
-                    'color' => 'warning',
-                    'confirm' => true,
-                    'icon' => 'fa-solid fa-repeat',
-                    'label' => 'rebuild-movements'
-                ]);
-
                 $this->addButton('ListStock', [
                     'action' => 'rebuild-stock',
                     'color' => 'warning',
@@ -65,32 +52,7 @@ class ListProducto
         return function ($action) {
             if ($action === 'rebuild-stock') {
                 $this->rebuildStockAction();
-            } elseif ($action === 'rebuild-movements') {
-                $this->rebuildMovementsAction();
             }
-        };
-    }
-
-    protected function rebuildMovementsAction(): Closure
-    {
-        return function () {
-            // si no hay productos, no hacemos nada
-            $total = (int)$this->request->get('total', Producto::count());
-            if (empty($total)) {
-                Tools::log()->warning('no-products');
-                return;
-            }
-
-            // procesamos los productos de uno en uno, redirigiendo a la misma página
-            $offset = (int)$this->request->get('offset', 0);
-            foreach (Producto::all([], [], $offset, 1) as $product) {
-                StockMovementManager::rebuild($product->id());
-                Tools::log()->info('rebuilding-movements', ['%reference%' => $product->referencia, '%offset%' => $offset + 1, '%total%' => $total]);
-                $this->redirect('?activetab=ListStock&action=rebuild-movements&total=' . $total . '&offset=' . ($offset + 1), 1);
-                return;
-            }
-
-            Tools::log()->info('rebuilding-movements-finished', ['%total%' => $total]);
         };
     }
 

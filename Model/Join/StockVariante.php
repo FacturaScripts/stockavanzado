@@ -23,11 +23,11 @@ use FacturaScripts\Core\Model\Base\JoinModel;
 use FacturaScripts\Dinamic\Model\Producto;
 
 /**
- * Description of StockProducto
+ * Description of StockVariante
  *
  * @author Carlos Garcia Gomez <carlos@facturascripts.com>
  */
-class StockProducto extends JoinModel
+class StockVariante extends JoinModel
 {
     /**
      * Class constructor.
