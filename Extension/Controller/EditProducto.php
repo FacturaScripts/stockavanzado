@@ -30,6 +30,7 @@ use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
+use FacturaScripts\Dinamic\Model\WorkEvent;
 
 /**
  * Description of EditProducto
@@ -154,6 +155,10 @@ class EditProducto
                 case 'rebuild-stock':
                     $this->rebuildStockAction();
                     break;
+
+                case 'wait-queue-end':
+                    $this->waitQueueEnd();
+                    break;
             }
         };
     }
@@ -188,7 +193,9 @@ class EditProducto
 
             WorkQueue::send('Model.Producto.rebuildStockMovements', $product->id());
 
-            Tools::log()->notice('rebuilt-movements');
+            Tools::log()->info('reloading');
+
+            $this->redirect($product->url() . '&action=wait-queue-end', 3);
         };
     }
 
@@ -210,6 +217,27 @@ class EditProducto
             StockRebuildManager::rebuild($product->idproducto);
 
             Tools::log()->notice('rebuilt-stock');
+        };
+    }
+
+    protected function waitQueueEnd(): Closure
+    {
+        return function () {
+            // comprobamos si hay trabajos pendientes
+            $where = [Where::eq('done', false)];
+            if (WorkEvent::count($where) === 0) {
+                Tools::log()->notice('rebuilt-movements');
+                return;
+            }
+
+            $product = $this->getModel();
+            if (false === $product->load($this->request->get('code'))) {
+                return;
+            }
+
+            Tools::log()->info('reloading');
+
+            $this->redirect($product->url() . '&action=wait-queue-end', 3);
         };
     }
 }

@@ -20,7 +20,8 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
-use FacturaScripts\Core\WorkQueue;
+use FacturaScripts\Dinamic\Lib\BusinessDocumentGenerator;
+use FacturaScripts\Dinamic\Lib\Calculator;
 use FacturaScripts\Dinamic\Model\AlbaranCliente;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
@@ -82,7 +83,7 @@ final class BusinessDocumentsTest extends TestCase
         $this->assertTrue($linea->save());
 
         // comprobamos que se ha actualizado el stock del producto
-        $this->assertTrue($stock->load($stock->id()));
+        $this->assertTrue($stock->reload());
         $this->assertEquals(0, $stock->cantidad);
         $this->assertEquals(0, $stock->disponible);
         $this->assertEquals(0, $stock->pterecibir);
@@ -104,6 +105,134 @@ final class BusinessDocumentsTest extends TestCase
         $this->assertTrue($albaran->delete());
         $this->assertTrue($customer->delete());
         $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testPartialAlbaranCliente(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al producto
+        $stock = new Stock();
+        $stock->referencia = $product->referencia;
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->cantidad = 10;
+        $stock->disponible = 10;
+        $this->assertTrue($stock->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos un albarán en ese almacén
+        $albaran = new AlbaranCliente();
+        $this->assertTrue($albaran->setSubject($customer));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+
+        // añadimos una línea al albarán
+        $linea = $albaran->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->servido = 5;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // actualizamos los totales
+        $lines = $albaran->getLines();
+        $this->assertTrue(Calculator::calculate($albaran, $lines, true));
+
+        // probamos parcialmente el albarán
+        $generator = new BusinessDocumentGenerator();
+        $this->assertTrue($generator->generate($albaran, 'FacturaCliente', [$linea], [$linea->idlinea => 5]), 'can-not-generate-document');
+
+        // ahora comprobamos que la factura se ha creado
+        $facturas = $generator->getLastDocs();
+        $this->assertCount(1, $facturas);
+
+        // comprobamos que hay 2 movimientos de stock
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $movimientos = MovimientoStock::all($whereRef);
+        $this->assertCount(2, $movimientos);
+
+        // comprobamos que cada uno tiene cantidad 5
+        $this->assertEquals(-5, $movimientos[0]->cantidad);
+        $this->assertEquals(-5, $movimientos[1]->cantidad);
+
+        // eliminamos
+        $this->assertTrue($facturas[0]->delete());
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testPartialAlbaranProveedor(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un proveedor
+        $proveedor = $this->getRandomSupplier();
+        $this->assertTrue($proveedor->save());
+
+        // creamos el albarán de proveedor
+        $albaran = new AlbaranProveedor();
+        $this->assertTrue($albaran->setSubject($proveedor));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+
+        // añadimos una línea al albarán
+        $linea = $albaran->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->servido = 5;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // actualizamos los totales
+        $lines = $albaran->getLines();
+        $this->assertTrue(Calculator::calculate($albaran, $lines, true));
+
+        // probamos parcialmente el albarán
+        $generator = new BusinessDocumentGenerator();
+        $this->assertTrue($generator->generate($albaran, 'FacturaProveedor', [$linea], [$linea->idlinea => 5]), 'can-not-generate-document');
+
+        // ahora comprobamos que la factura se ha creado
+        $facturas = $generator->getLastDocs();
+        $this->assertCount(1, $facturas);
+
+        // comprobamos que hay 2 movimientos de stock
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $movimientos = MovimientoStock::all($whereRef);
+        $this->assertCount(2, $movimientos);
+
+        // comprobamos que cada uno tiene cantidad 5 (positivos porque es entrada de stock)
+        $this->assertEquals(5, $movimientos[0]->cantidad);
+        $this->assertEquals(5, $movimientos[1]->cantidad);
+
+        // eliminamos
+        $this->assertTrue($facturas[0]->delete());
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
         $this->assertTrue($product->delete());
         $this->assertTrue($warehouse->delete());
     }

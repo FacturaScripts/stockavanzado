@@ -90,9 +90,9 @@ class StockMovementManager
 
         // actualizamos la cantidad
         $movement->cantidad -= in_array($line->getOriginal('actualizastock'), [-1, 0, 1]) ?
-            $line->getOriginal('actualizastock') * $line->getOriginal('cantidad') : 0;
+            $line->getOriginal('actualizastock') * ($line->getOriginal('cantidad') - $line->getOriginal('servido')) : 0;
         $movement->cantidad += in_array($line->actualizastock, [-1, 0, 1]) ?
-            $line->actualizastock * $line->cantidad : 0;
+            $line->actualizastock * ($line->cantidad - $line->servido) : 0;
         $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
@@ -385,7 +385,7 @@ class StockMovementManager
                         $movement->referencia = $line->referencia;
 
                         $movement->cantidad = in_array($line->actualizastock, [-1, 0, 1]) ?
-                            $line->actualizastock * $line->cantidad : 0;
+                            $line->actualizastock * ($line->cantidad - $line->servido) : 0;
                         if (empty($movement->cantidad)) {
                             continue;
                         }
@@ -398,7 +398,7 @@ class StockMovementManager
                     }
 
                     // ya existe, actualizamos la cantidad
-                    $movement->cantidad += $line->actualizastock * $line->cantidad;
+                    $movement->cantidad += $line->actualizastock * ($line->cantidad - $line->servido);
                     if (empty($model->cantidad)) {
                         $movement->delete();
                     } else {
