@@ -111,7 +111,7 @@ class ReportStock extends ListController
         $manufacturers = $this->codeModel->all('fabricantes', 'codfabricante', 'nombre');
         $families = $this->codeModel->all('familias', 'codfamilia', 'descripcion');
 
-        $this->addView($viewName, 'Join\StockProducto', 'stock', 'fa-solid fa-dolly')
+        $this->addView($viewName, 'Join\StockVariante', 'stock', 'fa-solid fa-dolly')
             ->addOrderBy(['referencia', 'codalmacen'], 'reference')
             ->addOrderBy(['disponible'], 'available')
             ->addOrderBy(['cantidad'], 'quantity', 2)
