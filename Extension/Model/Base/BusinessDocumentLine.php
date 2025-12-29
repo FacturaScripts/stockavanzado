@@ -31,6 +31,10 @@ class BusinessDocumentLine
     public static function transfer(): Closure
     {
         return function ($fromCodalmacen, $toCodalmacen, $doc) {
+            if (empty($this->idproducto)) {
+                return;
+            }
+
             // creamos el movimiento de stock
             StockMovementManager::addTransferLine($this, $doc, $fromCodalmacen, $toCodalmacen);
 
@@ -42,6 +46,10 @@ class BusinessDocumentLine
     protected function updateStock(): Closure
     {
         return function ($doc) {
+            if (empty($this->idproducto)) {
+                return;
+            }
+
             // creamos el movimiento de stock
             StockMovementManager::addLineBusinessDocument($this, $doc);
 
