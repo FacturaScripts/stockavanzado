@@ -58,7 +58,7 @@ class StockVariante extends JoinModel
             'nostock' => 'productos.nostock',
             'precio' => 'variantes.precio',
             'pterecibir' => 'stocks.pterecibir',
-            'referencia' => 'stocks.referencia',
+            'referencia' => 'variantes.referencia',
             'reservada' => 'stocks.reservada',
             'stockmax' => 'stocks.stockmax',
             'stockmin' => 'stocks.stockmin',
