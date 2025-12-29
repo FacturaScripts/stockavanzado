@@ -12,7 +12,7 @@
     "rebuilding-movements": "Bewegungen des Produkts %reference% werden rekonstruiert (%offset%\/%total%)",
     "rebuilding-movements-finished": "Wiederaufbau der Bewegungen mit %total% Produkten abgeschlossen",
     "rebuilding-stock": "Bestand des Produkts %reference% (%offset%\/%total%) wird wiederhergestellt",
-    "rebuilding-stock-finished": "Bestandswiederaufbau abgeschlossen mit %total% Produkten.",
+    "rebuilding-stock-finished": "Bestandswiederaufbau abgeschlossen mit %total% Produkten",
     "rebuilt-movements": "Bewegungen wiederhergestellt",
     "rebuilt-stock": "Neuaufbau-Bestand",
     "reconstructed-movements": "Lagerbewegungen wieder hergestellt",

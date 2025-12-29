@@ -18,7 +18,7 @@
     "reconstructed-movements": "Movimentos de stock reconstruídos",
     "start-with-one-stock": "C",
     "start-with-product-stock": "Inicializar com o stock atual",
-    "start-with-zero-stock": "Inicializar com stock 0",
+    "start-with-zero-stock": "Iniciar com stock 0",
     "stock-count": "Contagem de estoque",
     "stock-count-line-p": "Adicione linhas a esta lista escrevendo\/escanando um código de barras ou referência. Se o produto já existia, a quantidade é aumentada.",
     "stock-counts": "Contagens",
