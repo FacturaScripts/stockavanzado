@@ -455,7 +455,7 @@ class EditConteoStock extends EditController
 
         // si hay familia, filtramos
         if (!empty($codfamilia)) {
-            $sql .= ' p.codfamilia = ' . $this->dataBase->var2str($codfamilia);
+            $sql .= ' AND p.codfamilia = ' . $this->dataBase->var2str($codfamilia);
         }
 
         // obtenemos las variantes
