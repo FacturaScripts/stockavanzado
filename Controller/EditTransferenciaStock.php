@@ -431,15 +431,15 @@ class EditTransferenciaStock extends EditController
         $option = $this->request->get('option', 'one');
 
         // obtenemos todas las variantes
-        $sql = 'SELECT v.* from variantes as v';
+        $sql = 'SELECT v.referencia, v.idproducto, COALESCE(s.cantidad, 0) AS cantidad '
+            . ' FROM variantes as v'
+            . ' JOIN productos as p ON p.idproducto = v.idproducto'
+            . ' LEFT JOIN stocks as s ON s.referencia = v.referencia AND s.codalmacen = ' . $this->dataBase->var2str($transferencia->codalmacenorigen)
+            . ' WHERE p.nostock = 0 AND COALESCE(s.cantidad, 0) > 0';
 
         // si hay familia, filtramos
         if (!empty($codfamilia)) {
-            $sql .= ' JOIN productos as p ON p.idproducto = v.idproducto'
-                . ' WHERE p.codfamilia = ' . $this->dataBase->var2str($codfamilia)
-                . ' AND v.stockfis > 0';
-        } else {
-            $sql .= ' WHERE v.stockfis > 0';
+            $sql .= ' AND p.codfamilia = ' . $this->dataBase->var2str($codfamilia);
         }
 
         // obtenemos las variantes
@@ -452,7 +452,7 @@ class EditTransferenciaStock extends EditController
 
         // recorremos las variantes
         foreach ($variants as $variant) {
-            $qty = $option === 'one' ? 1 : $variant['stockfis'];
+            $qty = $option === 'one' ? 1 : $variant['cantidad'];
             $newLine = $transferencia->addLine($variant['referencia'], $variant['idproducto'], $qty);
             if (empty($newLine->id())) {
                 Tools::log()->error('record-save-error');
