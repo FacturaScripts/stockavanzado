@@ -447,12 +447,15 @@ class EditConteoStock extends EditController
         $option = $this->request->get('option', 'cero');
 
         // obtenemos todas las variantes
-        $sql = 'SELECT v.* from variantes as v';
+        $sql = 'SELECT v.referencia, v.idproducto, COALESCE(s.cantidad, 0) AS cantidad '
+            . ' FROM variantes as v'
+            . ' JOIN productos as p ON p.idproducto = v.idproducto'
+            . ' LEFT JOIN stocks as s ON s.referencia = v.referencia AND s.codalmacen = ' . $this->dataBase->var2str($conteo->codalmacen)
+            . ' WHERE p.nostock = 0';
 
         // si hay familia, filtramos
         if (!empty($codfamilia)) {
-            $sql .= ' JOIN productos as p ON p.idproducto = v.idproducto'
-                . ' WHERE p.codfamilia = ' . $this->dataBase->var2str($codfamilia);
+            $sql .= ' p.codfamilia = ' . $this->dataBase->var2str($codfamilia);
         }
 
         // obtenemos las variantes
@@ -465,7 +468,7 @@ class EditConteoStock extends EditController
 
         // recorremos las variantes
         foreach ($variants as $variant) {
-            $qty = $option === 'cero' ? 0.0 : $variant['stockfis'];
+            $qty = $option === 'cero' ? 0.0 : (float)$variant['cantidad'];
             $newLine = $conteo->addLine($variant['referencia'], $variant['idproducto'], $qty);
             if (empty($newLine->id())) {
                 Tools::log()->error('record-save-error');
