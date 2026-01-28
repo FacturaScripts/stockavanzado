@@ -21,6 +21,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 
 use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\DataSrc\Almacenes;
+use FacturaScripts\Core\KernelException;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
@@ -171,16 +172,59 @@ class StockRebuildManager
         static::$idproducto = $idproducto;
     }
 
+    /**
+     * Calcula las cantidades pendientes de recibir para un almacén
+     * para cada tipo de documento de proveedor.
+     *
+     * @param array $stockData
+     * @param string $codalmacen
+     * @return void
+     * @throws KernelException
+     */
     protected static function setPterecibir(array &$stockData, string $codalmacen): void
     {
-        if (false === static::db()->tableExists('lineaspedidosprov')) {
+        static::applyPteRecibirFromTable($stockData, $codalmacen, 'pedidosprov', 'idpedido');
+        static::applyPteRecibirFromTable($stockData, $codalmacen, 'albaranesprov', 'idalbaran');
+        static::applyPteRecibirFromTable($stockData, $codalmacen, 'facturasprov', 'idfactura');
+    }
+
+    /**
+     * Calcula las cantidades reservadas para un almacén
+     * para cada tipo de documento de cliente.
+     *
+     * @param array $stockData
+     * @param string $codalmacen
+     * @return void
+     * @throws KernelException
+     */
+    protected static function setReservada(array &$stockData, string $codalmacen): void
+    {
+        static::applyReservadaFromTable($stockData, $codalmacen, 'pedidoscli', 'idpedido');
+        static::applyReservadaFromTable($stockData, $codalmacen, 'albaranescli', 'idalbaran');
+        static::applyReservadaFromTable($stockData, $codalmacen, 'facturascli', 'idfactura');
+    }
+
+    /**
+     * Aplica las cantidades pendientes de recibir desde una tabla específica
+     *
+     * @param array $stockData
+     * @param string $codalmacen
+     * @param string $table
+     * @param string $field
+     * @return void
+     * @throws KernelException
+     */
+    private static function applyPteRecibirFromTable(array &$stockData, string $codalmacen, string $table, string $field): void
+    {
+        $linesTable = 'lineas' . $table;
+        if (false === static::db()->tableExists($linesTable)) {
             return;
         }
 
         $sql = "SELECT l.referencia,"
             . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as pte"
-            . " FROM lineaspedidosprov l"
-            . " JOIN pedidosprov p ON l.idpedido = p.idpedido"
+            . " FROM {$linesTable} l"
+            . " JOIN {$table} p ON p.{$field} = l.{$field}"
             . " JOIN variantes v ON v.referencia = l.referencia"
             . " WHERE l.referencia IS NOT NULL";
 
@@ -191,6 +235,7 @@ class StockRebuildManager
         $sql .= " AND l.actualizastock = '2'"
             . " AND p.codalmacen = " . static::db()->var2str($codalmacen)
             . " GROUP BY 1;";
+
         foreach (static::db()->select($sql) as $row) {
             $ref = trim($row['referencia']);
             if (!isset($stockData[$ref])) {
@@ -198,24 +243,36 @@ class StockRebuildManager
                     'cantidad' => 0,
                     'codalmacen' => $codalmacen,
                     'referencia' => $ref,
-                    'reservada' => 0
+                    'reservada' => 0,
+                    'pterecibir' => 0,
                 ];
             }
 
-            $stockData[$ref]['pterecibir'] = (float)$row['pte'];
+            $stockData[$ref]['pterecibir'] += (float)$row['pte'];
         }
     }
 
-    protected static function setReservada(array &$stockData, string $codalmacen): void
+    /**
+     * Aplica las cantidades reservadas desde una tabla específica
+     *
+     * @param array $stockData
+     * @param string $codalmacen
+     * @param string $table
+     * @param string $field
+     * @return void
+     * @throws KernelException
+     */
+    private static function applyReservadaFromTable(array &$stockData, string $codalmacen, string $table, string $field): void
     {
-        if (false === static::db()->tableExists('lineaspedidoscli')) {
+        $linesTable = 'lineas' . $table;
+        if (false === static::db()->tableExists($linesTable)) {
             return;
         }
 
         $sql = "SELECT l.referencia,"
             . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as reservada"
-            . " FROM lineaspedidoscli l"
-            . " JOIN pedidoscli p ON l.idpedido = p.idpedido"
+            . " FROM {$linesTable} l"
+            . " JOIN {$table} p ON p.{$field} = l.{$field}"
             . " JOIN variantes v ON v.referencia = l.referencia"
             . " WHERE l.referencia IS NOT NULL";
 
@@ -226,6 +283,7 @@ class StockRebuildManager
         $sql .= " AND l.actualizastock = '-2'"
             . " AND p.codalmacen = " . static::db()->var2str($codalmacen)
             . " GROUP BY 1;";
+
         foreach (static::db()->select($sql) as $row) {
             $ref = trim($row['referencia']);
             if (!isset($stockData[$ref])) {
@@ -233,11 +291,12 @@ class StockRebuildManager
                     'cantidad' => 0,
                     'codalmacen' => $codalmacen,
                     'pterecibir' => 0,
-                    'referencia' => $ref
+                    'referencia' => $ref,
+                    'reservada' => 0,
                 ];
             }
 
-            $stockData[$ref]['reservada'] = (float)$row['reservada'];
+            $stockData[$ref]['reservada'] += (float)$row['reservada'];
         }
     }
 }
