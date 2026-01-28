@@ -173,71 +173,91 @@ class StockRebuildManager
 
     protected static function setPterecibir(array &$stockData, string $codalmacen): void
     {
-        if (false === static::db()->tableExists('lineaspedidosprov')) {
-            return;
-        }
-
-        $sql = "SELECT l.referencia,"
-            . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as pte"
-            . " FROM lineaspedidosprov l"
-            . " JOIN pedidosprov p ON l.idpedido = p.idpedido"
-            . " JOIN variantes v ON v.referencia = l.referencia"
-            . " WHERE l.referencia IS NOT NULL";
-
-        if (null !== static::$idproducto) {
-            $sql .= " AND l.idproducto = " . static::db()->var2str(static::$idproducto);
-        }
-
-        $sql .= " AND l.actualizastock = '2'"
-            . " AND p.codalmacen = " . static::db()->var2str($codalmacen)
-            . " GROUP BY 1;";
-        foreach (static::db()->select($sql) as $row) {
-            $ref = trim($row['referencia']);
-            if (!isset($stockData[$ref])) {
-                $stockData[$ref] = [
-                    'cantidad' => 0,
-                    'codalmacen' => $codalmacen,
-                    'referencia' => $ref,
-                    'reservada' => 0
-                ];
+        $apply = function (string $table, string $field) use (&$stockData, $codalmacen): void {
+            $linesTable = 'lineas' . $table;
+            if (false === static::db()->tableExists($linesTable)) {
+                return;
             }
 
-            $stockData[$ref]['pterecibir'] = (float)$row['pte'];
-        }
-    }
+            $sql = "SELECT l.referencia,"
+                . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as pte"
+                . " FROM {$linesTable} l"
+                . " JOIN {$table} p ON p.{$field} = l.{$field}"
+                . " JOIN variantes v ON v.referencia = l.referencia"
+                . " WHERE l.referencia IS NOT NULL";
 
+            if (null !== static::$idproducto) {
+                $sql .= " AND l.idproducto = " . static::db()->var2str(static::$idproducto);
+            }
+
+            $sql .= " AND l.actualizastock = '2'"
+                . " AND p.codalmacen = " . static::db()->var2str($codalmacen)
+                . " GROUP BY 1;";
+
+            foreach (static::db()->select($sql) as $row) {
+                $ref = trim($row['referencia']);
+                if (!isset($stockData[$ref])) {
+                    $stockData[$ref] = [
+                        'cantidad' => 0,
+                        'codalmacen' => $codalmacen,
+                        'referencia' => $ref,
+                        'reservada' => 0,
+                        'pterecibir' => 0,
+                    ];
+                }
+
+                $stockData[$ref]['pterecibir'] += (float)$row['pte'];
+            }
+        };
+
+        // Aplicar para los diferentes tipos de documentos de proveedor
+        $apply('pedidosprov', 'idpedido');
+        $apply('albaranesprov', 'idalbaran');
+        $apply('facturasprov', 'idfactura');
+    }
+    
     protected static function setReservada(array &$stockData, string $codalmacen): void
     {
-        if (false === static::db()->tableExists('lineaspedidoscli')) {
-            return;
-        }
-
-        $sql = "SELECT l.referencia,"
-            . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as reservada"
-            . " FROM lineaspedidoscli l"
-            . " JOIN pedidoscli p ON l.idpedido = p.idpedido"
-            . " JOIN variantes v ON v.referencia = l.referencia"
-            . " WHERE l.referencia IS NOT NULL";
-
-        if (null !== static::$idproducto) {
-            $sql .= " AND l.idproducto = " . static::db()->var2str(static::$idproducto);
-        }
-
-        $sql .= " AND l.actualizastock = '-2'"
-            . " AND p.codalmacen = " . static::db()->var2str($codalmacen)
-            . " GROUP BY 1;";
-        foreach (static::db()->select($sql) as $row) {
-            $ref = trim($row['referencia']);
-            if (!isset($stockData[$ref])) {
-                $stockData[$ref] = [
-                    'cantidad' => 0,
-                    'codalmacen' => $codalmacen,
-                    'pterecibir' => 0,
-                    'referencia' => $ref
-                ];
+        $apply = function (string $table, string $field) use (&$stockData, $codalmacen): void {
+            $linesTable = 'lineas' . $table;
+            if (false === static::db()->tableExists($linesTable)) {
+                return;
             }
 
-            $stockData[$ref]['reservada'] = (float)$row['reservada'];
-        }
+            $sql = "SELECT l.referencia,"
+                . " SUM(CASE WHEN l.cantidad > l.servido THEN l.cantidad - l.servido ELSE 0 END) as reservada"
+                . " FROM {$linesTable} l"
+                . " JOIN {$table} p ON p.{$field} = l.{$field}"
+                . " JOIN variantes v ON v.referencia = l.referencia"
+                . " WHERE l.referencia IS NOT NULL";
+
+            if (null !== static::$idproducto) {
+                $sql .= " AND l.idproducto = " . static::db()->var2str(static::$idproducto);
+            }
+
+            $sql .= " AND l.actualizastock = '-2'"
+                . " AND p.codalmacen = " . static::db()->var2str($codalmacen)
+                . " GROUP BY 1;";
+
+            foreach (static::db()->select($sql) as $row) {
+                $ref = trim($row['referencia']);
+                if (!isset($stockData[$ref])) {
+                    $stockData[$ref] = [
+                        'cantidad' => 0,
+                        'codalmacen' => $codalmacen,
+                        'pterecibir' => 0,
+                        'referencia' => $ref,
+                        'reservada' => 0,
+                    ];
+                }
+
+                $stockData[$ref]['reservada'] += (float)$row['reservada'];
+            }
+        };
+
+        // Aplicar para los diferentes tipos de documentos de cliente
+        $apply('pedidoscli', 'idpedido');
+        $apply('albaranescli', 'idalbaran');
+        $apply('facturascli', 'idfactura');
     }
 }
