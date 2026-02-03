@@ -20,6 +20,7 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
+use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
@@ -49,8 +50,8 @@ class ReportProducto
                 ->addFilterSelectWhere('type', [
                     ['label' => Tools::trans('all'), 'where' => []],
                     ['label' => '------', 'where' => []],
-                    ['label' => Tools::trans('purchases'), 'where' => [Where::column('sm.cantidad', 0, '>')]],
-                    ['label' => Tools::trans('sales'), 'where' => [Where::column('sm.cantidad', 0, '<')]],
+                    ['label' => Tools::trans('purchases'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '>')]],
+                    ['label' => Tools::trans('sales'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '<')]],
                 ])
                 ->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=')
                 ->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=')
