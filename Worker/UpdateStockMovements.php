@@ -23,7 +23,9 @@ use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Model\Producto;
 use FacturaScripts\Core\Model\WorkEvent;
 use FacturaScripts\Core\Template\WorkerClass;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
+use FacturaScripts\Plugins\StockAvanzado\Lib\StockRebuildManager;
 use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 
 class UpdateStockMovements extends WorkerClass
@@ -74,6 +76,11 @@ class UpdateStockMovements extends WorkerClass
                     $offset += $limit;
                 } while (count($movements) > 0);
             }
+        }
+
+        $rebuild = (bool)Tools::settings('default', 'stock_rebuild', false) === true ?? false;
+        if ($rebuild) {
+            StockRebuildManager::rebuild($product->idproducto);
         }
 
         return $this->done();
