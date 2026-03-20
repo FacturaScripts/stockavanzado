@@ -40,7 +40,7 @@ use FacturaScripts\Dinamic\Model\TransferenciaStock;
  */
 class Init extends InitClass
 {
-    const ROLE_NAME = 'StockAvanzado';
+
 
     /** @var DataBase */
     private $db;
@@ -84,10 +84,15 @@ class Init extends InitClass
 
     private function createRoleForPlugin(): void
     {
+        $roleName = 'StockAvanzado';
+
+        new Role();
+        new RoleAccess();
+
         // creates the role if not exists
         $role = new Role();
-        if (false === $role->load(self::ROLE_NAME)) {
-            $role->codrole = $role->descripcion = self::ROLE_NAME;
+        if (false === $role->load($roleName)) {
+            $role->codrole = $role->descripcion = $roleName;
             if (false === $role->save()) {
                 return;
             }
@@ -95,12 +100,33 @@ class Init extends InitClass
 
         $this->db()->beginTransaction();
 
-        // check the role permissions
-        $controllerNames = ['EditConteoStock', 'EditTransferenciaStock', 'ReportStock'];
-        foreach ($controllerNames as $controllerName) {
+        // scan Controller and Extension/Controller for pagenames
+        $nameControllers = [];
+        $dirs = [__DIR__ . '/Controller', __DIR__ . '/Extension/Controller'];
+        foreach ($dirs as $dir) {
+            if (!is_dir($dir)) {
+                continue;
+            }
+            foreach (scandir($dir) as $file) {
+                if (!is_file($dir . DIRECTORY_SEPARATOR . $file)) {
+                    continue;
+                }
+                if (substr($file, -4) !== '.php') {
+                    continue;
+                }
+                $name = pathinfo($file, PATHINFO_FILENAME);
+                if (preg_match('/^(Edit|List|Report|Dashboard)/', $name)) {
+                    $nameControllers[] = $name;
+                }
+            }
+        }
+        $nameControllers = array_unique($nameControllers);
+
+        // check/create the role permissions
+        foreach ($nameControllers as $controllerName) {
             $roleAccess = new RoleAccess();
             $where = [
-                Where::eq('codrole', self::ROLE_NAME),
+                Where::eq('codrole', $roleName),
                 Where::eq('pagename', $controllerName)
             ];
             if ($roleAccess->loadWhere($where)) {
@@ -110,7 +136,7 @@ class Init extends InitClass
             // creates the permission if not exists
             $roleAccess->allowdelete = true;
             $roleAccess->allowupdate = true;
-            $roleAccess->codrole = self::ROLE_NAME;
+            $roleAccess->codrole = $roleName;
             $roleAccess->pagename = $controllerName;
             $roleAccess->onlyownerdata = false;
             if (false === $roleAccess->save()) {
