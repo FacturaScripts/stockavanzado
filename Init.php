@@ -40,8 +40,8 @@ use FacturaScripts\Dinamic\Model\TransferenciaStock;
  */
 class Init extends InitClass
 {
-    const ROLE_NAME = 'StockAvanzado';
 
+    const ROLE_NAME = 'StockAvanzado';
     /** @var DataBase */
     private $db;
 
@@ -84,6 +84,13 @@ class Init extends InitClass
 
     private function createRoleForPlugin(): void
     {
+        // force table checks for Role and RoleAccess
+        new Role();
+        new RoleAccess();
+
+        $dataBase = new DataBase();
+        $dataBase->beginTransaction();
+
         // creates the role if not exists
         $role = new Role();
         if (false === $role->load(self::ROLE_NAME)) {
@@ -93,17 +100,19 @@ class Init extends InitClass
             }
         }
 
-        $this->db()->beginTransaction();
-
-        // check the role permissions
-        $controllerNames = ['EditConteoStock', 'EditTransferenciaStock', 'ReportStock'];
-        foreach ($controllerNames as $controllerName) {
+        // checks the role permissions (only plugin's own controllers)
+        $nameControllers = [
+            'ApiCountingExecute', 'ApiTransferExecute', 'EditConteoStock',
+            'EditTransferenciaStock', 'ReportStock'
+        ];
+        foreach ($nameControllers as $nameController) {
             $roleAccess = new RoleAccess();
             $where = [
                 Where::eq('codrole', self::ROLE_NAME),
-                Where::eq('pagename', $controllerName)
+                Where::eq('pagename', $nameController)
             ];
             if ($roleAccess->loadWhere($where)) {
+                // permission exists? Then skip
                 continue;
             }
 
@@ -111,17 +120,17 @@ class Init extends InitClass
             $roleAccess->allowdelete = true;
             $roleAccess->allowupdate = true;
             $roleAccess->codrole = self::ROLE_NAME;
-            $roleAccess->pagename = $controllerName;
+            $roleAccess->pagename = $nameController;
             $roleAccess->onlyownerdata = false;
             if (false === $roleAccess->save()) {
-                // exit and rollback on fail
-                $this->db()->rollback();
+                // rollback and exit on fail
+                $dataBase->rollback();
                 return;
             }
         }
 
-        // commit if there is no problem
-        $this->db()->commit();
+        // without problems = Commit
+        $dataBase->commit();
     }
 
     protected function db(): DataBase
