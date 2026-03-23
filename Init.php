@@ -41,7 +41,7 @@ use FacturaScripts\Dinamic\Model\TransferenciaStock;
 class Init extends InitClass
 {
 
-
+    const ROLE_NAME = 'StockAvanzado';
     /** @var DataBase */
     private $db;
 
@@ -84,70 +84,53 @@ class Init extends InitClass
 
     private function createRoleForPlugin(): void
     {
-        $roleName = 'StockAvanzado';
-
+        // force table checks for Role and RoleAccess
         new Role();
         new RoleAccess();
 
+        $dataBase = new DataBase();
+        $dataBase->beginTransaction();
+
         // creates the role if not exists
         $role = new Role();
-        if (false === $role->load($roleName)) {
-            $role->codrole = $role->descripcion = $roleName;
+        if (false === $role->load(self::ROLE_NAME)) {
+            $role->codrole = $role->descripcion = self::ROLE_NAME;
             if (false === $role->save()) {
                 return;
             }
         }
 
-        $this->db()->beginTransaction();
-
-        // scan Controller and Extension/Controller for pagenames
-        $nameControllers = [];
-        $dirs = [__DIR__ . '/Controller', __DIR__ . '/Extension/Controller'];
-        foreach ($dirs as $dir) {
-            if (!is_dir($dir)) {
-                continue;
-            }
-            foreach (scandir($dir) as $file) {
-                if (!is_file($dir . DIRECTORY_SEPARATOR . $file)) {
-                    continue;
-                }
-                if (substr($file, -4) !== '.php') {
-                    continue;
-                }
-                $name = pathinfo($file, PATHINFO_FILENAME);
-                if (preg_match('/^(Edit|List|Report|Dashboard)/', $name)) {
-                    $nameControllers[] = $name;
-                }
-            }
-        }
-        $nameControllers = array_unique($nameControllers);
-
-        // check/create the role permissions
-        foreach ($nameControllers as $controllerName) {
+        // checks the role permissions (only plugin's own controllers)
+        $nameControllers = [
+            'ApiCountingExecute', 'ApiTransferExecute', 'EditConteoStock',
+            'EditTransferenciaStock', 'ReportStock'
+        ];
+        foreach ($nameControllers as $nameController) {
             $roleAccess = new RoleAccess();
             $where = [
-                Where::eq('codrole', $roleName),
-                Where::eq('pagename', $controllerName)
+                Where::eq('codrole', self::ROLE_NAME),
+                Where::eq('pagename', $nameController)
             ];
             if ($roleAccess->loadWhere($where)) {
+                // permission exists? Then skip
                 continue;
             }
 
             // creates the permission if not exists
             $roleAccess->allowdelete = true;
             $roleAccess->allowupdate = true;
-            $roleAccess->codrole = $roleName;
-            $roleAccess->pagename = $controllerName;
+            $roleAccess->codrole = self::ROLE_NAME;
+            $roleAccess->pagename = $nameController;
             $roleAccess->onlyownerdata = false;
             if (false === $roleAccess->save()) {
-                // exit and rollback on fail
-                $this->db()->rollback();
+                // rollback and exit on fail
+                $dataBase->rollback();
                 return;
             }
         }
 
-        // commit if there is no problem
-        $this->db()->commit();
+        // without problems = Commit
+        $dataBase->commit();
     }
 
     protected function db(): DataBase
