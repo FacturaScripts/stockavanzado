@@ -2,7 +2,7 @@
 <view>
     <columns>
         <group name="products">
-            <column name="stock_rebuild" title="rebuild_stock_after_moviments" numcolumns="3" order="130">
+            <column name="stock_rebuild" title="rebuild-stock-after-moviments" numcolumns="3" order="130">
                 <widget type="checkbox" fieldname="stock_rebuild"/>
             </column>
         </group>

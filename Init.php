@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -40,7 +40,6 @@ use FacturaScripts\Dinamic\Model\TransferenciaStock;
  */
 class Init extends InitClass
 {
-
     const ROLE_NAME = 'StockAvanzado';
     /** @var DataBase */
     private $db;
@@ -88,8 +87,7 @@ class Init extends InitClass
         new Role();
         new RoleAccess();
 
-        $dataBase = new DataBase();
-        $dataBase->beginTransaction();
+        $this->db()->beginTransaction();
 
         // creates the role if not exists
         $role = new Role();
@@ -124,13 +122,12 @@ class Init extends InitClass
             $roleAccess->onlyownerdata = false;
             if (false === $roleAccess->save()) {
                 // rollback and exit on fail
-                $dataBase->rollback();
+                $this->db()->rollback();
                 return;
             }
         }
 
-        // without problems = Commit
-        $dataBase->commit();
+        $this->db()->commit();
     }
 
     protected function db(): DataBase
