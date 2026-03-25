@@ -177,6 +177,84 @@ final class BusinessDocumentsTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testStatusAlbaranClienteGeneratesInvoice(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al producto
+        $stock = new Stock();
+        $stock->referencia = $product->referencia;
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->cantidad = 10;
+        $stock->disponible = 10;
+        $this->assertTrue($stock->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos un albarán en ese almacén
+        $albaran = new AlbaranCliente();
+        $this->assertTrue($albaran->setSubject($customer));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+
+        // añadimos una línea al albarán
+        $linea = $albaran->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // buscamos el estado que genera factura
+        $invoiceStatusId = null;
+        foreach ($albaran->getAvailableStatus() as $status) {
+            if ('FacturaCliente' === $status->generadoc) {
+                $invoiceStatusId = $status->idestado;
+                break;
+            }
+        }
+        $this->assertNotNull($invoiceStatusId);
+
+        // al cambiar el estado se genera la factura
+        $albaran->idestado = $invoiceStatusId;
+        $this->assertTrue($albaran->save());
+
+        // comprobamos que la factura se ha creado
+        $facturas = $albaran->childrenDocuments();
+        $this->assertCount(1, $facturas);
+        $this->assertEquals($warehouse->codalmacen, $facturas[0]->codalmacen);
+
+        // comprobamos que el stock final no cambia
+        $this->assertTrue($stock->reload());
+        $this->assertEquals(0, $stock->cantidad);
+        $this->assertEquals(0, $stock->disponible);
+
+        // comprobamos que el movimiento de stock final pertenece a la factura
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $movimientos = MovimientoStock::all($whereRef);
+        $this->assertCount(1, $movimientos);
+        $this->assertEquals(-10, $movimientos[0]->cantidad);
+        $this->assertEquals($facturas[0]->id(), $movimientos[0]->docid);
+        $this->assertEquals($facturas[0]->modelClassName(), $movimientos[0]->docmodel);
+
+        // eliminamos
+        $this->assertTrue($facturas[0]->delete());
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     public function testPartialAlbaranProveedor(): void
     {
         // creamos un almacén
@@ -227,6 +305,77 @@ final class BusinessDocumentsTest extends TestCase
         // comprobamos que cada uno tiene cantidad 5 (positivos porque es entrada de stock)
         $this->assertEquals(5, $movimientos[0]->cantidad);
         $this->assertEquals(5, $movimientos[1]->cantidad);
+
+        // eliminamos
+        $this->assertTrue($facturas[0]->delete());
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testStatusAlbaranProveedorGeneratesInvoice(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un proveedor
+        $proveedor = $this->getRandomSupplier();
+        $this->assertTrue($proveedor->save());
+
+        // creamos el albarán de proveedor
+        $albaran = new AlbaranProveedor();
+        $this->assertTrue($albaran->setSubject($proveedor));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+
+        // añadimos una línea al albarán
+        $linea = $albaran->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // buscamos el estado que genera factura
+        $invoiceStatusId = null;
+        foreach ($albaran->getAvailableStatus() as $status) {
+            if ('FacturaProveedor' === $status->generadoc) {
+                $invoiceStatusId = $status->idestado;
+                break;
+            }
+        }
+        $this->assertNotNull($invoiceStatusId);
+
+        // al cambiar el estado se genera la factura
+        $albaran->idestado = $invoiceStatusId;
+        $this->assertTrue($albaran->save());
+
+        // comprobamos que la factura se ha creado
+        $facturas = $albaran->childrenDocuments();
+        $this->assertCount(1, $facturas);
+        $this->assertEquals($warehouse->codalmacen, $facturas[0]->codalmacen);
+
+        // comprobamos que el stock final no cambia
+        $stock = new Stock();
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $this->assertTrue($stock->loadWhere($whereRef));
+        $this->assertEquals(10, $stock->cantidad);
+        $this->assertEquals(10, $stock->disponible);
+
+        // comprobamos que el movimiento de stock final pertenece a la factura
+        $movimientos = MovimientoStock::all($whereRef);
+        $this->assertCount(1, $movimientos);
+        $this->assertEquals(10, $movimientos[0]->cantidad);
+        $this->assertEquals($facturas[0]->id(), $movimientos[0]->docid);
+        $this->assertEquals($facturas[0]->modelClassName(), $movimientos[0]->docmodel);
 
         // eliminamos
         $this->assertTrue($facturas[0]->delete());
