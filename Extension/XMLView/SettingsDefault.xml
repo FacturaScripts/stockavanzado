@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<view>
+    <columns>
+        <group name="products">
+            <column name="stock_rebuild" title="rebuild_stock_after_moviments" numcolumns="3" order="130">
+                <widget type="checkbox" fieldname="stock_rebuild"/>
+            </column>
+        </group>
+    </columns>
+</view>
