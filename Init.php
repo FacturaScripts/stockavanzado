@@ -28,7 +28,9 @@ use FacturaScripts\Core\Template\InitClass;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Lib\StockMinMaxManager;
+use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\EmailNotification;
+use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\TransferenciaStock;
@@ -52,6 +54,7 @@ class Init extends InitClass
         $this->loadExtension(new Extension\Controller\ListAlmacen());
         $this->loadExtension(new Extension\Controller\ListProducto());
         $this->loadExtension(new Extension\Controller\ReportProducto());
+        $this->loadExtension(new Extension\Lib\BusinessDocumentGenerator());
         $this->loadExtension(new Extension\Model\Stock());
         $this->loadExtension(new Extension\Model\Base\BusinessDocumentLine());
 
@@ -75,6 +78,10 @@ class Init extends InitClass
         $this->unlinkUsers();
 
         new MovimientoStock();
+        new ConteoStock();
+        new LineaConteoStock();
+        new TransferenciaStock();
+        new LineaTransferenciaStock();
 
         $this->createRoleForPlugin();
         $this->updateEmailNotifications();

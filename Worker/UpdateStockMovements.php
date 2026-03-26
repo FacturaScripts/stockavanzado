@@ -25,8 +25,8 @@ use FacturaScripts\Core\Model\WorkEvent;
 use FacturaScripts\Core\Template\WorkerClass;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
+use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
 use FacturaScripts\Plugins\StockAvanzado\Lib\StockRebuildManager;
-use FacturaScripts\Plugins\StockAvanzado\Model\MovimientoStock;
 
 class UpdateStockMovements extends WorkerClass
 {
@@ -42,39 +42,7 @@ class UpdateStockMovements extends WorkerClass
         foreach ($product->getVariants() as $variant) {
             // recorremos los almacenes
             foreach (Almacenes::all() as $almacen) {
-                $saldo = 0;
-
-                // recorremos los movimientos de stock
-                $where = [
-                    Where::eq('codalmacen', $almacen->codalmacen),
-                    Where::eq('referencia', $variant->referencia)
-                ];
-                $orderBy = ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC'];
-                $offset = 0;
-                $limit = 100;
-
-                do {
-                    $movements = MovimientoStock::all($where, $orderBy, $offset, $limit);
-                    foreach ($movements as $movement) {
-                        // si es un conteo de stock, reiniciamos el saldo
-                        if ($movement->docmodel === 'ConteoStock') {
-                            $saldo = $movement->saldo;
-                            continue;
-                        }
-
-                        // actualizamos el saldo acumulado
-                        $saldo += $movement->cantidad;
-
-                        // actualizamos el saldo en el movimiento, si es necesario
-                        if ($movement->saldo != $saldo) {
-                            $movement->saldo = $saldo;
-                            $movement->save();
-                        }
-                    }
-
-                    // incrementamos el offset para la siguiente iteración
-                    $offset += $limit;
-                } while (count($movements) > 0);
+                StockMovementManager::updateReferenceSaldos($almacen->codalmacen, $variant->referencia);
             }
         }
 
