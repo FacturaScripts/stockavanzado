@@ -9,7 +9,7 @@
     "preload-products": "Preload all products",
     "reason-for-change": "Reason for change",
     "rebuild-movements": "Rebuild movements",
-    "rebuild-stock-after-moviments": "Reconstruir stock tras los movimientos",
+    "rebuild-stock-after-moviments": "Rebuild stock after movements",
     "rebuilding-movements": "Rebuilding movements of product %reference% (%offset%\/%total%)",
     "rebuilding-movements-finished": "Rebuilding of movements finished with %total% products.",
     "rebuilding-stock": "Rebuilding stock for product %reference% (%offset%\/%total%)",
