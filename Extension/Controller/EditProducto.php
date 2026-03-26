@@ -43,22 +43,29 @@ class EditProducto
     protected function changeStockAction(): Closure
     {
         return function () {
-            $data = $this->request->request->all();
+            if (false === $this->permissions->allowUpdate) {
+                Tools::log()->warning('not-allowed-modify');
+                return;
+            } elseif (false === $this->validateFormToken()) {
+                return;
+            }
 
             $stock = new Stock();
+            $data = $this->request->request->all();
             if (empty($data['code']) || false === $stock->load($data['code'])) {
                 Tools::log()->warning('record-not-found');
                 return true;
             }
 
-            $this->dataBase->beginTransaction();
+            // iniciamos una transacción
+            $this->db()->beginTransaction();
 
             // creamos un nuevo conteo
             $conteo = new ConteoStock();
             $conteo->codalmacen = $stock->codalmacen;
             $conteo->observaciones = $data['mov-description'];
             if (false === $conteo->save()) {
-                $this->dataBase->rollback();
+                $this->db()->rollback();
                 Tools::log()->warning('record-save-error');
                 return true;
             }
@@ -66,19 +73,19 @@ class EditProducto
             // añadimos una línea con la nueva cantidad
             $line = $conteo->addLine($stock->referencia, $stock->idproducto, (float)$data['mov-quantity']);
             if (empty($line->id())) {
-                $this->dataBase->rollback();
+                $this->db()->rollback();
                 Tools::log()->warning('record-save-error');
                 return true;
             }
 
             // ejecutamos el conteo
             if (false === $conteo->updateStock()) {
-                $this->dataBase->rollback();
+                $this->db()->rollback();
                 Tools::log()->warning('record-save-error');
                 return true;
             }
 
-            $this->dataBase->commit();
+            $this->db()->commit();
             Tools::log()->notice('record-updated-correctly');
             return true;
         };
