@@ -21,6 +21,10 @@ namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 
 use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Base\DataBase;
+use FacturaScripts\Core\Where;
+use FacturaScripts\Dinamic\Model\Almacen;
+use FacturaScripts\Plugins\StockAvanzado\Model\StockValoradoHistorico;
 use FacturaScripts\Dinamic\Lib\StockValueManager;
 
 final class StockValue extends CronJobClass
@@ -37,13 +41,13 @@ final class StockValue extends CronJobClass
 
         // Guardar histórico día a día por almacén
         try {
-            $db = new \FacturaScripts\Core\Base\DataBase();
+            $db = new DataBase();
             $db->connect();
-            $fecha = \FacturaScripts\Core\Tools::date();
-            $whereAlm = empty($codalmacen) ? [] : [\FacturaScripts\Core\Where::column('codalmacen', $codalmacen)];
-            foreach (\FacturaScripts\Dinamic\Model\Almacen::all($whereAlm) as $warehouse) {
-                $hist = new \FacturaScripts\Plugins\StockAvanzado\Model\StockValoradoHistorico();
-                $whereHist = [\FacturaScripts\Core\Where::column('codalmacen', $warehouse->codalmacen), \FacturaScripts\Core\Where::eq('fecha', $fecha)];
+            $fecha = Tools::date();
+            $whereAlm = empty($codalmacen) ? [] : [Where::eq('codalmacen', $codalmacen)];
+            foreach (Almacen::all($whereAlm) as $warehouse) {
+                $hist = new StockValoradoHistorico();
+                $whereHist = [Where::eq('codalmacen', $warehouse->codalmacen), Where::eq('fecha', $fecha)];
                 $hist->loadWhere($whereHist); // load if exists, ignore result
 
                 $hist->codalmacen = $warehouse->codalmacen;
