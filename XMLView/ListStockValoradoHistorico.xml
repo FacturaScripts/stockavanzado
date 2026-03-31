@@ -19,8 +19,5 @@
         <column name="total_price" display="right" order="130">
             <widget type="number" fieldname="total_precio"/>
         </column>
-        <column name="details" order="140">
-            <widget type="textarea" fieldname="detalles"/>
-        </column>
     </columns>
 </view>

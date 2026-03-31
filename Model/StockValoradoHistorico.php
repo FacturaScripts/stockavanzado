@@ -28,9 +28,6 @@ class StockValoradoHistorico extends ModelClass
     /** @var float */
     public $total_precio;
 
-    /** @var string (JSON) */
-    public $detalles;
-
     public function clear(): void
     {
         parent::clear();

@@ -39,10 +39,7 @@ final class StockValue extends CronJobClass
         $messages = [];
         StockValueManager::calculate($codalmacen, $messages, true);
 
-        // Guardar histórico día a día por almacén
-        try {
-            $db = new DataBase();
-            $db->connect();
+        // Guardar histórico día a día por almacen
             $fecha = Tools::date();
             $whereAlm = empty($codalmacen) ? [] : [Where::eq('codalmacen', $codalmacen)];
             foreach (Almacen::all($whereAlm) as $warehouse) {
@@ -54,41 +51,10 @@ final class StockValue extends CronJobClass
                 $hist->fecha = $fecha;
                 $hist->total_coste = (float)$warehouse->stock_valorado_coste;
                 $hist->total_precio = (float)$warehouse->stock_valorado_precio;
-
-                // construir detalles
-                $detalles = [];
-                $sql = 'SELECT s.referencia, s.cantidad, v.coste, v.precio'
-                    . ' FROM stocks AS s'
-                    . ' JOIN variantes AS v ON v.referencia = s.referencia'
-                    . ' WHERE s.codalmacen = ' . $db->var2str($warehouse->codalmacen)
-                    . ' AND s.cantidad > 0';
-
-                $limit = 1000;
-                $offset = 0;
-                while ($rows = $db->selectLimit($sql, $limit, $offset)) {
-                    foreach ($rows as $row) {
-                        $detalles[] = [
-                            'referencia' => $row['referencia'],
-                            'cantidad' => (float)$row['cantidad'],
-                            'coste' => (float)$row['coste'],
-                            'precio' => (float)$row['precio'],
-                            'valor_coste' => (float)$row['cantidad'] * (float)$row['coste'],
-                            'valor_precio' => (float)$row['cantidad'] * (float)$row['precio']
-                        ];
-                    }
-
-                    $offset += $limit;
-                }
-
-                $hist->detalles = json_encode($detalles, JSON_UNESCAPED_UNICODE);
-
                 if (false === $hist->save()) {
                     $messages[] = '- Error al guardar histórico del almacén ' . $warehouse->codalmacen;
                 }
             }
-        } catch (\Throwable $e) {
-            Tools::log()->error('stock-valorado-historico-save-failed: ' . $e->getMessage());
-        }
 
         foreach ($messages as $message) {
             self::echo("\n- " . Tools::trans($message));
