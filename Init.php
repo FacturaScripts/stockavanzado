@@ -34,6 +34,7 @@ use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\TransferenciaStock;
+use FacturaScripts\Plugins\StockAvanzado\Model\StockValoradoHistorico;
 
 /**
  * Description of Init
@@ -82,6 +83,7 @@ class Init extends InitClass
         new LineaConteoStock();
         new TransferenciaStock();
         new LineaTransferenciaStock();
+        new StockValoradoHistorico();
 
         $this->createRoleForPlugin();
         $this->updateEmailNotifications();

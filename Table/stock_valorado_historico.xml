@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : stock_valorado_historico.xml
+    Description:
+        Structure for the stock_valorado_historico table.
+-->
+<table>
+    <column>
+        <name>id</name>
+        <type>serial</type>
+        <null>NO</null>
+    </column>
+    <column>
+        <name>codalmacen</name>
+        <type>character varying(4)</type>
+        <null>NO</null>
+    </column>
+    <column>
+        <name>fecha</name>
+        <type>date</type>
+        <null>NO</null>
+    </column>
+    <column>
+        <name>total_coste</name>
+        <type>double precision</type>
+        <default>0</default>
+    </column>
+    <column>
+        <name>total_precio</name>
+        <type>double precision</type>
+        <default>0</default>
+    </column>
+    <column>
+        <name>detalles</name>
+        <type>text</type>
+    </column>
+    <column>
+        <name>created_at</name>
+        <type>timestamp</type>
+    </column>
+    <column>
+        <name>updated_at</name>
+        <type>timestamp</type>
+    </column>
+
+    <constraint>
+        <name>stock_valorado_historico_pkey</name>
+        <type>PRIMARY KEY (id)</type>
+    </constraint>
+
+    <constraint>
+        <name>ca_stock_valorado_historico_almacenes</name>
+        <type>FOREIGN KEY (codalmacen) REFERENCES almacenes (codalmacen) ON DELETE CASCADE ON UPDATE CASCADE</type>
+    </constraint>
+
+    <constraint>
+        <name>ux_stock_valorado_historico_almacen_fecha</name>
+        <type>UNIQUE (codalmacen, fecha)</type>
+    </constraint>
+</table>
