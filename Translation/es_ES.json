@@ -5,6 +5,7 @@
     "new-quantity-description": "Introduzca la cantidad",
     "no-movements-to-rebuild-stock": "No hay movimientos de stock para poder reconstruirlo",
     "no-products": "No hay productos",
+    "no-stock-this-product": "Stock no controlado de este producto",
     "preload": "Precargar",
     "preload-products": "Precargar todos los productos",
     "reason-for-change": "Motivo del cambio",
