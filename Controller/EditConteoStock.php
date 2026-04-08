@@ -90,7 +90,7 @@ class EditConteoStock extends EditController
         // comprobamos si el producto controla stock
         $product = $variante->getProducto();
         if ($product->nostock) {
-            Tools::log()->warning('no-stock-this-product');
+            Tools::log()->warning('no-stock-this-product', ['%referencia%' => $variante->referencia]);
             return ['addLine' => false];
         }
 
