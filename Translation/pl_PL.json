@@ -9,7 +9,7 @@
     "preload-products": "Wstępne ładowanie wszystkich produktów",
     "reason-for-change": "Powód zmiany",
     "rebuild-movements": "Odbuduj ruchy",
-    "rebuild-stock-after-moviments": "Reconstruir stock tras los movimientos",
+    "rebuild-stock-after-moviments": "Odtwórz stan zapasów po ruchach",
     "rebuilding-movements": "Odtwarzanie ruchów produktu %reference% (%offset%\/%total%)",
     "rebuilding-movements-finished": "Odtwarzanie ruchów zakończone dla %total% produktów",
     "rebuilding-stock": "Odbudowywanie stanu magazynowego produktu %reference% (%offset%\/%total%)",

@@ -9,7 +9,7 @@
     "preload-products": "Produktu guztiak aurretik kargatu",
     "reason-for-change": "Aldaketaren arrazoia",
     "rebuild-movements": "Mugimenduak berritu",
-    "rebuild-stock-after-moviments": "Reconstruir stock tras los movimientos",
+    "rebuild-stock-after-moviments": "Stocka berreraiki mugimenduen ondoren",
     "rebuilding-movements": "Produktuaren %reference% mugimenduak berreskuratzea (%offset%\/%total%)",
     "rebuilding-movements-finished": "Mugimenduen berreraikitzea amaitu da, %total% produkturekin",
     "rebuilding-stock": "%reference% produktuaren stock-a (%%offset%\/%total%) berreraikitzen",
