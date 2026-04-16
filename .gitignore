@@ -21,3 +21,8 @@ package-lock.json
 # sscode
 .vscode
 *.code-workspace
+
+# IA
+CLAUDE.md
+/.claude
+.codex
