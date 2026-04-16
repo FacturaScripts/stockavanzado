@@ -27,7 +27,7 @@ use FacturaScripts\Dinamic\Lib\InitialStockMovementManager;
  * Este cron, que además sirve de clase, es para crear movimientos iniciales de stock
  * cuando el producto tiene stock, pero no tiene movimientos.
  *
- * @author Daniel Fernández Giménez <hola@danielfg.es>
+ * @author Daniel Fernández Giménez <contacto@danielfg.es>
  */
 final class InitialStockMovement extends CronJobClass
 {

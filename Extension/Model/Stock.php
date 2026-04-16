@@ -22,7 +22,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Extension\Model;
 use Closure;
 
 /**
- * @author Daniel Fernández Giménez <hola@danielfg.es>
+ * @author Daniel Fernández Giménez <contacto@danielfg.es>
  */
 class Stock
 {

@@ -24,7 +24,7 @@ use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Lib\StockMinMaxManager;
 
 /**
- * @author Daniel Fernández Giménez <hola@danielfg.es>
+ * @author Daniel Fernández Giménez <contacto@danielfg.es>
  */
 final class StockMinMax extends CronJobClass
 {

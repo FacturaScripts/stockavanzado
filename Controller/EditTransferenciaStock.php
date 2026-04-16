@@ -31,7 +31,7 @@ use FacturaScripts\Dinamic\Model\Variante;
 /**
  * @author Cristo M. Estévez Hernández  <cristom.estevez@gmail.com>
  * @author Carlos García Gómez          <carlos@facturascripts.com>
- * @author Daniel Fernández Giménez     <hola@danielfg.es>
+ * @author Daniel Fernández Giménez     <contacto@danielfg.es>
  */
 class EditTransferenciaStock extends EditController
 {

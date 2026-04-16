@@ -28,7 +28,7 @@ use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
  * Está clase, es para crear movimientos iniciales de stock
  * cuando el producto tiene stock, pero no tiene movimientos.
  *
- * @author Daniel Fernández Giménez <hola@danielfg.es>
+ * @author Daniel Fernández Giménez <contacto@danielfg.es>
  */
 class InitialStockMovementManager
 {

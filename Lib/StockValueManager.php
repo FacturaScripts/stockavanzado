@@ -27,7 +27,7 @@ use FacturaScripts\Dinamic\Model\Almacen;
 /**
  * Esta clase sirve para establecer el stock valorado de los almacenes.
  *
- * @author Daniel Fernández Giménez <hola@danielfg.es>
+ * @author Daniel Fernández Giménez <contacto@danielfg.es>
  */
 class StockValueManager
 {

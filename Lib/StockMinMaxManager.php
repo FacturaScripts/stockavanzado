@@ -32,7 +32,7 @@ use FacturaScripts\Dinamic\Model\User;
 /**
  * Esta clase sirve para corregir los ids de los productos en las líneas y movimientos.
  *
- * @author Daniel Fernández Giménez <hola@danielfg.es>
+ * @author Daniel Fernández Giménez <contacto@danielfg.es>
  */
 class StockMinMaxManager
 {
