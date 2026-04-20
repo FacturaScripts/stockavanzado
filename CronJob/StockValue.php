@@ -21,6 +21,10 @@ namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 
 use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Base\DataBase;
+use FacturaScripts\Core\Where;
+use FacturaScripts\Dinamic\Model\Almacen;
+use FacturaScripts\Plugins\StockAvanzado\Model\StockValoradoHistorico;
 use FacturaScripts\Dinamic\Lib\StockValueManager;
 
 final class StockValue extends CronJobClass
@@ -34,6 +38,23 @@ final class StockValue extends CronJobClass
 
         $messages = [];
         StockValueManager::calculate($codalmacen, $messages, true);
+
+        // Guardar histórico día a día por almacen
+            $fecha = Tools::date();
+            $whereAlm = empty($codalmacen) ? [] : [Where::eq('codalmacen', $codalmacen)];
+            foreach (Almacen::all($whereAlm) as $warehouse) {
+                $hist = new StockValoradoHistorico();
+                $whereHist = [Where::eq('codalmacen', $warehouse->codalmacen), Where::eq('fecha', $fecha)];
+                $hist->loadWhere($whereHist); // load if exists, ignore result
+
+                $hist->codalmacen = $warehouse->codalmacen;
+                $hist->fecha = $fecha;
+                $hist->total_coste = (float)$warehouse->stock_valorado_coste;
+                $hist->total_precio = (float)$warehouse->stock_valorado_precio;
+                if (false === $hist->save()) {
+                    $messages[] = '- Error al guardar histórico del almacén ' . $warehouse->codalmacen;
+                }
+            }
 
         foreach ($messages as $message) {
             self::echo("\n- " . Tools::trans($message));
