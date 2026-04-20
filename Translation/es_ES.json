@@ -27,5 +27,6 @@
     "transfer-stock": "Transferir stock",
     "valued-stock-cost": "Stock valorado a coste",
     "valued-stock-price": "Stock valorado a precio",
+    "wait-stock-movements-rebuild": "Reconstruccion de stock no completada, espera que se finalice la reconstruccion de movimientos",
     "without-stock-count": "Excluir conteos"
 }

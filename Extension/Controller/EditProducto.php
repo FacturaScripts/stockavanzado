@@ -225,6 +225,18 @@ class EditProducto
                 return;
             }
 
+            // si hay reconstrucción de movimientos en curso, no reconstruimos el stock
+            $where = [
+                Where::eq('done', false),
+                Where::in('name', ['Model.Producto.rebuildStockMovements', 'Model.Producto.updateStockMovements']),
+                Where::eq('value', (string)$product->id())
+            ];
+
+            if (WorkEvent::count($where) > 0) {
+                Tools::log()->warning('wait-stock-movements-rebuild');
+                return;
+            }
+
             StockRebuildManager::rebuild($product->idproducto);
 
             Tools::log()->notice('rebuilt-stock');
