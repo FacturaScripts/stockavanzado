@@ -87,6 +87,13 @@ class EditConteoStock extends EditController
             return ['addLine' => false];
         }
 
+        // comprobamos si el producto controla stock
+        $product = $variante->getProducto();
+        if ($product->nostock) {
+            Tools::log()->warning('no-stock-this-product', ['%referencia%' => $variante->referencia]);
+            return ['addLine' => false];
+        }
+
         // cargamos el conteo
         $conteo = new ConteoStock();
         if (false === $conteo->load($code)) {
