@@ -23,7 +23,7 @@
     "stock-count": "Contagem de estoque",
     "stock-count-line-p": "Adicione linhas a esta lista escrevendo\/escanando um código de barras ou referência. Se o produto já existia, a quantidade é aumentada.",
     "stock-counts": "Contagens",
-    "stock-rebuild-inconsistency-detected": "Foi detectada uma inconsistência no stock do produto %referencia% do armazém %codalmacen%: a soma dos movimentos (%sum_movements%) não coincide com o saldo do último movimento (%last_saldo%)",
+    "stock-rebuild-inconsistency-detected": "Foi detetada uma inconsistência no stock do produto %referencia% do armazém %codalmacen%: a soma dos movimentos (%sum_movements%) não coincide com o saldo do último movimento (%last_saldo%)",
     "transfer-stock": "Transferir stock",
     "valued-stock-cost": "Stock avaliado a custo",
     "valued-stock-price": "Preço de stock valorizado",
