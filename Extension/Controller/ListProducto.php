@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,10 +20,13 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
+use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Producto;
+use FacturaScripts\Dinamic\Model\WorkEvent;
 
 /**
  * Description of ListProducto
@@ -47,7 +50,7 @@ class ListProducto
         };
     }
 
-    protected function execPreviousAction(): Closure
+    protected function execAfterAction(): Closure
     {
         return function ($action) {
             if ($action === 'rebuild-stock') {
@@ -59,29 +62,64 @@ class ListProducto
     protected function rebuildStockAction(): Closure
     {
         return function () {
-            // si no hay movimientos, no hacemos nada
             if (MovimientoStock::count() === 0) {
                 Tools::log()->warning('no-movements-to-rebuild-stock');
                 return;
             }
 
-            // si no hay productos, no hacemos nada
-            $total = (int)$this->request->get('total', Producto::count());
+            // en este punto, $this->views['ListStock']->where ya está poblado
+            // por el flujo normal (processFormData + loadData se ejecutaron antes de execAfterAction)
+            $whereSql = Where::multiSqlLegacy($this->views['ListStock']->where);
+
+            $from = 'stocks'
+                . ' LEFT JOIN variantes ON variantes.referencia = stocks.referencia'
+                . ' LEFT JOIN productos ON productos.idproducto = variantes.idproducto';
+
+            $db = new DataBase();
+
+            $total = (int)$this->request->get('total', -1);
+            if ($total < 0) {
+                $rows = $db->select('SELECT COUNT(DISTINCT stocks.idproducto) as total FROM ' . $from . $whereSql);
+                $total = (int)($rows[0]['total'] ?? 0);
+            }
+
             if (empty($total)) {
                 Tools::log()->warning('no-products');
                 return;
             }
 
-            // procesamos los productos de uno en uno, redirigiendo a la misma página
             $offset = (int)$this->request->get('offset', 0);
-            foreach (Producto::all([], [], $offset, 1) as $product) {
-                StockRebuildManager::rebuild($product->id());
-                Tools::log()->info('rebuilding-stock', ['%reference%' => $product->referencia, '%offset%' => $offset + 1, '%total%' => $total]);
-                $this->redirect('?activetab=ListStock&action=rebuild-stock&total=' . $total . '&offset=' . ($offset + 1), 1);
+            $rows = $db->select(
+                'SELECT DISTINCT stocks.idproducto FROM ' . $from . $whereSql
+                    . ' ORDER BY stocks.idproducto LIMIT 1 OFFSET ' . $offset
+            );
+
+            if (empty($rows)) {
+                Tools::log()->info('rebuilding-stock-finished', ['%total%' => $total]);
                 return;
             }
 
-            Tools::log()->info('rebuilding-stock-finished', ['total' => $total]);
+            $product = new Producto();
+            if (false === $product->load((int)$rows[0]['idproducto'])) {
+                Tools::log()->warning('product-not-found', ['%id%' => $rows[0]['idproducto']]);
+                return;
+            }
+
+            // si hay reconstrucción de movimientos en curso, no reconstruimos el stock
+            $where = [
+                Where::eq('done', false),
+                Where::in('name', ['Model.Producto.rebuildStockMovements', 'Model.Producto.updateStockMovements']),
+                Where::eq('value', (string)$product->id())
+            ];
+
+            if (WorkEvent::count($where) > 0) {
+                Tools::log()->warning('wait-stock-movements-rebuild');
+                return;
+            }
+
+            StockRebuildManager::rebuild($product->id());
+            Tools::log()->info('rebuilding-stock', ['%reference%' => $product->referencia, '%offset%' => $offset + 1, '%total%' => $total]);
+            $this->redirect('?activetab=ListStock&action=rebuild-stock&total=' . $total . '&offset=' . ($offset + 1), 1);
         };
     }
 }

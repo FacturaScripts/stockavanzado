@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -28,7 +28,6 @@ use FacturaScripts\Dinamic\Lib\AssetManager;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\ConteoStock;
-use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\WorkEvent;
@@ -222,6 +221,18 @@ class EditProducto
 
             $product = $this->getModel();
             if (false === $product->load($this->request->get('code'))) {
+                return;
+            }
+
+            // si hay reconstrucción de movimientos en curso, no reconstruimos el stock
+            $where = [
+                Where::eq('done', false),
+                Where::in('name', ['Model.Producto.rebuildStockMovements', 'Model.Producto.updateStockMovements']),
+                Where::eq('value', (string)$product->id())
+            ];
+
+            if (WorkEvent::count($where) > 0) {
+                Tools::log()->warning('wait-stock-movements-rebuild');
                 return;
             }
 

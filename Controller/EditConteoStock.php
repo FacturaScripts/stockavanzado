@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -84,6 +84,13 @@ class EditConteoStock extends EditController
             [Where::column('codbarras', $barcode)];
         if (false === $variante->loadWhere($where)) {
             Tools::log()->warning('no-data');
+            return ['addLine' => false];
+        }
+
+        // comprobamos si el producto controla stock
+        $product = $variante->getProducto();
+        if ($product->nostock) {
+            Tools::log()->warning('no-stock-this-product', ['%referencia%' => $variante->referencia]);
             return ['addLine' => false];
         }
 
@@ -365,6 +372,7 @@ class EditConteoStock extends EditController
                     . '<div class="input-group">'
                     . '<button class="btn btn-outline-danger delete-line btn-spin-action" title="'
                     . Tools::trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fa-solid fa-trash-alt"></i></button>'
+                    . '<span class="input-group-text" title="' . Tools::trans('current-stock') . '">' . $line->getStock()->cantidad . '</span>'
                     . '<input type="number" name="cantidad" id="lineaCantidad' . $line->idlinea . '" class="form-control text-center qty-line" value="' . $line->cantidad . '"/>'
                     . '<button class="btn btn-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
                     . $line->idlinea . '\')" title="' . Tools::trans('update') . '"><i class="fa-solid fa-save"></i></button>'

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
  * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
@@ -63,6 +64,10 @@ class StockMovementManager
 
     public static function addLineBusinessDocument(BusinessDocumentLine $line, TransformerDocument $doc): void
     {
+        if (empty($line->referencia)) {
+            return;
+        }
+        
         if (false === static::mustCreateBusinessDocumentMovement($line)) {
             return;
         }
@@ -337,7 +342,9 @@ class StockMovementManager
     {
         $limit = 250;
         $models = [
-            new LineaAlbaranProveedor(), new LineaFacturaProveedor(), new LineaAlbaranCliente(),
+            new LineaAlbaranProveedor(),
+            new LineaFacturaProveedor(),
+            new LineaAlbaranCliente(),
             new LineaFacturaCliente()
         ];
         foreach ($models as $model) {

@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2014-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2014-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -24,6 +24,8 @@ use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Template\ModelClass;
 use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
+use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\TransferenciaStock as DinTransferenciaStock;
 use FacturaScripts\Dinamic\Model\Variante;
 
@@ -60,6 +62,28 @@ class LineaTransferenciaStock extends ModelClass
         $this->cantidad = 1.0;
         $this->fecha = Tools::dateTime();
         $this->nick = Session::user()->nick;
+    }
+
+    public function getStockDest(): Stock
+    {
+        $stock = new Stock();
+        $where = [
+            Where::eq('codalmacen', $this->getTransference()->codalmacendestino),
+            Where::eq('referencia', $this->referencia)
+        ];
+        $stock->loadWhere($where);
+        return $stock;
+    }
+
+    public function getStockOrig(): Stock
+    {
+        $stock = new Stock();
+        $where = [
+            Where::eq('codalmacen', $this->getTransference()->codalmacenorigen),
+            Where::eq('referencia', $this->referencia)
+        ];
+        $stock->loadWhere($where);
+        return $stock;
     }
 
     public function getTransference(): DinTransferenciaStock
