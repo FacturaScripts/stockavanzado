@@ -38,7 +38,7 @@ class ListProducto
     protected function createViews(): Closure
     {
         return function () {
-            if ($this->user->admin || ($this->user->can('EditProducto', 'update') && $this->user->level >= 30)) {
+            if (Tools::config('debug')) {
                 $this->addButton('ListStock', [
                     'action' => 'rebuild-stock',
                     'color' => 'warning',
@@ -64,6 +64,8 @@ class ListProducto
         return function () {
             if (MovimientoStock::count() === 0) {
                 Tools::log()->warning('no-movements-to-rebuild-stock');
+                return;
+            } elseif (false === Tools::config('debug')) {
                 return;
             }
 

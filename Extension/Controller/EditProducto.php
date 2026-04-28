@@ -30,6 +30,7 @@ use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\WorkEvent;
+use Google\Service\Connectors\Tool;
 
 /**
  * Description of EditProducto
@@ -129,7 +130,7 @@ class EditProducto
             }
 
             // desactivamos los botones de nuevo, eliminar y checkbox
-            if ($this->user->admin || ($this->permissions->allowUpdate && $this->user->level >= 30)) {
+            if (Tools::config('debug')) {
                 $this->addButton($viewName, [
                     'action' => 'rebuild-movements',
                     'color' => 'info',
@@ -193,6 +194,8 @@ class EditProducto
                 return;
             } elseif (false === $this->validateFormToken()) {
                 return;
+            }  elseif (false === Tools::config('debug')) {
+                return;
             }
 
             $product = new Producto();
@@ -215,6 +218,8 @@ class EditProducto
                 Tools::log()->warning('not-allowed-modify');
                 return;
             } elseif (false === $this->validateFormToken()) {
+                return;
+            }  elseif (false === Tools::config('debug')) {
                 return;
             }
 
