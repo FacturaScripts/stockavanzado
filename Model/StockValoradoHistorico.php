@@ -18,6 +18,8 @@ class StockValoradoHistorico extends ModelClass
 
     /** @var string */
     public $codalmacen;
+    /** @var timestamp */
+    public $create_date;
 
     /** @var string */
     public $fecha;
@@ -33,6 +35,7 @@ class StockValoradoHistorico extends ModelClass
         parent::clear();
         $this->total_coste = 0.0;
         $this->total_precio = 0.0;
+        $this->create_date = null;
     }
 
     public function install(): string

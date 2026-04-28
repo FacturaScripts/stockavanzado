@@ -56,7 +56,7 @@ final class Cron extends CronClass
 
         // con este proceso recalculamos el valor del stock de cada almacén
         $this->job(StockValue::JOB_NAME)
-            ->every(StockValue::JOB_PERIOD)
+            ->everyDayAt(0)
             ->withoutOverlapping()
             ->run(function () {
                 StockValue::run();
