@@ -26,6 +26,7 @@ use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Producto;
+use FacturaScripts\Dinamic\Model\WorkEvent;
 
 /**
  * Description of ListProducto
@@ -90,7 +91,7 @@ class ListProducto
             $offset = (int)$this->request->get('offset', 0);
             $rows = $db->select(
                 'SELECT DISTINCT stocks.idproducto FROM ' . $from . $whereSql
-                . ' ORDER BY stocks.idproducto LIMIT 1 OFFSET ' . $offset
+                    . ' ORDER BY stocks.idproducto LIMIT 1 OFFSET ' . $offset
             );
 
             if (empty($rows)) {
@@ -99,7 +100,23 @@ class ListProducto
             }
 
             $product = new Producto();
-            $product->load((int)$rows[0]['idproducto']);
+            if (false === $product->load((int)$rows[0]['idproducto'])) {
+                Tools::log()->warning('product-not-found', ['%id%' => $rows[0]['idproducto']]);
+                return;
+            }
+
+            // si hay reconstrucción de movimientos en curso, no reconstruimos el stock
+            $where = [
+                Where::eq('done', false),
+                Where::in('name', ['Model.Producto.rebuildStockMovements', 'Model.Producto.updateStockMovements']),
+                Where::eq('value', (string)$product->id())
+            ];
+
+            if (WorkEvent::count($where) > 0) {
+                Tools::log()->warning('wait-stock-movements-rebuild');
+                return;
+            }
+
             StockRebuildManager::rebuild($product->id());
             Tools::log()->info('rebuilding-stock', ['%reference%' => $product->referencia, '%offset%' => $offset + 1, '%total%' => $total]);
             $this->redirect('?activetab=ListStock&action=rebuild-stock&total=' . $total . '&offset=' . ($offset + 1), 1);
