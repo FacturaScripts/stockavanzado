@@ -94,7 +94,7 @@ class ListProducto
             );
 
             if (empty($rows)) {
-                Tools::log()->info('rebuilding-stock-finished', ['total' => $total]);
+                Tools::log()->info('rebuilding-stock-finished', ['%total%' => $total]);
                 return;
             }
 
