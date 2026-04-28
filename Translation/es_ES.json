@@ -12,7 +12,7 @@
     "rebuild-stock-after-moviments": "Reconstruir stock tras los movimientos",
     "rebuilding-movements": "Reconstruyendo movimientos del producto %reference% (%offset%\/%total%)",
     "rebuilding-movements-finished": "Reconstrucción de movimientos finalizada con %total% productos",
-    "rebuilding-stock": "Reconstruyendo stock del producto %reference% (%offset%\/%total%)",
+    "rebuilding-stock": "Reconstruyendo stock del producto %reference% (producto %offset% de %total%)",
     "rebuilding-stock-finished": "Reconstrucción de stock finalizada con %total% productos",
     "rebuilt-movements": "Movimientos reconstruidos",
     "rebuilt-stock": "Stock reconstruido",
