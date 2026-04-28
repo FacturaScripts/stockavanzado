@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2023-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2023-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,10 +21,6 @@ namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 
 use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Core\Base\DataBase;
-use FacturaScripts\Core\Where;
-use FacturaScripts\Dinamic\Model\Almacen;
-use FacturaScripts\Plugins\StockAvanzado\Model\StockValoradoHistorico;
 use FacturaScripts\Dinamic\Lib\StockValueManager;
 
 final class StockValue extends CronJobClass
@@ -37,8 +33,6 @@ final class StockValue extends CronJobClass
 
         $messages = [];
         StockValueManager::calculate($codalmacen, $messages, true);
-
-
 
         foreach ($messages as $message) {
             self::echo("\n- " . Tools::trans($message));
