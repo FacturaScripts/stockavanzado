@@ -372,6 +372,7 @@ class EditConteoStock extends EditController
                     . '<div class="input-group">'
                     . '<button class="btn btn-outline-danger delete-line btn-spin-action" title="'
                     . Tools::trans('delete') . '" onclick="deleteLine(\'' . $line->idlinea . '\')"><i class="fa-solid fa-trash-alt"></i></button>'
+                    . '<span class="input-group-text" title="' . Tools::trans('current-stock') . '">' . $line->getStock()->cantidad . '</span>'
                     . '<input type="number" name="cantidad" id="lineaCantidad' . $line->idlinea . '" class="form-control text-center qty-line" value="' . $line->cantidad . '"/>'
                     . '<button class="btn btn-info btn-update-line btn-spin-action" type="button" onclick="updateLine(\''
                     . $line->idlinea . '\')" title="' . Tools::trans('update') . '"><i class="fa-solid fa-save"></i></button>'
