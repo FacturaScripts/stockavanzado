@@ -38,7 +38,7 @@ class ListProducto
     protected function createViews(): Closure
     {
         return function () {
-            if ($this->user->admin) {
+            if ($this->user->admin || ($this->user->can('EditProducto', 'update') && $this->user->level >= 30)) {
                 $this->addButton('ListStock', [
                     'action' => 'rebuild-stock',
                     'color' => 'warning',

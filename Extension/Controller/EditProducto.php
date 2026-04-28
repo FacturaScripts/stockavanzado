@@ -129,7 +129,7 @@ class EditProducto
             }
 
             // desactivamos los botones de nuevo, eliminar y checkbox
-            if ($this->user->admin) {
+            if ($this->user->admin || ($this->permissions->allowUpdate && $this->user->level >= 30)) {
                 $this->addButton($viewName, [
                     'action' => 'rebuild-movements',
                     'color' => 'info',
