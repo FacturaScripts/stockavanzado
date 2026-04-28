@@ -23,6 +23,7 @@ use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\Almacen;
+use FacturaScripts\Plugins\StockAvanzado\Model\StockValoradoHistorico;
 
 /**
  * Esta clase sirve para establecer el stock valorado de los almacenes.
@@ -36,38 +37,26 @@ class StockValueManager
 
     public static function calculate(?string $codalmacen = null, array &$messages = [], bool $cron = false): void
     {
-        static::$db = new DataBase();
-        $where = empty($codalmacen) ? [] : [Where::column('codalmacen', $codalmacen)];
-        foreach (Almacen::all($where) as $warehouse) {
-            // ponemos el stock valorado a 0
-            $warehouse->stock_valorado_coste = 0.0;
-            $warehouse->stock_valorado_precio = 0.0;
+        // Guardar histórico día a día por almacen
+        $fecha = Tools::date();
+        $whereAlm = empty($codalmacen) ? [] : [Where::eq('codalmacen', $codalmacen)];
+        foreach (Almacen::all($whereAlm) as $warehouse) {
+            $hist = new StockValoradoHistorico();
+            $whereHist = [Where::eq('codalmacen', $warehouse->codalmacen), Where::eq('fecha', $fecha)];
+            if(false === $hist->loadWhere($whereHist)){
+                $messages[] = '- Error al guardar histórico del almacén ' . $warehouse->codalmacen;
+                return;
+            }; // load if exists, ignore result
 
-            // calculamos el stock valorado
-            $sql = 'SELECT s.referencia, s.cantidad, v.coste, v.precio'
-                . ' FROM stocks AS s'
-                . ' JOIN variantes AS v ON v.referencia = s.referencia'
-                . ' WHERE s.codalmacen = ' . static::$db->var2str($warehouse->id())
-                . ' AND s.cantidad > 0';
-
-            $limit = 1000;
-            $offset = 0;
-            while ($rows = static::$db->selectLimit($sql, $limit, $offset)) {
-                foreach ($rows as $row) {
-                    $warehouse->stock_valorado_coste += $row['cantidad'] * $row['coste'];
-                    $warehouse->stock_valorado_precio += $row['cantidad'] * $row['precio'];
-                }
-
-                $offset += $limit;
-            }
-
-            // guardamos los cambios
-            $warehouse->stock_valorado_coste = round($warehouse->stock_valorado_coste, FS_NF0);
-            $warehouse->stock_valorado_precio = round($warehouse->stock_valorado_precio, FS_NF0);
-            if (!$warehouse->save()) {
-                $messages[] = '- Error al guardar el almacén ' . $warehouse->codalmacen;
+            $hist->codalmacen = $warehouse->codalmacen;
+            $hist->fecha = $fecha;
+            $hist->total_coste = (float)$warehouse->stock_valorado_coste;
+            $hist->total_precio = (float)$warehouse->stock_valorado_precio;
+            if (false === $hist->save()) {
+                $messages[] = '- Error al guardar histórico del almacén ' . $warehouse->codalmacen;
             }
         }
+
 
         // si hemos ejecutado la clase desde el cron, terminamos
         if ($cron) {

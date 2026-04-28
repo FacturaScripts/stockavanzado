@@ -21,12 +21,15 @@ namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 
 use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Base\DataBase;
+use FacturaScripts\Core\Where;
+use FacturaScripts\Dinamic\Model\Almacen;
+use FacturaScripts\Plugins\StockAvanzado\Model\StockValoradoHistorico;
 use FacturaScripts\Dinamic\Lib\StockValueManager;
 
 final class StockValue extends CronJobClass
 {
     const JOB_NAME = 'stock-value';
-    const JOB_PERIOD = '1 hour';
 
     public static function run(?string $codalmacen = null): void
     {
@@ -34,6 +37,8 @@ final class StockValue extends CronJobClass
 
         $messages = [];
         StockValueManager::calculate($codalmacen, $messages, true);
+
+
 
         foreach ($messages as $message) {
             self::echo("\n- " . Tools::trans($message));

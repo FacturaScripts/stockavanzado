@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * This file is part of StockAvanzado plugin for FacturaScripts
+ * Definition for ListStockValoradoHistorico view
+ -->
+<view>
+    <columns>
+        <column name="warehouse" order="100">
+            <widget type="select" fieldname="codalmacen">
+                <values source="almacenes" fieldcode="codalmacen" fieldtitle="nombre"/>
+            </widget>
+        </column>
+        <column name="date" display="right" order="110">
+            <widget type="date" fieldname="fecha"/>
+        </column>
+        <column name="total_cost" display="right" order="120">
+            <widget type="number" fieldname="total_coste"/>
+        </column>
+        <column name="total_price" display="right" order="130">
+            <widget type="number" fieldname="total_precio"/>
+        </column>
+    </columns>
+</view>

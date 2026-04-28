@@ -34,6 +34,7 @@ class EditAlmacen
         return function () {
             $this->createViewsMovements();
             $this->createViewsCounts();
+            $this->createViewsHistorico();
         };
     }
 
@@ -48,6 +49,18 @@ class EditAlmacen
                 ->setSettings('checkBoxes', false);
         };
     }
+    protected function createViewsHistorico(): Closure
+    {
+        return function ($viewName = 'ListStockValoradoHistorico') {
+            $this->addListView($viewName, 'StockValoradoHistorico', 'stock-valorado-historico', 'fa-solid fa-chart-line')
+                ->addOrderBy(['fecha'], 'date', 2)
+                ->disableColumn('warehouse')
+                ->setSettings('btnNew', false)
+                ->setSettings('btnDelete', false)
+                ->setSettings('checkBoxes', false);
+        };
+    }
+
 
     protected function createViewsMovements(): Closure
     {
@@ -75,6 +88,7 @@ class EditAlmacen
             switch ($viewName) {
                 case 'ListConteoStock':
                 case 'ListMovimientoStock':
+                case 'ListStockValoradoHistorico':
                     $codalmacen = $this->getViewModelValue('EditAlmacen', 'codalmacen');
                     $where = [Where::column('codalmacen', $codalmacen)];
                     $view->loadData('', $where);
