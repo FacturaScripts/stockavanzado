@@ -107,11 +107,11 @@ class ListProducto
                 return;
             }
 
-            // si hay reconstrucción de movimientos en curso, no reconstruimos el stock
+            // si hay reconstrucción de movimientos de este producto en curso, no reconstruimos el stock
             $where = [
                 Where::eq('done', false),
                 Where::in('name', ['Model.Producto.rebuildStockMovements', 'Model.Producto.updateStockMovements']),
-                Where::eq('value', (string)$product->id())
+                Where::eq('value', $product->id())
             ];
 
             if (WorkEvent::count($where) > 0) {

@@ -30,7 +30,6 @@ use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\WorkEvent;
-use Google\Service\Connectors\Tool;
 
 /**
  * Description of EditProducto
@@ -203,6 +202,18 @@ class EditProducto
                 return;
             }
 
+            // si hay reconstrucción de movimientos en curso, no reconstruimos los movimientos
+            $where = [
+                Where::eq('done', false),
+                Where::in('name', ['Model.Producto.rebuildStockMovements', 'Model.Producto.updateStockMovements']),
+                Where::eq('value', $product->id())
+            ];
+
+            if (WorkEvent::count($where) > 0) {
+                Tools::log()->warning('wait-stock-movements-rebuild');
+                return;
+            }
+
             WorkQueue::send('Model.Producto.rebuildStockMovements', $product->id());
 
             Tools::log()->info('reloading');
@@ -232,7 +243,7 @@ class EditProducto
             $where = [
                 Where::eq('done', false),
                 Where::in('name', ['Model.Producto.rebuildStockMovements', 'Model.Producto.updateStockMovements']),
-                Where::eq('value', (string)$product->id())
+                Where::eq('value', $product->id())
             ];
 
             if (WorkEvent::count($where) > 0) {
