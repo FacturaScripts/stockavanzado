@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2017-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -84,6 +84,13 @@ class EditTransferenciaStock extends EditController
             [Where::column('codbarras', $barcode)];
         if (false === $variante->loadWhere($where)) {
             Tools::log()->warning('no-data');
+            return ['addLine' => false];
+        }
+
+        // comprobamos si el producto controla stock
+        $product = $variante->getProducto();
+        if ($product->nostock) {
+            Tools::log()->warning('no-stock-this-product', ['%referencia%' => $variante->referencia]);
             return ['addLine' => false];
         }
 
