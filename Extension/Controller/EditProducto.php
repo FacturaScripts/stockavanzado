@@ -24,6 +24,7 @@ use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
+use FacturaScripts\Dinamic\Lib\AssetManager;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\ConteoStock;
@@ -94,6 +95,9 @@ class EditProducto
     protected function createViews(): Closure
     {
         return function () {
+            $route = Tools::config('route');
+            AssetManager::addJs($route . '/Plugins/StockAvanzado/Assets/JS/EditProductoButtons.js');
+
             // marcamos la columna de cantidad en el stock como no editable
             $this->tab('EditStock')->disableColumn('quantity', false, 'true');
 
@@ -130,7 +134,7 @@ class EditProducto
             if ($this->user->admin) {
                 $this->addButton($viewName, [
                     'action' => 'rebuild-movements',
-                    'color' => 'warning',
+                    'color' => 'info',
                     'confirm' => true,
                     'icon' => 'fa-solid fa-repeat',
                     'label' => 'rebuild-movements'
