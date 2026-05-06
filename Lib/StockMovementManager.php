@@ -73,7 +73,7 @@ class StockMovementManager
         }
 
         $movement = static::getBusinessDocumentMovement($line, $doc);
-        $movement->cantidad = static::getBusinessDocumentMovementQuantity($line);
+        $movement->cantidad = static::getNetBusinessDocumentMovementQuantity($line, $doc);
         $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
@@ -82,7 +82,7 @@ class StockMovementManager
         $previousSaldo = static::getPreviousSaldo($movement->codalmacen, $movement->referencia, $movement->fecha, $movement->hora);
         $movement->saldo = $previousSaldo + $movement->cantidad;
 
-        if (empty($movement->cantidad) && false === static::shouldSaveZeroBusinessDocumentMovement($line)) {
+        if (empty($movement->cantidad) && false === static::shouldSaveZeroBusinessDocumentMovement($line, $doc)) {
             $movement->delete();
             static::updateReferenceSaldos($doc->codalmacen, $line->referencia);
             return;
@@ -408,6 +408,25 @@ class StockMovementManager
         return static::getCurrentBusinessDocumentLineQuantity($line) + static::getSignedChildrenTransformationQuantity($line);
     }
 
+    protected static function getNetBusinessDocumentMovementQuantity(BusinessDocumentLine $line, TransformerDocument $doc): float
+    {
+        // The pipe fires before saveInsert/saveUpdate, so the current line may not be in DB yet.
+        // Sum all DB lines with the same referencia (skipping the current line if it already exists
+        // there with stale values), then add the current line's in-memory contribution.
+        $total = 0.0;
+        foreach ($doc->getLines() as $docLine) {
+            if ($docLine->referencia !== $line->referencia) {
+                continue;
+            }
+            if ($line->exists() && $docLine->primaryColumnValue() === $line->primaryColumnValue()) {
+                continue; // skip the stale DB copy of the line being updated
+            }
+            $total += static::getBusinessDocumentMovementQuantity($docLine);
+        }
+        $total += static::getBusinessDocumentMovementQuantity($line);
+        return $total;
+    }
+
     protected static function getCurrentBusinessDocumentLineQuantity(BusinessDocumentLine $line): float
     {
         return in_array($line->actualizastock, [-1, 1], true) ?
@@ -497,13 +516,34 @@ class StockMovementManager
         return !empty(static::getSignedChildrenTransformationQuantity($line));
     }
 
-    protected static function shouldSaveZeroBusinessDocumentMovement(BusinessDocumentLine $line): bool
+    protected static function shouldSaveZeroBusinessDocumentMovement(BusinessDocumentLine $line, TransformerDocument $doc): bool
     {
-        if (false === $line->exists()) {
-            return false;
+        // transformation case (albaran→factura): always keep zero movements
+        if ($line->exists() && false === is_null(static::getTransformationFromChildLine($line))) {
+            return true;
         }
 
-        return false === is_null(static::getTransformationFromChildLine($line));
+        // if other lines in the document affect this same product, keep the zero movement
+        // so the movement record shows the activity even when lines cancel each other out
+        foreach ($doc->getLines() as $docLine) {
+            if ($docLine->referencia !== $line->referencia) {
+                continue;
+            }
+            if ($line->exists() && $docLine->primaryColumnValue() === $line->primaryColumnValue()) {
+                continue;
+            }
+            if (in_array($docLine->actualizastock, [-1, 1], true)) {
+                return true;
+            }
+        }
+
+        // if the current line itself has stock impact and is not being deleted (cantidad != 0),
+        // keep the zero movement (its contribution is cancelled by other lines not yet in DB)
+        if (in_array($line->actualizastock, [-1, 1], true) && !empty((float)$line->cantidad)) {
+            return true;
+        }
+
+        return false;
     }
 
     public static function updateReferenceSaldos(string $codalmacen, string $referencia): void
