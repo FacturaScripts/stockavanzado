@@ -418,7 +418,7 @@ class StockMovementManager
             if ($docLine->referencia !== $line->referencia) {
                 continue;
             }
-            if ($line->exists() && $docLine->primaryColumnValue() === $line->primaryColumnValue()) {
+            if ($line->exists() && $docLine->primaryColumnValue() == $line->primaryColumnValue()) {
                 continue; // skip the stale DB copy of the line being updated
             }
             $total += static::getBusinessDocumentMovementQuantity($docLine);
@@ -529,7 +529,7 @@ class StockMovementManager
             if ($docLine->referencia !== $line->referencia) {
                 continue;
             }
-            if ($line->exists() && $docLine->primaryColumnValue() === $line->primaryColumnValue()) {
+            if ($line->exists() && $docLine->primaryColumnValue() == $line->primaryColumnValue()) {
                 continue;
             }
             if (in_array($docLine->actualizastock, [-1, 1], true)) {
