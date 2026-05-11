@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2024-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2024-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -102,6 +102,70 @@ final class BusinessDocumentsTest extends TestCase
         $this->assertEquals(-10, $movement->saldo);
         $this->assertEquals($albaran->id(), $movement->docid);
         $this->assertEquals($albaran->modelClassName(), $movement->docmodel);
+
+        // eliminamos
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testAlbaranClienteConsolidatesSameReferenceLines(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al producto
+        $stock = new Stock();
+        $stock->referencia = $product->referencia;
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->cantidad = 10;
+        $stock->disponible = 10;
+        $this->assertTrue($stock->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos un albarán en ese almacén
+        $albaran = new AlbaranCliente();
+        $this->assertTrue($albaran->setSubject($customer));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+
+        // añadimos dos líneas con la misma referencia (4 + 6 = 10 unidades)
+        $linea1 = $albaran->getNewProductLine($product->referencia);
+        $linea1->cantidad = 4;
+        $linea1->pvpunitario = 10;
+        $this->assertTrue($linea1->save());
+
+        $linea2 = $albaran->getNewProductLine($product->referencia);
+        $linea2->cantidad = 6;
+        $linea2->pvpunitario = 10;
+        $this->assertTrue($linea2->save());
+
+        // el stock debe reflejar las dos líneas consolidadas
+        $this->assertTrue($stock->reload());
+        $this->assertEquals(0, $stock->cantidad);
+        $this->assertEquals(0, $stock->disponible);
+
+        // debe existir un único movimiento de stock con la cantidad consolidada
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia),
+            Where::eq('docid', $albaran->id()),
+            Where::eq('docmodel', $albaran->modelClassName())
+        ];
+        $movimientos = MovimientoStock::all($whereRef);
+        $this->assertCount(1, $movimientos, 'expected a single consolidated stock movement');
+        $this->assertEquals(-10, $movimientos[0]->cantidad);
+        $this->assertEquals(-10, $movimientos[0]->saldo);
 
         // eliminamos
         $this->assertTrue($albaran->delete());

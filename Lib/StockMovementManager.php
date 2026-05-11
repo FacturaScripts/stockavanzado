@@ -73,7 +73,7 @@ class StockMovementManager
         }
 
         $movement = static::getBusinessDocumentMovement($line, $doc);
-        $movement->cantidad = static::getBusinessDocumentMovementQuantity($line);
+        $movement->cantidad = static::getBusinessDocumentMovementQuantityForReference($line, $doc);
         $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
@@ -394,6 +394,25 @@ class StockMovementManager
         $movement->idproducto = $line->idproducto ?? $line->getProducto()->idproducto;
         $movement->referencia = $line->referencia;
         return $movement;
+    }
+
+    protected static function getBusinessDocumentMovementQuantityForReference(BusinessDocumentLine $line, TransformerDocument $doc): float
+    {
+        // El hook se dispara antes de persistir la línea, así que $line puede no estar
+        // todavía en $doc->getLines(). Tratamos $line como autoritativa para su propia
+        // contribución y sumamos las del resto de líneas con la misma referencia.
+        $linePk = $line->primaryColumnValue();
+        $quantity = static::getBusinessDocumentMovementQuantity($line);
+        foreach ($doc->getLines() as $docLine) {
+            if ($docLine->referencia !== $line->referencia) {
+                continue;
+            }
+            if (!empty($linePk) && $docLine->primaryColumnValue() == $linePk) {
+                continue;
+            }
+            $quantity += static::getBusinessDocumentMovementQuantity($docLine);
+        }
+        return $quantity;
     }
 
     protected static function getBusinessDocumentMovementQuantity(BusinessDocumentLine $line): float
