@@ -2,7 +2,7 @@
 
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -47,9 +47,6 @@ use FacturaScripts\Plugins\StockAvanzado\Contract\StockMovementModInterface;
  */
 class StockMovementManager
 {
-    /** @var array */
-    private static $docStates = [];
-
     /** @var int|null */
     private static $idproducto = null;
 
@@ -67,7 +64,7 @@ class StockMovementManager
         if (empty($line->referencia)) {
             return;
         }
-        
+
         if (false === static::mustCreateBusinessDocumentMovement($line)) {
             return;
         }
@@ -77,10 +74,7 @@ class StockMovementManager
         $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
-
-        // actualizamos el saldo
-        $previousSaldo = static::getPreviousSaldo($movement->codalmacen, $movement->referencia, $movement->fecha, $movement->hora);
-        $movement->saldo = $previousSaldo + $movement->cantidad;
+        $movement->saldo = 0;
 
         if (empty($movement->cantidad) && false === static::shouldSaveZeroBusinessDocumentMovement($line)) {
             $movement->delete();
@@ -94,26 +88,15 @@ class StockMovementManager
 
     public static function addLineCounting(LineaConteoStock $line, ConteoStock $stockCount, float $stock): bool
     {
-        $docid = $stockCount->id();
-        $docmodel = $stockCount->modelClassName();
-
-        // buscamos el movimiento existente
-        $movement = new MovimientoStock();
-        $where = [
-            Where::eq('codalmacen', $stockCount->codalmacen),
-            Where::eq('docid', $docid),
-            Where::eq('docmodel', $docmodel),
-            Where::eq('referencia', $line->referencia)
-        ];
-
-        if (false === $movement->loadWhere($where)) {
+        $movement = static::findMovement($stockCount->codalmacen, $stockCount, $line->referencia);
+        if (false === $movement->exists()) {
             // no existe, lo creamos
             $movement->documento = Tools::trans($stockCount->modelClassName()) . ' ' . $stockCount->id();
             $movement->fecha = Tools::date($stockCount->fechafin);
             $movement->hora = Tools::hour($stockCount->fechafin);
             $movement->codalmacen = $stockCount->codalmacen;
-            $movement->docid = $docid;
-            $movement->docmodel = $docmodel;
+            $movement->docid = $stockCount->id();
+            $movement->docmodel = $stockCount->modelClassName();
             $movement->idproducto = $line->idproducto;
             $movement->referencia = $line->referencia;
         }
@@ -143,14 +126,8 @@ class StockMovementManager
 
     public static function addTransferLine(BusinessDocumentLine $line, TransformerDocument $doc, string $fromCodalmacen, string $toCodalmacen): void
     {
-        $movement = new MovimientoStock();
-        $where = [
-            Where::eq('codalmacen', $fromCodalmacen),
-            Where::eq('docid', $doc->id()),
-            Where::eq('docmodel', $doc->modelClassName()),
-            Where::eq('referencia', $line->referencia)
-        ];
-        if ($movement->loadWhere($where)) {
+        $movement = static::findMovement($fromCodalmacen, $doc, $line->referencia);
+        if ($movement->exists()) {
             $movement->codalmacen = $toCodalmacen;
             $movement->save();
         }
@@ -158,17 +135,8 @@ class StockMovementManager
 
     public static function deleteLineCounting(LineaConteoStock $line, ConteoStock $stockCount): bool
     {
-        $docid = $stockCount->id();
-        $docmodel = $stockCount->modelClassName();
-
-        $movement = new MovimientoStock();
-        $where = [
-            Where::eq('codalmacen', $stockCount->codalmacen),
-            Where::eq('docid', $docid),
-            Where::eq('docmodel', $docmodel),
-            Where::eq('referencia', $line->referencia)
-        ];
-        if (false === $movement->loadWhere($where)) {
+        $movement = static::findMovement($stockCount->codalmacen, $stockCount, $line->referencia);
+        if (false === $movement->exists()) {
             return true;
         }
 
@@ -187,6 +155,18 @@ class StockMovementManager
         }
 
         return static::deleteLineTransferMovement($stockCount->codalmacendestino, $line, $stockCount);
+    }
+
+    public static function deleteMovements(): bool
+    {
+        $db = new DataBase();
+
+        $sql = 'DELETE FROM stocks_movimientos';
+        if (!is_null(static::$idproducto)) {
+            $sql .= ' WHERE idproducto = ' . $db->var2str(static::$idproducto);
+        }
+
+        return $db->exec($sql);
     }
 
     public static function rebuild(?int $idproducto = null, array &$messages = [], bool $cron = false): void
@@ -234,17 +214,47 @@ class StockMovementManager
         static::$idproducto = $idproducto;
     }
 
-    protected static function addLineTransferStockMovement(string $codalmacen, float $cantidad, TransferenciaStock $transfer, LineaTransferenciaStock $line): bool
+    public static function updateReferenceSaldos(string $codalmacen, string $referencia): void
     {
-        // buscamos el movimiento existente
-        $movement = new MovimientoStock();
+        $saldo = 0.0;
         $where = [
             Where::eq('codalmacen', $codalmacen),
-            Where::eq('docid', $transfer->id()),
-            Where::eq('docmodel', $transfer->modelClassName()),
-            Where::eq('referencia', $line->referencia)
+            Where::eq('referencia', $referencia)
         ];
-        if (false === $movement->loadWhere($where)) {
+        $movements = MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC'], 0, 0);
+        usort($movements, function (MovimientoStock $a, MovimientoStock $b) {
+            $dateA = strtotime($a->fecha . ' ' . $a->hora);
+            $dateB = strtotime($b->fecha . ' ' . $b->hora);
+            if ($dateA !== $dateB) {
+                return $dateA <=> $dateB;
+            }
+
+            $priority = static::getMovementSortPriority($a->docmodel) <=> static::getMovementSortPriority($b->docmodel);
+            if ($priority !== 0) {
+                return $priority;
+            }
+
+            return $a->id() <=> $b->id();
+        });
+
+        foreach ($movements as $movement) {
+            if ($movement->docmodel === 'ConteoStock') {
+                $saldo = $movement->saldo;
+                continue;
+            }
+
+            $saldo += $movement->cantidad;
+            if ($movement->saldo != $saldo) {
+                $movement->saldo = $saldo;
+                $movement->save();
+            }
+        }
+    }
+
+    protected static function addLineTransferStockMovement(string $codalmacen, float $cantidad, TransferenciaStock $transfer, LineaTransferenciaStock $line): bool
+    {
+        $movement = static::findMovement($codalmacen, $transfer, $line->referencia);
+        if (false === $movement->exists()) {
             // no existe, lo creamos
             $movement->documento = Tools::trans($transfer->modelClassName()) . ' ' . $transfer->id();
             $movement->fecha = Tools::date($transfer->fecha);
@@ -271,30 +281,98 @@ class StockMovementManager
 
     protected static function deleteLineTransferMovement(string $codalmacen, LineaTransferenciaStock $line, TransferenciaStock $stockCount): bool
     {
-        $movement = new MovimientoStock();
-        $where = [
-            Where::eq('codalmacen', $codalmacen),
-            Where::eq('docid', $stockCount->id()),
-            Where::eq('docmodel', $stockCount->modelClassName()),
-            Where::eq('referencia', $line->referencia)
-        ];
-        if ($movement->loadWhere($where) && false === $movement->delete()) {
+        $movement = static::findMovement($codalmacen, $stockCount, $line->referencia);
+        if ($movement->exists() && false === $movement->delete()) {
             return false;
         }
 
         return true;
     }
 
-    public static function deleteMovements(): bool
+    protected static function findMovement(string $codalmacen, $doc, string $referencia): MovimientoStock
     {
-        $db = new DataBase();
+        $movement = new MovimientoStock();
+        $movement->loadWhere([
+            Where::eq('codalmacen', $codalmacen),
+            Where::eq('docid', $doc->id()),
+            Where::eq('docmodel', $doc->modelClassName()),
+            Where::eq('referencia', $referencia),
+        ]);
+        return $movement;
+    }
 
-        $sql = 'DELETE FROM stocks_movimientos';
-        if (!is_null(static::$idproducto)) {
-            $sql .= ' WHERE idproducto = ' . $db->var2str(static::$idproducto);
+    protected static function getBusinessDocumentMovement(BusinessDocumentLine $line, TransformerDocument $doc): MovimientoStock
+    {
+        $movement = static::findMovement($doc->codalmacen, $doc, $line->referencia);
+        if ($movement->exists()) {
+            return $movement;
         }
 
-        return $db->exec($sql);
+        $movement->codalmacen = $doc->codalmacen;
+        $movement->docid = $doc->id();
+        $movement->docmodel = $doc->modelClassName();
+        $movement->idproducto = $line->idproducto ?? $line->getProducto()->idproducto;
+        $movement->referencia = $line->referencia;
+        return $movement;
+    }
+
+    protected static function getBusinessDocumentMovementQuantity(BusinessDocumentLine $line): float
+    {
+        $transformation = static::getTransformationFromChildLine($line);
+        if (false === is_null($transformation)) {
+            return $line->exists() ?
+                static::getCurrentBusinessDocumentLineQuantity($line) - static::getSignedTransformationQuantity($transformation) :
+                0.0;
+        }
+
+        return static::getCurrentBusinessDocumentLineQuantity($line) + static::getSignedChildrenTransformationQuantity($line);
+    }
+
+    protected static function getBusinessDocumentMovementQuantityForReference(BusinessDocumentLine $line, TransformerDocument $doc): float
+    {
+        // El hook se dispara antes de persistir la línea, así que $line puede no estar
+        // todavía en $doc->getLines(). Tratamos $line como autoritativa para su propia
+        // contribución y sumamos las del resto de líneas con la misma referencia.
+        $linePk = $line->primaryColumnValue();
+        $quantity = static::getBusinessDocumentMovementQuantity($line);
+        foreach ($doc->getLines() as $docLine) {
+            if ($docLine->referencia !== $line->referencia) {
+                continue;
+            }
+            if (!empty($linePk) && $docLine->primaryColumnValue() == $linePk) {
+                continue;
+            }
+            $quantity += static::getBusinessDocumentMovementQuantity($docLine);
+        }
+        return $quantity;
+    }
+
+    protected static function getCurrentBusinessDocumentLineQuantity(BusinessDocumentLine $line): float
+    {
+        return in_array($line->actualizastock, [-1, 1], true) ?
+            $line->actualizastock * ((float)$line->cantidad - (float)$line->servido) :
+            0.0;
+    }
+
+    protected static function getMovementSortPriority(string $docmodel): int
+    {
+        switch ($docmodel) {
+            case 'AlbaranCliente':
+            case 'AlbaranProveedor':
+                return 10;
+
+            case 'TransferenciaStock':
+                return 20;
+
+            case 'ConteoStock':
+                return 30;
+
+            case 'FacturaCliente':
+            case 'FacturaProveedor':
+                return 40;
+        }
+
+        return 50;
     }
 
     protected static function getPreviousSaldo(string $codalmacen, string $referencia, string $fecha, string $hora): float
@@ -325,113 +403,6 @@ class StockMovementManager
         }
 
         return static::$products[$variant->idproducto];
-    }
-
-    protected static function getVariant(string $referencia): Variante
-    {
-        if (!isset(static::$variants[$referencia])) {
-            $variante = new Variante();
-            $variante->loadWhereEq('referencia', $referencia);
-            static::$variants[$referencia] = $variante;
-        }
-
-        return static::$variants[$referencia];
-    }
-
-    protected static function rebuildBusinessDocument(): void
-    {
-        $limit = 250;
-        $models = [
-            new LineaAlbaranProveedor(),
-            new LineaFacturaProveedor(),
-            new LineaAlbaranCliente(),
-            new LineaFacturaCliente()
-        ];
-        foreach ($models as $model) {
-            $where = [
-                Where::notEq('cantidad', 0),
-                Where::eq('idproducto', static::$idproducto),
-                Where::isNotNull('referencia'),
-            ];
-            $offset = 0;
-
-            $lines = $model->all($where, ['idlinea' => 'ASC'], $offset, $limit);
-            while (count($lines) > 0) {
-                foreach ($lines as $line) {
-                    // Omitir productos faltantes o productos sin gestión de stock
-                    $product = static::getProduct($line->referencia);
-                    if (empty($product->idproducto) || $product->nostock) {
-                        continue;
-                    }
-
-                    $doc = $line->getDocument();
-
-                    static::addLineBusinessDocument($line, $doc);
-                }
-
-                $offset += $limit;
-                $lines = $model->all($where, ['idlinea' => 'ASC'], $offset, $limit);
-            }
-        }
-    }
-
-    protected static function getBusinessDocumentMovement(BusinessDocumentLine $line, TransformerDocument $doc): MovimientoStock
-    {
-        $movement = new MovimientoStock();
-        $where = [
-            Where::eq('codalmacen', $doc->codalmacen),
-            Where::eq('docid', $doc->id()),
-            Where::eq('docmodel', $doc->modelClassName()),
-            Where::eq('referencia', $line->referencia)
-        ];
-        if ($movement->loadWhere($where)) {
-            return $movement;
-        }
-
-        $movement->codalmacen = $doc->codalmacen;
-        $movement->docid = $doc->id();
-        $movement->docmodel = $doc->modelClassName();
-        $movement->idproducto = $line->idproducto ?? $line->getProducto()->idproducto;
-        $movement->referencia = $line->referencia;
-        return $movement;
-    }
-
-    protected static function getBusinessDocumentMovementQuantityForReference(BusinessDocumentLine $line, TransformerDocument $doc): float
-    {
-        // El hook se dispara antes de persistir la línea, así que $line puede no estar
-        // todavía en $doc->getLines(). Tratamos $line como autoritativa para su propia
-        // contribución y sumamos las del resto de líneas con la misma referencia.
-        $linePk = $line->primaryColumnValue();
-        $quantity = static::getBusinessDocumentMovementQuantity($line);
-        foreach ($doc->getLines() as $docLine) {
-            if ($docLine->referencia !== $line->referencia) {
-                continue;
-            }
-            if (!empty($linePk) && $docLine->primaryColumnValue() == $linePk) {
-                continue;
-            }
-            $quantity += static::getBusinessDocumentMovementQuantity($docLine);
-        }
-        return $quantity;
-    }
-
-    protected static function getBusinessDocumentMovementQuantity(BusinessDocumentLine $line): float
-    {
-        $transformation = static::getTransformationFromChildLine($line);
-        if (false === is_null($transformation)) {
-            return $line->exists() ?
-                static::getCurrentBusinessDocumentLineQuantity($line) - static::getSignedTransformationQuantity($transformation) :
-                0.0;
-        }
-
-        return static::getCurrentBusinessDocumentLineQuantity($line) + static::getSignedChildrenTransformationQuantity($line);
-    }
-
-    protected static function getCurrentBusinessDocumentLineQuantity(BusinessDocumentLine $line): float
-    {
-        return in_array($line->actualizastock, [-1, 1], true) ?
-            $line->actualizastock * ((float)$line->cantidad - (float)$line->servido) :
-            0.0;
     }
 
     protected static function getSignedChildrenTransformationQuantity(BusinessDocumentLine $line): float
@@ -497,6 +468,17 @@ class StockMovementManager
         return 0;
     }
 
+    protected static function getVariant(string $referencia): Variante
+    {
+        if (!isset(static::$variants[$referencia])) {
+            $variante = new Variante();
+            $variante->loadWhereEq('referencia', $referencia);
+            static::$variants[$referencia] = $variante;
+        }
+
+        return static::$variants[$referencia];
+    }
+
     protected static function isSupportedStockTransformation(DocTransformation $transformation): bool
     {
         return ($transformation->model1 === 'AlbaranCliente' && $transformation->model2 === 'FacturaCliente') ||
@@ -516,71 +498,41 @@ class StockMovementManager
         return !empty(static::getSignedChildrenTransformationQuantity($line));
     }
 
-    protected static function shouldSaveZeroBusinessDocumentMovement(BusinessDocumentLine $line): bool
+    protected static function rebuildBusinessDocument(): void
     {
-        if (false === $line->exists()) {
-            return false;
-        }
-
-        return false === is_null(static::getTransformationFromChildLine($line));
-    }
-
-    public static function updateReferenceSaldos(string $codalmacen, string $referencia): void
-    {
-        $saldo = 0.0;
-        $where = [
-            Where::eq('codalmacen', $codalmacen),
-            Where::eq('referencia', $referencia)
+        $limit = 250;
+        $models = [
+            new LineaAlbaranProveedor(),
+            new LineaFacturaProveedor(),
+            new LineaAlbaranCliente(),
+            new LineaFacturaCliente()
         ];
-        $movements = MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC'], 0, 0);
-        usort($movements, function (MovimientoStock $a, MovimientoStock $b) {
-            $dateA = strtotime($a->fecha . ' ' . $a->hora);
-            $dateB = strtotime($b->fecha . ' ' . $b->hora);
-            if ($dateA !== $dateB) {
-                return $dateA <=> $dateB;
-            }
+        foreach ($models as $model) {
+            $where = [
+                Where::notEq('cantidad', 0),
+                Where::eq('idproducto', static::$idproducto),
+                Where::isNotNull('referencia'),
+            ];
+            $offset = 0;
 
-            $priority = static::getMovementSortPriority($a->docmodel) <=> static::getMovementSortPriority($b->docmodel);
-            if ($priority !== 0) {
-                return $priority;
-            }
+            $lines = $model->all($where, ['idlinea' => 'ASC'], $offset, $limit);
+            while (count($lines) > 0) {
+                foreach ($lines as $line) {
+                    // Omitir productos faltantes o productos sin gestión de stock
+                    $product = static::getProduct($line->referencia);
+                    if (empty($product->idproducto) || $product->nostock) {
+                        continue;
+                    }
 
-            return $a->id() <=> $b->id();
-        });
+                    $doc = $line->getDocument();
 
-        foreach ($movements as $movement) {
-            if ($movement->docmodel === 'ConteoStock') {
-                $saldo = $movement->saldo;
-                continue;
-            }
+                    static::addLineBusinessDocument($line, $doc);
+                }
 
-            $saldo += $movement->cantidad;
-            if ($movement->saldo != $saldo) {
-                $movement->saldo = $saldo;
-                $movement->save();
+                $offset += $limit;
+                $lines = $model->all($where, ['idlinea' => 'ASC'], $offset, $limit);
             }
         }
-    }
-
-    protected static function getMovementSortPriority(string $docmodel): int
-    {
-        switch ($docmodel) {
-            case 'AlbaranCliente':
-            case 'AlbaranProveedor':
-                return 10;
-
-            case 'TransferenciaStock':
-                return 20;
-
-            case 'ConteoStock':
-                return 30;
-
-            case 'FacturaCliente':
-            case 'FacturaProveedor':
-                return 40;
-        }
-
-        return 50;
     }
 
     protected static function rebuildStockCounting(): void
@@ -612,5 +564,14 @@ class StockMovementManager
 
             static::addLineTransferStock($line, $transfer);
         }
+    }
+
+    protected static function shouldSaveZeroBusinessDocumentMovement(BusinessDocumentLine $line): bool
+    {
+        if (false === $line->exists()) {
+            return false;
+        }
+
+        return false === is_null(static::getTransformationFromChildLine($line));
     }
 }
