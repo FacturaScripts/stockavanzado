@@ -43,6 +43,7 @@ use FacturaScripts\Dinamic\Model\TransferenciaStock;
 class Init extends InitClass
 {
     const ROLE_NAME = 'StockAvanzado';
+
     /** @var DataBase */
     private $db;
 
