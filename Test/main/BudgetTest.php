@@ -1,0 +1,141 @@
+<?php
+/**
+ * This file is part of StockAvanzado plugin for FacturaScripts
+ * Copyright (C) 2024-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+namespace FacturaScripts\Test\Plugins;
+
+use FacturaScripts\Core\Where;
+use FacturaScripts\Dinamic\Model\MovimientoStock;
+use FacturaScripts\Dinamic\Model\PresupuestoCliente;
+use FacturaScripts\Dinamic\Model\PresupuestoProveedor;
+use FacturaScripts\Dinamic\Model\Stock;
+use FacturaScripts\Test\Traits\DefaultSettingsTrait;
+use FacturaScripts\Test\Traits\LogErrorsTrait;
+use FacturaScripts\Test\Traits\RandomDataTrait;
+use PHPUnit\Framework\TestCase;
+
+final class BudgetTest extends TestCase
+{
+    use LogErrorsTrait;
+    use RandomDataTrait;
+    use DefaultSettingsTrait;
+
+    public static function setUpBeforeClass(): void
+    {
+        self::setDefaultSettings();
+        self::installAccountingPlan();
+        self::removeTaxRegularization();
+    }
+
+    public function testCreatePresupuestoCliente(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos un presupuesto en ese almacén
+        $presupuesto = new PresupuestoCliente();
+        $this->assertTrue($presupuesto->setSubject($customer));
+        $this->assertTrue($presupuesto->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($presupuesto->save());
+
+        // añadimos una línea al presupuesto
+        $linea = $presupuesto->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // comprobamos que no hay stock del producto en el almacén
+        $stock = new Stock();
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $this->assertFalse($stock->loadWhere($whereRef));
+
+        // comprobamos que no hay ningún movimiento de stock
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadWhere($whereRef));
+
+        // eliminamos
+        $this->assertTrue($presupuesto->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testCreatePresupuestoProveedor(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un proveedor
+        $proveedor = $this->getRandomSupplier();
+        $this->assertTrue($proveedor->save());
+
+        // creamos un presupuesto en ese almacén
+        $presupuesto = new PresupuestoProveedor();
+        $this->assertTrue($presupuesto->setSubject($proveedor));
+        $this->assertTrue($presupuesto->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($presupuesto->save());
+
+        // añadimos una línea al presupuesto
+        $linea = $presupuesto->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // comprobamos que no hay stock del producto en el almacén
+        $stock = new Stock();
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $this->assertFalse($stock->loadWhere($whereRef));
+
+        // comprobamos que no hay ningún movimiento de stock
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadWhere($whereRef));
+
+        // eliminamos
+        $this->assertTrue($presupuesto->delete());
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    protected function tearDown(): void
+    {
+        $this->logErrors();
+    }
+}
