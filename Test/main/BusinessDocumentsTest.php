@@ -836,6 +836,162 @@ final class BusinessDocumentsTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testStatusPedidoClienteGeneratesAlbaran(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto con stock
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        $stock = new Stock();
+        $stock->referencia = $product->referencia;
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->cantidad = 10;
+        $stock->disponible = 10;
+        $this->assertTrue($stock->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos un pedido en ese almacén
+        $pedido = new PedidoCliente();
+        $this->assertTrue($pedido->setSubject($customer));
+        $this->assertTrue($pedido->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($pedido->save());
+
+        // añadimos una línea al pedido
+        $linea = $pedido->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // comprobamos que aún no hay movimiento de stock
+        $movement = new MovimientoStock();
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $this->assertFalse($movement->loadWhere($whereRef));
+
+        // buscamos el estado del pedido que genera albarán
+        $deliveryStatusId = null;
+        foreach ($pedido->getAvailableStatus() as $status) {
+            if ('AlbaranCliente' === $status->generadoc) {
+                $deliveryStatusId = $status->idestado;
+                break;
+            }
+        }
+        $this->assertNotNull($deliveryStatusId);
+
+        // al cambiar el estado se genera el albarán
+        $pedido->idestado = $deliveryStatusId;
+        $this->assertTrue($pedido->save());
+
+        // comprobamos que el albarán se ha creado
+        $albaranes = $pedido->childrenDocuments();
+        $this->assertCount(1, $albaranes);
+        $this->assertEquals($warehouse->codalmacen, $albaranes[0]->codalmacen);
+
+        // comprobamos que el stock se ha reducido
+        $this->assertTrue($stock->reload());
+        $this->assertEquals(0, $stock->cantidad);
+        $this->assertEquals(0, $stock->disponible);
+
+        // comprobamos que el movimiento de stock pertenece al albarán generado
+        $movimientos = MovimientoStock::all($whereRef);
+        $this->assertCount(1, $movimientos);
+        $this->assertEquals(-10, $movimientos[0]->cantidad);
+        $this->assertEquals($albaranes[0]->id(), $movimientos[0]->docid);
+        $this->assertEquals($albaranes[0]->modelClassName(), $movimientos[0]->docmodel);
+
+        // eliminamos
+        $this->assertTrue($albaranes[0]->delete());
+        $this->assertTrue($pedido->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testStatusPedidoProveedorGeneratesAlbaran(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto (sin stock inicial)
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un proveedor
+        $proveedor = $this->getRandomSupplier();
+        $this->assertTrue($proveedor->save());
+
+        // creamos un pedido en ese almacén
+        $pedido = new PedidoProveedor();
+        $this->assertTrue($pedido->setSubject($proveedor));
+        $this->assertTrue($pedido->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($pedido->save());
+
+        // añadimos una línea al pedido
+        $linea = $pedido->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // comprobamos que aún no hay movimiento de stock
+        $movement = new MovimientoStock();
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $this->assertFalse($movement->loadWhere($whereRef));
+
+        // buscamos el estado del pedido que genera albarán
+        $deliveryStatusId = null;
+        foreach ($pedido->getAvailableStatus() as $status) {
+            if ('AlbaranProveedor' === $status->generadoc) {
+                $deliveryStatusId = $status->idestado;
+                break;
+            }
+        }
+        $this->assertNotNull($deliveryStatusId);
+
+        // al cambiar el estado se genera el albarán
+        $pedido->idestado = $deliveryStatusId;
+        $this->assertTrue($pedido->save());
+
+        // comprobamos que el albarán se ha creado
+        $albaranes = $pedido->childrenDocuments();
+        $this->assertCount(1, $albaranes);
+        $this->assertEquals($warehouse->codalmacen, $albaranes[0]->codalmacen);
+
+        // comprobamos que el stock ha aumentado
+        $stock = new Stock();
+        $this->assertTrue($stock->loadWhere($whereRef));
+        $this->assertEquals(10, $stock->cantidad);
+        $this->assertEquals(10, $stock->disponible);
+
+        // comprobamos que el movimiento de stock pertenece al albarán generado
+        $movimientos = MovimientoStock::all($whereRef);
+        $this->assertCount(1, $movimientos);
+        $this->assertEquals(10, $movimientos[0]->cantidad);
+        $this->assertEquals($albaranes[0]->id(), $movimientos[0]->docid);
+        $this->assertEquals($albaranes[0]->modelClassName(), $movimientos[0]->docmodel);
+
+        // eliminamos
+        $this->assertTrue($albaranes[0]->delete());
+        $this->assertTrue($pedido->delete());
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     public function testCreatePresupuestoCliente(): void
     {
         // creamos un almacén
