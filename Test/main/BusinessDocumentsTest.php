@@ -26,6 +26,8 @@ use FacturaScripts\Dinamic\Lib\Calculator;
 use FacturaScripts\Dinamic\Model\AlbaranCliente;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\ConteoStock;
+use FacturaScripts\Dinamic\Model\FacturaCliente;
+use FacturaScripts\Dinamic\Model\FacturaProveedor;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\PedidoCliente;
 use FacturaScripts\Dinamic\Model\PedidoProveedor;
@@ -1000,6 +1002,116 @@ final class BusinessDocumentsTest extends TestCase
             'delivery' => $delivery,
             'warehouse' => $warehouse,
         ];
+    }
+
+    public function testCreateFacturaCliente(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto y le ponemos stock
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        $stock = new Stock();
+        $stock->referencia = $product->referencia;
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->cantidad = 10;
+        $stock->disponible = 10;
+        $this->assertTrue($stock->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos una factura directa (sin albarán previo)
+        $factura = new FacturaCliente();
+        $this->assertTrue($factura->setSubject($customer));
+        $this->assertTrue($factura->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($factura->save());
+
+        // añadimos una línea
+        $linea = $factura->getNewProductLine($product->referencia);
+        $linea->cantidad = 4;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // comprobamos que el stock se ha reducido
+        $this->assertTrue($stock->reload());
+        $this->assertEquals(6, $stock->cantidad);
+        $this->assertEquals(6, $stock->disponible);
+
+        // comprobamos que se ha generado el movimiento de stock
+        $movement = new MovimientoStock();
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $this->assertTrue($movement->loadWhere($whereRef));
+        $this->assertEquals(-4, $movement->cantidad);
+        $this->assertEquals(-4, $movement->saldo);
+        $this->assertEquals($factura->id(), $movement->docid);
+        $this->assertEquals($factura->modelClassName(), $movement->docmodel);
+
+        // eliminamos
+        $this->assertTrue($factura->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testCreateFacturaProveedor(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto (sin stock)
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un proveedor
+        $proveedor = $this->getRandomSupplier();
+        $this->assertTrue($proveedor->save());
+
+        // creamos una factura de proveedor directa (sin albarán previo)
+        $factura = new FacturaProveedor();
+        $this->assertTrue($factura->setSubject($proveedor));
+        $this->assertTrue($factura->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($factura->save());
+
+        // añadimos una línea
+        $linea = $factura->getNewProductLine($product->referencia);
+        $linea->cantidad = 7;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // comprobamos que el stock ha aumentado
+        $stock = new Stock();
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $this->assertTrue($stock->loadWhere($whereRef));
+        $this->assertEquals(7, $stock->cantidad);
+        $this->assertEquals(7, $stock->disponible);
+
+        // comprobamos que se ha generado el movimiento de stock
+        $movement = new MovimientoStock();
+        $this->assertTrue($movement->loadWhere($whereRef));
+        $this->assertEquals(7, $movement->cantidad);
+        $this->assertEquals(7, $movement->saldo);
+        $this->assertEquals($factura->id(), $movement->docid);
+        $this->assertEquals($factura->modelClassName(), $movement->docmodel);
+
+        // eliminamos
+        $this->assertTrue($factura->delete());
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
     }
 
     private function deleteSupplierInvoiceAfterCountingScenario(array $scenario): void
