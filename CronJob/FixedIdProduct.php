@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2025 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2025-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -23,12 +23,21 @@ use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Template\CronJobClass;
 
 /**
+ * Tarea de mantenimiento que corrige el campo idproducto en las líneas de documentos
+ * (presupuestos, pedidos, albaranes y facturas, tanto de compra como de venta), en las
+ * líneas de conteos y transferencias de stock y en los movimientos de stock.
+ *
+ * Para cada registro busca la referencia en la tabla variantes y, si el idproducto no
+ * coincide o está vacío, lo actualiza con el valor correcto. De este modo se mantiene
+ * la coherencia entre referencia e idproducto cuando alguna fuente externa los ha
+ * dejado desincronizados.
+ *
  * @author Daniel Fernández Giménez <contacto@danielfg.es>
  */
 final class FixedIdProduct extends CronJobClass
 {
     const JOB_NAME = 'fixed-id-product';
-    const JOB_PERIOD = '1 year';
+    const JOB_PERIOD = '1 month';
 
     private static $db;
 
@@ -36,94 +45,57 @@ final class FixedIdProduct extends CronJobClass
     {
         self::echo("\n\n* JOB: " . self::JOB_NAME . ' ...');
 
-        self::checkLinesIDs('lineaspresupuestosprov');
-        self::checkLinesIDs('lineaspedidosprov');
-        self::checkLinesIDs('lineasalbaranesprov');
-        self::checkLinesIDs('lineasfacturasprov');
+        self::fixTable('lineaspresupuestosprov', 'idlinea');
+        self::fixTable('lineaspedidosprov', 'idlinea');
+        self::fixTable('lineasalbaranesprov', 'idlinea');
+        self::fixTable('lineasfacturasprov', 'idlinea');
 
-        self::checkLinesIDs('lineaspresupuestoscli');
-        self::checkLinesIDs('lineaspedidoscli');
-        self::checkLinesIDs('lineasalbaranescli');
-        self::checkLinesIDs('lineasfacturascli');
+        self::fixTable('lineaspresupuestoscli', 'idlinea');
+        self::fixTable('lineaspedidoscli', 'idlinea');
+        self::fixTable('lineasalbaranescli', 'idlinea');
+        self::fixTable('lineasfacturascli', 'idlinea');
 
-        self::checkLinesIDs('stocks_lineasconteos');
-        self::checkLinesIDs('stocks_lineastransferencias');
-        self::checkIDs('stocks_movimientos');
+        self::fixTable('stocks_lineasconteos', 'idlinea');
+        self::fixTable('stocks_lineastransferencias', 'idlinea');
+        self::fixTable('stocks_movimientos', 'id');
 
         self::saveEcho();
     }
 
-    protected static function checkIDs(string $table): void
+    protected static function fixTable(string $table, string $pk): void
     {
         // si la tabla no existe, salimos
         if (!self::db()->tableExists($table)) {
             return;
         }
 
-        // creamos la sql
-        $sql = 'SELECT lf.id,'
-            . ' lf.idproducto AS idproducto_linea,'
+        // buscamos registros con idproducto incorrecto
+        $sql = 'SELECT lf.' . $pk . ' AS pk,'
             . ' v.idproducto AS idproducto_variante,'
             . ' lf.referencia'
             . ' FROM ' . $table . ' lf'
             . ' JOIN variantes v ON v.referencia = lf.referencia'
-            . ' WHERE lf.idproducto <> v.idproducto;';
+            . ' WHERE lf.idproducto IS NULL OR lf.idproducto <> v.idproducto;';
 
-        // si no hay datos, salimos
         $result = self::db()->select($sql);
         if (empty($result)) {
             return;
         }
 
-        // recorremos los datos
         foreach ($result as $row) {
-            $update = self::db()->exec('UPDATE ' . $table . ' SET idproducto = ' . $row['idproducto_variante']
-                . ' WHERE id = ' . $row['id'] . ';');
+            $idproducto = (int)$row['idproducto_variante'];
+            $pkValue = (int)$row['pk'];
+
+            $update = self::db()->exec('UPDATE ' . $table . ' SET idproducto = ' . $idproducto
+                . ' WHERE ' . $pk . ' = ' . $pkValue . ';');
 
             if (!$update) {
-                self::echo("\n-- Error al actualizar el id del producto en el movimiento " . $row['id'] . ' de la tabla ' . $table);
+                self::echo("\n-- Error al corregir el idproducto en el registro " . $pkValue . ' de la tabla ' . $table);
                 continue;
             }
 
-            self::echo("\n-- Corregido id del producto " . $row['referencia'] . ' en el movimiento ' . $row['id']
-                . ' de la tabla ' . $table);
-        }
-    }
-
-    protected static function checkLinesIDs(string $table): void
-    {
-        // si la tabla no existe, salimos
-        if (!self::db()->tableExists($table)) {
-            return;
-        }
-
-        // buscamos líneas con idproducto incorrecto
-        $sql = 'SELECT lf.idlinea,'
-            . ' lf.idproducto AS idproducto_linea,'
-            . ' v.idproducto AS idproducto_variante,'
-            . ' lf.referencia'
-            . ' FROM ' . $table . ' lf'
-            . ' JOIN variantes v ON v.referencia = lf.referencia'
-            . ' WHERE lf.idproducto <> v.idproducto;';
-
-        // si no hay datos, salimos
-        $result = self::db()->select($sql);
-        if (empty($result)) {
-            return;
-        }
-
-        // recorremos los datos
-        foreach ($result as $row) {
-            $update = self::db()->exec('UPDATE ' . $table . ' SET idproducto = ' . $row['idproducto_variante']
-                . ' WHERE idlinea = ' . $row['idlinea'] . ';');
-
-            if (!$update) {
-                self::echo("\n-- Error al actualizar el id del producto en la línea " . $row['idlinea'] . ' de la tabla ' . $table);
-                continue;
-            }
-
-            self::echo("\n-- Corregido id del producto " . $row['referencia'] . ' en la línea ' . $row['idlinea']
-                . ' de la tabla ' . $table);
+            self::echo("\n-- Corregido idproducto de " . $row['referencia']
+                . ' en el registro ' . $pkValue . ' de la tabla ' . $table);
         }
     }
 
