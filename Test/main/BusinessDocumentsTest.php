@@ -992,6 +992,103 @@ final class BusinessDocumentsTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testMovementDatesFollowDocumentDates(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto con stock
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        $stock = new Stock();
+        $stock->referencia = $product->referencia;
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->cantidad = 10;
+        $stock->disponible = 10;
+        $this->assertTrue($stock->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos un albarán con fecha y hora del pasado
+        $pastDate = date('d-m-Y', strtotime('-3 days'));
+        $pastHour = '09:15:00';
+
+        $albaran = new AlbaranCliente();
+        $this->assertTrue($albaran->setSubject($customer));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->setDate($pastDate, $pastHour));
+        $this->assertTrue($albaran->save());
+
+        // añadimos una línea
+        $linea = $albaran->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // el movimiento debe tener la fecha y hora del albarán
+        $movement = new MovimientoStock();
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $this->assertTrue($movement->loadWhere($whereRef));
+        $this->assertEquals($pastDate, $movement->fecha);
+        $this->assertEquals($pastHour, $movement->hora);
+        $this->assertEquals($albaran->id(), $movement->docid);
+
+        // ahora aprobamos el albarán a factura (la factura toma fecha/hora actuales)
+        $invoiceStatusId = null;
+        foreach ($albaran->getAvailableStatus() as $status) {
+            if ('FacturaCliente' === $status->generadoc) {
+                $invoiceStatusId = $status->idestado;
+                break;
+            }
+        }
+        $this->assertNotNull($invoiceStatusId);
+
+        $albaran->idestado = $invoiceStatusId;
+        $this->assertTrue($albaran->save());
+
+        $facturas = $albaran->childrenDocuments();
+        $this->assertCount(1, $facturas);
+        $factura = $facturas[0];
+
+        // el movimiento del albarán mantiene su fecha/hora originales
+        $albaranMovement = new MovimientoStock();
+        $this->assertTrue($albaranMovement->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia),
+            Where::eq('docid', $albaran->id()),
+            Where::eq('docmodel', $albaran->modelClassName()),
+        ]));
+        $this->assertEquals($pastDate, $albaranMovement->fecha);
+        $this->assertEquals($pastHour, $albaranMovement->hora);
+
+        // el movimiento de la factura toma su propia fecha/hora (distintas del albarán)
+        $facturaMovement = new MovimientoStock();
+        $this->assertTrue($facturaMovement->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia),
+            Where::eq('docid', $factura->id()),
+            Where::eq('docmodel', $factura->modelClassName()),
+        ]));
+        $this->assertEquals($factura->fecha, $facturaMovement->fecha);
+        $this->assertEquals($factura->hora, $facturaMovement->hora);
+        $this->assertNotEquals($albaranMovement->fecha, $facturaMovement->fecha);
+
+        // eliminamos
+        $this->assertTrue($factura->delete());
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     public function testCreatePresupuestoCliente(): void
     {
         // creamos un almacén
