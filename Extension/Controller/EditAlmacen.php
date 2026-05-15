@@ -91,7 +91,7 @@ class EditAlmacen
                 case 'ListMovimientoStock':
                 case 'ListStockValoradoHistorico':
                     $codalmacen = $this->getViewModelValue('EditAlmacen', 'codalmacen');
-                    $where = [Where::column('codalmacen', $codalmacen)];
+                    $where = [Where::eq('codalmacen', $codalmacen)];
                     $view->loadData('', $where);
                     break;
             }

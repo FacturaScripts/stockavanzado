@@ -100,10 +100,10 @@ final class TransferenciaStockTest extends TestCase
         // comprobamos que está el movimiento de stock del almacén 1
         $movement1 = new MovimientoStock();
         $where1 = [
-            Where::column('codalmacen', $transferencia->codalmacenorigen),
-            Where::column('docid', $transferencia->id()),
-            Where::column('docmodel', $transferencia->modelClassName()),
-            Where::column('referencia', $lineaTrans1->referencia)
+            Where::eq('codalmacen', $transferencia->codalmacenorigen),
+            Where::eq('docid', $transferencia->id()),
+            Where::eq('docmodel', $transferencia->modelClassName()),
+            Where::eq('referencia', $lineaTrans1->referencia)
         ];
         $this->assertTrue($movement1->loadWhere($where1));
 
@@ -116,10 +116,10 @@ final class TransferenciaStockTest extends TestCase
         // comprobamos que está el movimiento de stock del almacén 2
         $movement2 = new MovimientoStock();
         $where2 = [
-            Where::column('codalmacen', $transferencia->codalmacendestino),
-            Where::column('docid', $transferencia->id()),
-            Where::column('docmodel', $transferencia->modelClassName()),
-            Where::column('referencia', $lineaTrans1->referencia)
+            Where::eq('codalmacen', $transferencia->codalmacendestino),
+            Where::eq('docid', $transferencia->id()),
+            Where::eq('docmodel', $transferencia->modelClassName()),
+            Where::eq('referencia', $lineaTrans1->referencia)
         ];
         $this->assertTrue($movement2->loadWhere($where2));
 
@@ -140,8 +140,8 @@ final class TransferenciaStockTest extends TestCase
         // comprobamos que el stock del producto 1 en almacén 2 ahora es 10
         $stock21 = new Stock();
         $where21 = [
-            Where::column('codalmacen', $warehouse2->codalmacen),
-            Where::column('referencia', $product1->referencia)
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('referencia', $product1->referencia)
         ];
         $this->assertTrue($stock21->loadWhere($where21));
         $this->assertEquals(10, $stock21->cantidad);
@@ -149,8 +149,8 @@ final class TransferenciaStockTest extends TestCase
         // comprobamos que el stock del producto 2 en almacén 2 ahora es 5
         $stock22 = new Stock();
         $where22 = [
-            Where::column('codalmacen', $warehouse2->codalmacen),
-            Where::column('referencia', $product2->referencia)
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('referencia', $product2->referencia)
         ];
         $this->assertTrue($stock22->loadWhere($where22));
         $this->assertEquals(5, $stock22->cantidad);
@@ -241,28 +241,28 @@ final class TransferenciaStockTest extends TestCase
         // comprobamos que está el movimiento de stock del almacén 1
         $movement1 = new MovimientoStock();
         $where1 = [
-            Where::column('codalmacen', $transferencia->codalmacenorigen),
-            Where::column('docid', $transferencia->id()),
-            Where::column('docmodel', $transferencia->modelClassName()),
-            Where::column('referencia', $lineaTrans->referencia)
+            Where::eq('codalmacen', $transferencia->codalmacenorigen),
+            Where::eq('docid', $transferencia->id()),
+            Where::eq('docmodel', $transferencia->modelClassName()),
+            Where::eq('referencia', $lineaTrans->referencia)
         ];
         $this->assertTrue($movement1->loadWhere($where1));
 
         // comprobamos que está el movimiento de stock del almacén 2
         $movement2 = new MovimientoStock();
         $where2 = [
-            Where::column('codalmacen', $transferencia->codalmacendestino),
-            Where::column('docid', $transferencia->id()),
-            Where::column('docmodel', $transferencia->modelClassName()),
-            Where::column('referencia', $lineaTrans->referencia)
+            Where::eq('codalmacen', $transferencia->codalmacendestino),
+            Where::eq('docid', $transferencia->id()),
+            Where::eq('docmodel', $transferencia->modelClassName()),
+            Where::eq('referencia', $lineaTrans->referencia)
         ];
         $this->assertTrue($movement2->loadWhere($where2));
 
         // comprobamos que el stock del almacén 1 es 90
         $stock = new Stock();
         $where = [
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertTrue($stock->loadWhere($where));
         $this->assertEquals(90, $stock->cantidad);
@@ -270,8 +270,8 @@ final class TransferenciaStockTest extends TestCase
         // comprobamos que el stock del almacén 2 es 10
         $stock2 = new Stock();
         $where2 = [
-            Where::column('codalmacen', $warehouse2->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertTrue($stock2->loadWhere($where2));
         $this->assertEquals(10, $stock2->cantidad);
@@ -350,10 +350,10 @@ final class TransferenciaStockTest extends TestCase
         // comprobamos el movimiento de la primera transferencia en el almacén de origen
         $movOrig1 = new MovimientoStock();
         $this->assertTrue($movOrig1->loadWhere([
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('docid', $transferencia1->id()),
-            Where::column('docmodel', $transferencia1->modelClassName()),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('docid', $transferencia1->id()),
+            Where::eq('docmodel', $transferencia1->modelClassName()),
+            Where::eq('referencia', $product->referencia)
         ]));
         $this->assertEquals(-10, $movOrig1->cantidad);
         $this->assertEquals(-10, $movOrig1->saldo);
@@ -362,10 +362,10 @@ final class TransferenciaStockTest extends TestCase
         // saldo acumulado: -10 + -7 = -17
         $movOrig2 = new MovimientoStock();
         $this->assertTrue($movOrig2->loadWhere([
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('docid', $transferencia2->id()),
-            Where::column('docmodel', $transferencia2->modelClassName()),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('docid', $transferencia2->id()),
+            Where::eq('docmodel', $transferencia2->modelClassName()),
+            Where::eq('referencia', $product->referencia)
         ]));
         $this->assertEquals(-7, $movOrig2->cantidad);
         $this->assertEquals(-17, $movOrig2->saldo);
@@ -373,10 +373,10 @@ final class TransferenciaStockTest extends TestCase
         // comprobamos el movimiento de la primera transferencia en el almacén de destino
         $movDest1 = new MovimientoStock();
         $this->assertTrue($movDest1->loadWhere([
-            Where::column('codalmacen', $warehouse2->codalmacen),
-            Where::column('docid', $transferencia1->id()),
-            Where::column('docmodel', $transferencia1->modelClassName()),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('docid', $transferencia1->id()),
+            Where::eq('docmodel', $transferencia1->modelClassName()),
+            Where::eq('referencia', $product->referencia)
         ]));
         $this->assertEquals(10, $movDest1->cantidad);
         $this->assertEquals(10, $movDest1->saldo);
@@ -385,10 +385,10 @@ final class TransferenciaStockTest extends TestCase
         // saldo acumulado: 10 + 7 = 17
         $movDest2 = new MovimientoStock();
         $this->assertTrue($movDest2->loadWhere([
-            Where::column('codalmacen', $warehouse2->codalmacen),
-            Where::column('docid', $transferencia2->id()),
-            Where::column('docmodel', $transferencia2->modelClassName()),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('docid', $transferencia2->id()),
+            Where::eq('docmodel', $transferencia2->modelClassName()),
+            Where::eq('referencia', $product->referencia)
         ]));
         $this->assertEquals(7, $movDest2->cantidad);
         $this->assertEquals(17, $movDest2->saldo);
@@ -399,8 +399,8 @@ final class TransferenciaStockTest extends TestCase
 
         $stockDest = new Stock();
         $this->assertTrue($stockDest->loadWhere([
-            Where::column('codalmacen', $warehouse2->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ]));
         $this->assertEquals(17, $stockDest->cantidad);
 
@@ -460,15 +460,15 @@ final class TransferenciaStockTest extends TestCase
         // no debe existir stock en el almacén de destino
         $stockDest = new Stock();
         $this->assertFalse($stockDest->loadWhere([
-            Where::column('codalmacen', $warehouse2->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ]));
 
         // no debe existir ningún movimiento de stock para esta transferencia
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere([
-            Where::column('docid', $transferencia->id()),
-            Where::column('docmodel', $transferencia->modelClassName())
+            Where::eq('docid', $transferencia->id()),
+            Where::eq('docmodel', $transferencia->modelClassName())
         ]));
 
         // eliminamos
@@ -563,15 +563,15 @@ final class TransferenciaStockTest extends TestCase
         // no debe existir stock en el almacén de destino
         $stockDest = new Stock();
         $this->assertFalse($stockDest->loadWhere([
-            Where::column('codalmacen', $warehouse2->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ]));
 
         // no debe existir ningún movimiento de stock para esta transferencia
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere([
-            Where::column('docid', $transferencia->id()),
-            Where::column('docmodel', $transferencia->modelClassName())
+            Where::eq('docid', $transferencia->id()),
+            Where::eq('docmodel', $transferencia->modelClassName())
         ]));
 
         // eliminamos
@@ -579,6 +579,262 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($warehouse2->delete());
         $this->assertTrue($warehouse->delete());
         $this->assertTrue($product->delete());
+    }
+
+    public function testAddLineConsolidatesSameReference(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al almacén de origen
+        $stock = new Stock();
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->referencia = $product->referencia;
+        $stock->idproducto = $product->idproducto;
+        $stock->cantidad = 50;
+        $this->assertTrue($stock->save());
+
+        // creamos una transferencia
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Consolidacion lineas test';
+        $this->assertTrue($transferencia->save());
+
+        // primera llamada: 4 unidades
+        $linea1 = $transferencia->addLine($product->referencia, $product->idproducto, 4);
+        $this->assertTrue($linea1->exists());
+        $this->assertEquals(4, $linea1->cantidad);
+
+        // segunda llamada con la misma referencia: 6 unidades adicionales
+        $linea2 = $transferencia->addLine($product->referencia, $product->idproducto, 6);
+        $this->assertTrue($linea2->exists());
+
+        // debe ser la misma línea consolidada con 4 + 6 = 10
+        $this->assertEquals($linea1->idlinea, $linea2->idlinea);
+        $this->assertEquals(10, $linea2->cantidad);
+
+        // solo debe haber una línea en la transferencia
+        $this->assertCount(1, $transferencia->getLines());
+
+        // ejecutamos la transferencia y comprobamos que se transfieren 10 unidades
+        $this->assertTrue($transferencia->transferStock());
+
+        $stock->load($stock->idstock);
+        $this->assertEquals(40, $stock->cantidad);
+
+        $stockDest = new Stock();
+        $this->assertTrue($stockDest->loadWhere([
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(10, $stockDest->cantidad);
+
+        // eliminamos
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCantModifyCompletedTransfer(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos dos productos
+        $product1 = $this->getRandomProduct();
+        $this->assertTrue($product1->save());
+        $product2 = $this->getRandomProduct();
+        $this->assertTrue($product2->save());
+
+        // añadimos stock al almacén de origen para ambos productos
+        $stock1 = new Stock();
+        $stock1->codalmacen = $warehouse->codalmacen;
+        $stock1->referencia = $product1->referencia;
+        $stock1->idproducto = $product1->idproducto;
+        $stock1->cantidad = 30;
+        $this->assertTrue($stock1->save());
+        $stock2 = new Stock();
+        $stock2->codalmacen = $warehouse->codalmacen;
+        $stock2->referencia = $product2->referencia;
+        $stock2->idproducto = $product2->idproducto;
+        $stock2->cantidad = 30;
+        $this->assertTrue($stock2->save());
+
+        // creamos una transferencia con producto1 y la ejecutamos
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Transferencia completada test';
+        $this->assertTrue($transferencia->save());
+
+        $linea = $transferencia->addLine($product1->referencia, $product1->idproducto, 5);
+        $this->assertTrue($linea->exists());
+        $this->assertTrue($transferencia->transferStock());
+
+        // recargamos la transferencia y confirmamos que está completada
+        $transferencia->load($transferencia->idtrans);
+        $this->assertTrue($transferencia->completed);
+
+        // 1) addLine de un producto nuevo debe fallar
+        $nuevaLinea = $transferencia->addLine($product2->referencia, $product2->idproducto, 3);
+        $this->assertFalse($nuevaLinea->exists());
+        $this->assertCount(1, $transferencia->getLines());
+
+        // 2) addLine sobre la misma referencia tampoco debe modificar la línea existente
+        $linea->load($linea->idlinea);
+        $cantidadOriginal = $linea->cantidad;
+        $reintento = $transferencia->addLine($product1->referencia, $product1->idproducto, 7);
+        $this->assertFalse($reintento->exists());
+        $linea->load($linea->idlinea);
+        $this->assertEquals($cantidadOriginal, $linea->cantidad);
+
+        // 3) guardar directamente una modificación sobre la línea existente debe fallar
+        $linea->cantidad = 99;
+        $this->assertFalse($linea->save());
+        $linea->load($linea->idlinea);
+        $this->assertEquals($cantidadOriginal, $linea->cantidad);
+
+        // 4) eliminar directamente la línea de una transferencia completada debe fallar
+        $this->assertFalse($linea->delete());
+        $this->assertTrue($linea->exists());
+
+        // borrar la transferencia entera sí debe seguir funcionando (revierte stock y movimientos)
+        $this->assertTrue($transferencia->delete());
+        $this->assertFalse($linea->exists());
+
+        $stock1->load($stock1->idstock);
+        $this->assertEquals(30, $stock1->cantidad);
+
+        // eliminamos
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product1->delete());
+        $this->assertTrue($product2->delete());
+    }
+
+    public function testCantTransferWithoutLines(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos una transferencia sin líneas
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Transferencia sin lineas test';
+        $this->assertTrue($transferencia->save());
+
+        // ejecutar la transferencia debe fallar
+        $this->assertFalse($transferencia->transferStock());
+
+        // la transferencia no debe estar completada
+        $transferencia->load($transferencia->idtrans);
+        $this->assertFalse($transferencia->completed);
+
+        // eliminamos
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testTransferVariant(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos una variante (con su propio producto detrás)
+        $variant = $this->getRandomVariant();
+        $this->assertTrue($variant->save());
+
+        // añadimos stock al almacén de origen sobre la referencia de la variante
+        $stock = new Stock();
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->referencia = $variant->referencia;
+        $stock->idproducto = $variant->idproducto;
+        $stock->cantidad = 20;
+        $this->assertTrue($stock->save());
+
+        // creamos una transferencia
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Transferencia de variante test';
+        $this->assertTrue($transferencia->save());
+
+        // añadimos la variante a la transferencia sin pasar idproducto (debe resolverse desde la variante)
+        $linea = $transferencia->addLine($variant->referencia, 0, 8);
+        $this->assertTrue($linea->exists());
+        $this->assertEquals($variant->idproducto, $linea->idproducto);
+
+        // ejecutamos la transferencia
+        $this->assertTrue($transferencia->transferStock());
+
+        // el stock del almacén de origen baja a 12
+        $stock->load($stock->idstock);
+        $this->assertEquals(12, $stock->cantidad);
+
+        // el almacén de destino tiene 8 unidades de la variante
+        $stockDest = new Stock();
+        $this->assertTrue($stockDest->loadWhere([
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('referencia', $variant->referencia)
+        ]));
+        $this->assertEquals(8, $stockDest->cantidad);
+        $this->assertEquals($variant->idproducto, $stockDest->idproducto);
+
+        // existe el movimiento en origen con la cantidad y referencia correctas
+        $movOrig = new MovimientoStock();
+        $this->assertTrue($movOrig->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('docid', $transferencia->id()),
+            Where::eq('docmodel', $transferencia->modelClassName()),
+            Where::eq('referencia', $variant->referencia)
+        ]));
+        $this->assertEquals(-8, $movOrig->cantidad);
+        $this->assertEquals($variant->idproducto, $movOrig->idproducto);
+
+        // existe el movimiento en destino
+        $movDest = new MovimientoStock();
+        $this->assertTrue($movDest->loadWhere([
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('docid', $transferencia->id()),
+            Where::eq('docmodel', $transferencia->modelClassName()),
+            Where::eq('referencia', $variant->referencia)
+        ]));
+        $this->assertEquals(8, $movDest->cantidad);
+        $this->assertEquals($variant->idproducto, $movDest->idproducto);
+
+        // eliminamos
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($variant->getProducto()->delete());
     }
 
     public function testCantTransferToSameWarehouse(): void
@@ -632,18 +888,25 @@ final class TransferenciaStockTest extends TestCase
         // comprobamos que no hay stock en el almacén de origen
         $stock = new Stock();
         $where = [
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertFalse($stock->loadWhere($where));
 
         // comprobamos que no hay stock en el almacén de destino
         $stock2 = new Stock();
         $where2 = [
-            Where::column('codalmacen', $warehouse2->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertFalse($stock2->loadWhere($where2));
+
+        // no debe existir ningún movimiento de stock para esta transferencia
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadWhere([
+            Where::eq('docid', $transferencia->id()),
+            Where::eq('docmodel', $transferencia->modelClassName())
+        ]));
 
         // eliminamos
         $this->assertTrue($transferencia->delete());
@@ -699,16 +962,16 @@ final class TransferenciaStockTest extends TestCase
         // comprobamos que no hay stock en el almacén de destino
         $stock2 = new Stock();
         $where2 = [
-            Where::column('codalmacen', $warehouse2->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertFalse($stock2->loadWhere($where2));
 
         // comprobamos que no se ha creado movimiento de stock para esta transferencia
         $movement = new MovimientoStock();
         $whereMov = [
-            Where::column('docid', $transferencia->id()),
-            Where::column('docmodel', $transferencia->modelClassName())
+            Where::eq('docid', $transferencia->id()),
+            Where::eq('docmodel', $transferencia->modelClassName())
         ];
         $this->assertFalse($movement->loadWhere($whereMov));
 

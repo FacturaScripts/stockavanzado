@@ -39,6 +39,9 @@ class LineaTransferenciaStock extends ModelClass
     use ModelTrait;
     use ProductRelationTrait;
 
+    /** @var bool */
+    public $bypassCompletedCheck = false;
+
     /** @var float */
     public $cantidad;
 
@@ -63,6 +66,19 @@ class LineaTransferenciaStock extends ModelClass
         $this->cantidad = 1.0;
         $this->fecha = Tools::dateTime();
         $this->nick = Session::user()->nick;
+    }
+
+    public function delete(): bool
+    {
+        if (false === $this->bypassCompletedCheck) {
+            $transfer = $this->getTransference();
+            if ($transfer->exists() && $transfer->completed) {
+                Tools::log()->warning('cannot-modify-completed-transfer');
+                return false;
+            }
+        }
+
+        return parent::delete();
     }
 
     public function getStockDest(): Stock
@@ -122,6 +138,12 @@ class LineaTransferenciaStock extends ModelClass
 
         if (empty($this->idproducto)) {
             $this->idproducto = $this->getVariant()->idproducto;
+        }
+
+        $transfer = $this->getTransference();
+        if ($transfer->exists() && $transfer->completed) {
+            Tools::log()->warning('cannot-modify-completed-transfer');
+            return false;
         }
 
         if ($this->cantidad <= 0) {

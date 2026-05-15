@@ -58,8 +58,8 @@ final class StockRebuildTest extends TestCase
         // obtenemos el stock del producto
         $stock = new Stock();
         $where = [
-            Where::column('codalmacen', $warehouse->codalmacen),
-            Where::column('referencia', $product->referencia)
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
         ];
         $this->assertTrue($stock->loadWhere($where));
 

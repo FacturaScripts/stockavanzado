@@ -65,6 +65,11 @@ class TransferenciaStock extends ModelClass
 
     public function addLine(string $referencia, int $idproducto, float $quantity): LineaTransferenciaStock
     {
+        if ($this->completed) {
+            Tools::log()->warning('cannot-modify-completed-transfer');
+            return new LineaTransferenciaStock();
+        }
+
         $line = new LineaTransferenciaStock();
         $where = [
             Where::eq('idtrans', $this->idtrans),
@@ -80,7 +85,7 @@ class TransferenciaStock extends ModelClass
             $line->referencia = $referencia;
         } else {
             // si ya existe la línea, incrementamos la cantidad
-            $line->cantidad++;
+            $line->cantidad += $quantity;
         }
 
         $line->fecha = Tools::dateTime();
@@ -155,6 +160,7 @@ class TransferenciaStock extends ModelClass
             }
 
             // eliminamos la línea
+            $line->bypassCompletedCheck = true;
             if (false === $line->delete()) {
                 if ($newTransaction) {
                     self::db()->rollback();
@@ -244,11 +250,18 @@ class TransferenciaStock extends ModelClass
             return true;
         }
 
+        // si no hay líneas no se puede completar la transferencia
+        $lines = $transfer->getLines(['fecha' => 'ASC']);
+        if (empty($lines)) {
+            Tools::log()->warning('transfer-without-lines');
+            return false;
+        }
+
         // establecemos la fecha de fin del conteo
         $transfer->fecha_completed = Tools::dateTime();
 
         $newTransaction = false === self::db()->inTransaction() && self::db()->beginTransaction();
-        foreach ($transfer->getLines(['fecha' => 'ASC']) as $line) {
+        foreach ($lines as $line) {
             // comprobamos que el producto sigue gestionando stock
             $product = new Producto();
             if ($product->load($line->idproducto) && $product->nostock) {

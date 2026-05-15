@@ -80,8 +80,8 @@ class EditConteoStock extends EditController
         // buscamos la variante
         $variante = new Variante();
         $where = empty($barcode) ?
-            [Where::column('referencia', $ref)] :
-            [Where::column('codbarras', $barcode)];
+            [Where::eq('referencia', $ref)] :
+            [Where::eq('codbarras', $barcode)];
         if (false === $variante->loadWhere($where)) {
             Tools::log()->warning('no-data');
             return ['addLine' => false];
@@ -203,7 +203,7 @@ class EditConteoStock extends EditController
 
             if ($selectedView->getViewName() === 'EditConteoStockLines') {
                 $lines = [];
-                $where = [Where::column('idconteo', $this->views[$this->active]->model->id())];
+                $where = [Where::eq('idconteo', $this->views[$this->active]->model->id())];
                 foreach (LineaConteoStock::all($where) as $line) {
                     $lines[] = [
                         Tools::trans('reference') => $line->referencia,

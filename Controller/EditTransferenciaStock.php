@@ -80,8 +80,8 @@ class EditTransferenciaStock extends EditController
         // buscamos la referencia
         $variante = new Variante();
         $where = empty($barcode) ?
-            [Where::column('referencia', $ref)] :
-            [Where::column('codbarras', $barcode)];
+            [Where::eq('referencia', $ref)] :
+            [Where::eq('codbarras', $barcode)];
         if (false === $variante->loadWhere($where)) {
             Tools::log()->warning('no-data');
             return ['addLine' => false];
@@ -203,7 +203,7 @@ class EditTransferenciaStock extends EditController
 
             if ($selectedView->getViewName() === 'EditTransferenciaStockLines') {
                 $lines = [];
-                $where = [Where::column('idtrans', $this->views[$this->active]->model->id())];
+                $where = [Where::eq('idtrans', $this->views[$this->active]->model->id())];
                 foreach (LineaTransferenciaStock::all($where) as $line) {
                     $row = [
                         Tools::trans('reference') => $line->referencia,
