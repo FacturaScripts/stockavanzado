@@ -30,6 +30,7 @@ use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\ConteoStock as DinConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
+use FacturaScripts\Dinamic\Model\Producto;
 
 /**
  * Description of ConteoStock
@@ -63,6 +64,11 @@ class ConteoStock extends ModelClass
 
     public function addLine(string $referencia, int $idproducto, float $quantity): LineaConteoStock
     {
+        if ($this->completed) {
+            Tools::log()->warning('cannot-modify-completed-counting');
+            return new LineaConteoStock();
+        }
+
         $line = new LineaConteoStock();
         $where = [
             Where::eq('idconteo', $this->idconteo),
@@ -78,7 +84,7 @@ class ConteoStock extends ModelClass
             $line->referencia = $referencia;
         } else {
             // si ya existe la línea, incrementamos la cantidad
-            $line->cantidad++;
+            $line->cantidad += $quantity;
         }
 
         $line->fecha = Tools::dateTime();
@@ -129,6 +135,7 @@ class ConteoStock extends ModelClass
                 return false;
             }
 
+            $line->bypassCompletedCheck = true;
             if (false === $line->delete()) {
                 if ($newTransaction) {
                     self::db()->rollback();
@@ -206,12 +213,19 @@ class ConteoStock extends ModelClass
             return true;
         }
 
+        // si no hay líneas no se puede completar el conteo
+        $lines = $conteo->getLines();
+        if (empty($lines)) {
+            Tools::log()->warning('counting-without-lines');
+            return false;
+        }
+
         // establecemos la fecha de fin del conteo
         $conteo->fechafin = Tools::dateTime();
 
         // primero recorremos las líneas para obtener el stock actual por referencia
         $stocks = [];
-        foreach ($conteo->getLines() as $line) {
+        foreach ($lines as $line) {
             if (false === isset($stocks[$line->referencia])) {
                 $stocks[$line->referencia] = $line->cantidad;
                 continue;
@@ -221,6 +235,16 @@ class ConteoStock extends ModelClass
 
         $newTransaction = false === self::db()->inTransaction() && self::db()->beginTransaction();
         foreach ($conteo->getLines(['fecha' => 'ASC']) as $line) {
+            // comprobamos que el producto sigue gestionando stock
+            $product = new Producto();
+            if ($product->load($line->idproducto) && $product->nostock) {
+                Tools::log()->warning('no-stock-this-product', ['%referencia%' => $line->referencia]);
+                if ($newTransaction) {
+                    self::db()->rollback();
+                }
+                return false;
+            }
+
             if (false === StockMovementManager::addLineCounting($line, $conteo, $stocks[$line->referencia])) {
                 if ($newTransaction) {
                     self::db()->rollback();

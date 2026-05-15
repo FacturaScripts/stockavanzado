@@ -26,6 +26,7 @@ use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\ConteoStock as DinConteoStock;
+use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
 
@@ -36,6 +37,9 @@ class LineaConteoStock extends ModelClass
 {
     use ModelTrait;
     use ProductRelationTrait;
+
+    /** @var bool */
+    public $bypassCompletedCheck = false;
 
     /** @var float */
     public $cantidad;
@@ -61,6 +65,19 @@ class LineaConteoStock extends ModelClass
         $this->cantidad = 1.0;
         $this->fecha = Tools::dateTime();
         $this->nick = Session::user()->nick;
+    }
+
+    public function delete(): bool
+    {
+        if (false === $this->bypassCompletedCheck) {
+            $conteo = $this->getConteo();
+            if ($conteo->exists() && $conteo->completed) {
+                Tools::log()->warning('cannot-modify-completed-counting');
+                return false;
+            }
+        }
+
+        return parent::delete();
     }
 
     public function getConteo(): DinConteoStock
@@ -114,6 +131,23 @@ class LineaConteoStock extends ModelClass
 
         if (empty($this->idproducto)) {
             $this->idproducto = $this->getVariant()->idproducto;
+        }
+
+        $conteo = $this->getConteo();
+        if ($conteo->exists() && $conteo->completed) {
+            Tools::log()->warning('cannot-modify-completed-counting');
+            return false;
+        }
+
+        if ($this->cantidad < 0) {
+            Tools::log()->warning('quantity-cant-be-negative');
+            return false;
+        }
+
+        $product = new Producto();
+        if ($product->load($this->idproducto) && $product->nostock) {
+            Tools::log()->warning('no-stock-this-product', ['%referencia%' => $this->referencia]);
+            return false;
         }
 
         return parent::test();

@@ -21,6 +21,7 @@ namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\ConteoStock;
+use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
@@ -156,6 +157,346 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($stock2->delete());
         $this->assertTrue($product2->delete());
         $this->assertTrue($warehouse->delete());
+    }
+
+    public function testAddLineConsolidatesSameReference(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un conteo
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Consolidacion lineas conteo test';
+        $this->assertTrue($conteo->save());
+
+        // primera llamada: 4 unidades
+        $linea1 = $conteo->addLine($product->referencia, $product->idproducto, 4);
+        $this->assertTrue($linea1->exists());
+        $this->assertEquals(4, $linea1->cantidad);
+
+        // segunda llamada con la misma referencia: 6 unidades adicionales
+        $linea2 = $conteo->addLine($product->referencia, $product->idproducto, 6);
+        $this->assertTrue($linea2->exists());
+
+        // debe ser la misma línea consolidada con 4 + 6 = 10
+        $this->assertEquals($linea1->idlinea, $linea2->idlinea);
+        $this->assertEquals(10, $linea2->cantidad);
+
+        // solo debe haber una línea en el conteo
+        $this->assertCount(1, $conteo->getLines());
+
+        // ejecutamos el conteo y el stock resultante debe ser 10
+        $this->assertTrue($conteo->updateStock());
+
+        $stock = new Stock();
+        $this->assertTrue($stock->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(10, $stock->cantidad);
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCantUpdateStockWithoutLines(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un conteo sin líneas
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo sin lineas test';
+        $this->assertTrue($conteo->save());
+
+        // ejecutar el conteo debe fallar
+        $this->assertFalse($conteo->updateStock());
+
+        // el conteo no debe estar completado
+        $conteo->load($conteo->idconteo);
+        $this->assertFalse($conteo->completed);
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testCantAddLineWithNegativeQuantity(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un conteo
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo cantidad negativa test';
+        $this->assertTrue($conteo->save());
+
+        // intentamos añadir una línea con cantidad negativa
+        $lineaNeg = $conteo->addLine($product->referencia, $product->idproducto, -3);
+        $this->assertFalse($lineaNeg->exists());
+
+        // una línea con cantidad 0 sí es válida (he contado y hay 0)
+        $lineaCero = $conteo->addLine($product->referencia, $product->idproducto, 0);
+        $this->assertTrue($lineaCero->exists());
+        $this->assertEquals(0, $lineaCero->cantidad);
+
+        // solo debe haber una línea
+        $this->assertCount(1, $conteo->getLines());
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCantAddLineForNostockProduct(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto que no gestiona stock
+        $product = $this->getRandomProduct();
+        $product->nostock = true;
+        $this->assertTrue($product->save());
+
+        // creamos un conteo
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo producto nostock test';
+        $this->assertTrue($conteo->save());
+
+        // intentamos añadir el producto nostock al conteo, debe fallar
+        $linea = $conteo->addLine($product->referencia, $product->idproducto, 5);
+        $this->assertFalse($linea->exists());
+
+        // el conteo no debe tener líneas
+        $this->assertCount(0, $conteo->getLines());
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCantUpdateStockIfProductTurnsNostockAfterAddLine(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto que sí gestiona stock
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un conteo y añadimos una línea
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo con cambio nostock';
+        $this->assertTrue($conteo->save());
+
+        $linea = $conteo->addLine($product->referencia, $product->idproducto, 10);
+        $this->assertTrue($linea->exists());
+
+        // ahora marcamos el producto como nostock
+        $product->nostock = true;
+        $this->assertTrue($product->save());
+
+        // ejecutar el conteo debe fallar
+        $this->assertFalse($conteo->updateStock());
+
+        // el conteo no debe estar completado
+        $conteo->load($conteo->idconteo);
+        $this->assertFalse($conteo->completed);
+
+        // no debe existir movimiento de stock para este conteo
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadWhere([
+            Where::eq('docid', $conteo->id()),
+            Where::eq('docmodel', $conteo->modelClassName())
+        ]));
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCantModifyCompletedCounting(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos dos productos
+        $product1 = $this->getRandomProduct();
+        $this->assertTrue($product1->save());
+        $product2 = $this->getRandomProduct();
+        $this->assertTrue($product2->save());
+
+        // creamos un conteo con producto1 y lo ejecutamos
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo completado test';
+        $this->assertTrue($conteo->save());
+
+        $linea = $conteo->addLine($product1->referencia, $product1->idproducto, 5);
+        $this->assertTrue($linea->exists());
+        $this->assertTrue($conteo->updateStock());
+
+        // recargamos el conteo y confirmamos que está completado
+        $conteo->load($conteo->idconteo);
+        $this->assertTrue($conteo->completed);
+
+        // 1) addLine de un producto nuevo debe fallar
+        $nuevaLinea = $conteo->addLine($product2->referencia, $product2->idproducto, 3);
+        $this->assertFalse($nuevaLinea->exists());
+        $this->assertCount(1, $conteo->getLines());
+
+        // 2) addLine sobre la misma referencia tampoco debe modificar la línea existente
+        $linea->load($linea->idlinea);
+        $cantidadOriginal = $linea->cantidad;
+        $reintento = $conteo->addLine($product1->referencia, $product1->idproducto, 7);
+        $this->assertFalse($reintento->exists());
+        $linea->load($linea->idlinea);
+        $this->assertEquals($cantidadOriginal, $linea->cantidad);
+
+        // 3) guardar directamente una modificación sobre la línea existente debe fallar
+        $linea->cantidad = 99;
+        $this->assertFalse($linea->save());
+        $linea->load($linea->idlinea);
+        $this->assertEquals($cantidadOriginal, $linea->cantidad);
+
+        // 4) eliminar directamente la línea de un conteo completado debe fallar
+        $this->assertFalse($linea->delete());
+        $this->assertTrue($linea->exists());
+
+        // borrar el conteo entero sí debe seguir funcionando
+        $this->assertTrue($conteo->delete());
+        $this->assertFalse($linea->exists());
+
+        // eliminamos
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product1->delete());
+        $this->assertTrue($product2->delete());
+    }
+
+    public function testUpdateStockConsolidatesMultipleLinesSameReference(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un conteo
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo multiples lineas misma ref test';
+        $this->assertTrue($conteo->save());
+
+        // guardamos dos líneas separadas para la misma referencia (sin pasar por addLine)
+        $linea1 = new LineaConteoStock();
+        $linea1->idconteo = $conteo->idconteo;
+        $linea1->referencia = $product->referencia;
+        $linea1->idproducto = $product->idproducto;
+        $linea1->cantidad = 4;
+        $this->assertTrue($linea1->save());
+
+        $linea2 = new LineaConteoStock();
+        $linea2->idconteo = $conteo->idconteo;
+        $linea2->referencia = $product->referencia;
+        $linea2->idproducto = $product->idproducto;
+        $linea2->cantidad = 6;
+        $this->assertTrue($linea2->save());
+
+        // el conteo debe tener las dos líneas separadas
+        $this->assertCount(2, $conteo->getLines());
+
+        // ejecutamos el conteo
+        $this->assertTrue($conteo->updateStock());
+
+        // el stock resultante debe ser la suma consolidada (4 + 6 = 10)
+        $stock = new Stock();
+        $this->assertTrue($stock->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(10, $stock->cantidad);
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCountVariant(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos una variante (con su propio producto detrás)
+        $variant = $this->getRandomVariant();
+        $this->assertTrue($variant->save());
+
+        // creamos un conteo
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo de variante test';
+        $this->assertTrue($conteo->save());
+
+        // añadimos la variante al conteo sin pasar idproducto (debe resolverse desde la variante)
+        $linea = $conteo->addLine($variant->referencia, 0, 7);
+        $this->assertTrue($linea->exists());
+        $this->assertEquals($variant->idproducto, $linea->idproducto);
+
+        // ejecutamos el conteo
+        $this->assertTrue($conteo->updateStock());
+
+        // el stock del almacén debe ser 7 con el idproducto correcto
+        $stock = new Stock();
+        $this->assertTrue($stock->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $variant->referencia)
+        ]));
+        $this->assertEquals(7, $stock->cantidad);
+        $this->assertEquals($variant->idproducto, $stock->idproducto);
+
+        // debe existir un movimiento de stock para el conteo con el saldo igual al stock
+        $movement = new MovimientoStock();
+        $this->assertTrue($movement->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('docid', $conteo->id()),
+            Where::eq('docmodel', $conteo->modelClassName()),
+            Where::eq('referencia', $variant->referencia)
+        ]));
+        $this->assertEquals(0, $movement->cantidad);
+        $this->assertEquals(7, $movement->saldo);
+        $this->assertEquals($variant->idproducto, $movement->idproducto);
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($variant->getProducto()->delete());
     }
 
     public function testCantCreateWithoutWarehouse(): void
