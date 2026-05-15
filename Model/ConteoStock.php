@@ -108,7 +108,7 @@ class ConteoStock extends ModelClass
             return false;
         }
 
-        $newTransaction = false === static::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
+        $newTransaction = false === self::db()->inTransaction() && self::db()->beginTransaction();
         foreach ($this->getLines(['fecha' => 'DESC']) as $line) {
             // si no está completado, saltamos
             if (false === $conteo->completed) {
@@ -117,21 +117,21 @@ class ConteoStock extends ModelClass
 
             if (false === $this->pipeFalse('deleteLineCounting', $line, $conteo)) {
                 if ($newTransaction) {
-                    self::$dataBase->rollback();
+                    self::db()->rollback();
                 }
                 return false;
             }
 
             if (false === StockMovementManager::deleteLineCounting($line, $conteo)) {
                 if ($newTransaction) {
-                    self::$dataBase->rollback();
+                    self::db()->rollback();
                 }
                 return false;
             }
 
             if (false === $line->delete()) {
                 if ($newTransaction) {
-                    self::$dataBase->rollback();
+                    self::db()->rollback();
                 }
                 return false;
             }
@@ -140,7 +140,7 @@ class ConteoStock extends ModelClass
             StockRebuildManager::rebuild($line->idproducto, $messages);
             if (!empty($messages)) {
                 if ($newTransaction) {
-                    self::$dataBase->rollback();
+                    self::db()->rollback();
                 }
                 return false;
             }
@@ -148,13 +148,13 @@ class ConteoStock extends ModelClass
 
         if (false === parent::delete()) {
             if ($newTransaction) {
-                self::$dataBase->rollback();
+                self::db()->rollback();
             }
             return false;
         }
 
         if ($newTransaction) {
-            self::$dataBase->commit();
+            self::db()->commit();
         }
         return true;
     }
@@ -219,18 +219,18 @@ class ConteoStock extends ModelClass
             $stocks[$line->referencia] += $line->cantidad;
         }
 
-        $newTransaction = false === static::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
+        $newTransaction = false === self::db()->inTransaction() && self::db()->beginTransaction();
         foreach ($conteo->getLines(['fecha' => 'ASC']) as $line) {
             if (false === StockMovementManager::addLineCounting($line, $conteo, $stocks[$line->referencia])) {
                 if ($newTransaction) {
-                    self::$dataBase->rollback();
+                    self::db()->rollback();
                 }
                 return false;
             }
 
             if (false === $this->pipeFalse('updateStock', $line, $conteo, $stocks[$line->referencia])) {
                 if ($newTransaction) {
-                    self::$dataBase->rollback();
+                    self::db()->rollback();
                 }
                 return false;
             }
@@ -246,7 +246,7 @@ class ConteoStock extends ModelClass
             }
 
             if ($newTransaction) {
-                self::$dataBase->rollback();
+                self::db()->rollback();
             }
             return false;
         }
@@ -255,13 +255,13 @@ class ConteoStock extends ModelClass
         $conteo->completed = true;
         if (false === $conteo->save()) {
             if ($newTransaction) {
-                self::$dataBase->rollback();
+                self::db()->rollback();
             }
             return false;
         }
 
         if ($newTransaction) {
-            self::$dataBase->commit();
+            self::db()->commit();
         }
 
         return true;

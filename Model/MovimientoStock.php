@@ -142,14 +142,14 @@ class MovimientoStock extends ModelClass
         $movements = MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC']);
 
         if (empty($movements)) {
-            self::$dataBase->exec("UPDATE stocks_movimientos SET saldo = " . self::$dataBase->var2str($this->cantidad) . " WHERE id = " . self::$dataBase->var2str($this->id));
+            self::db()->exec("UPDATE stocks_movimientos SET saldo = " . self::db()->var2str($this->cantidad) . " WHERE id = " . self::db()->var2str($this->id));
             return;
         }
 
         $saldo = 0.0;
         foreach ($movements as $movement) {
             $saldo += (float)$movement->cantidad;
-            self::$dataBase->exec("UPDATE stocks_movimientos SET saldo = " . self::$dataBase->var2str($saldo) . " WHERE id = " . self::$dataBase->var2str($movement->id()));
+            self::db()->exec("UPDATE stocks_movimientos SET saldo = " . self::db()->var2str($saldo) . " WHERE id = " . self::db()->var2str($movement->id()));
         }
     }
 }
