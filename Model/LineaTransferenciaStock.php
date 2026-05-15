@@ -25,6 +25,7 @@ use FacturaScripts\Core\Template\ModelClass;
 use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
+use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\TransferenciaStock as DinTransferenciaStock;
 use FacturaScripts\Dinamic\Model\Variante;
@@ -121,6 +122,17 @@ class LineaTransferenciaStock extends ModelClass
 
         if (empty($this->idproducto)) {
             $this->idproducto = $this->getVariant()->idproducto;
+        }
+
+        if ($this->cantidad <= 0) {
+            Tools::log()->warning('quantity-must-be-positive');
+            return false;
+        }
+
+        $product = new Producto();
+        if ($product->load($this->idproducto) && $product->nostock) {
+            Tools::log()->warning('no-stock-this-product', ['%referencia%' => $this->referencia]);
+            return false;
         }
 
         return parent::test();

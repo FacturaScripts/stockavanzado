@@ -386,7 +386,7 @@ class StockMovementManager
         $order = ['fecha' => 'DESC', 'hora' => 'DESC'];
         foreach (MovimientoStock::all($where, $order, 0, 50) as $movement) {
             // nos aseguramos de que la hora también sea anterior
-            if (strtotime($fecha . ' ' . $hora) < strtotime($movement->fecha . ' ' . $movement->hora)) {
+            if (strtotime($movement->fecha . ' ' . $movement->hora) < strtotime($fecha . ' ' . $hora)) {
                 return $movement->saldo;
             }
         }

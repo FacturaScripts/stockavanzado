@@ -27,6 +27,7 @@ use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
+use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\TransferenciaStock as DinTransferenciaStock;
 
@@ -248,6 +249,16 @@ class TransferenciaStock extends ModelClass
 
         $newTransaction = false === static::$dataBase->inTransaction() && self::$dataBase->beginTransaction();
         foreach ($transfer->getLines(['fecha' => 'ASC']) as $line) {
+            // comprobamos que el producto sigue gestionando stock
+            $product = new Producto();
+            if ($product->load($line->idproducto) && $product->nostock) {
+                Tools::log()->warning('no-stock-this-product', ['%referencia%' => $line->referencia]);
+                if ($newTransaction) {
+                    self::$dataBase->rollback();
+                }
+                return false;
+            }
+
             // cargamos el stock de la línea
             $stock = new Stock();
             $where = [

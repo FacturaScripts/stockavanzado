@@ -302,6 +302,285 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($product->delete());
     }
 
+    public function testSaldoAccumulatesAcrossTransfers(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al almacén de origen
+        $stock = new Stock();
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->referencia = $product->referencia;
+        $stock->idproducto = $product->idproducto;
+        $stock->cantidad = 100;
+        $this->assertTrue($stock->save());
+
+        // primera transferencia: 10 unidades del almacén 1 al almacén 2
+        $transferencia1 = new TransferenciaStock();
+        $transferencia1->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia1->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia1->fecha = date('Y-m-d H:i:s', strtotime('-1 minute'));
+        $transferencia1->observaciones = 'Primera transferencia';
+        $this->assertTrue($transferencia1->save());
+
+        $linea1 = $transferencia1->addLine($product->referencia, $product->idproducto, 10);
+        $this->assertTrue($linea1->exists());
+        $this->assertTrue($transferencia1->transferStock());
+
+        // segunda transferencia: 7 unidades más del almacén 1 al almacén 2
+        $transferencia2 = new TransferenciaStock();
+        $transferencia2->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia2->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia2->observaciones = 'Segunda transferencia';
+        $this->assertTrue($transferencia2->save());
+
+        $linea2 = $transferencia2->addLine($product->referencia, $product->idproducto, 7);
+        $this->assertTrue($linea2->exists());
+        $this->assertTrue($transferencia2->transferStock());
+
+        // comprobamos el movimiento de la primera transferencia en el almacén de origen
+        $movOrig1 = new MovimientoStock();
+        $this->assertTrue($movOrig1->loadWhere([
+            Where::column('codalmacen', $warehouse->codalmacen),
+            Where::column('docid', $transferencia1->id()),
+            Where::column('docmodel', $transferencia1->modelClassName()),
+            Where::column('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(-10, $movOrig1->cantidad);
+        $this->assertEquals(-10, $movOrig1->saldo);
+
+        // comprobamos el movimiento de la segunda transferencia en el almacén de origen
+        // saldo acumulado: -10 + -7 = -17
+        $movOrig2 = new MovimientoStock();
+        $this->assertTrue($movOrig2->loadWhere([
+            Where::column('codalmacen', $warehouse->codalmacen),
+            Where::column('docid', $transferencia2->id()),
+            Where::column('docmodel', $transferencia2->modelClassName()),
+            Where::column('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(-7, $movOrig2->cantidad);
+        $this->assertEquals(-17, $movOrig2->saldo);
+
+        // comprobamos el movimiento de la primera transferencia en el almacén de destino
+        $movDest1 = new MovimientoStock();
+        $this->assertTrue($movDest1->loadWhere([
+            Where::column('codalmacen', $warehouse2->codalmacen),
+            Where::column('docid', $transferencia1->id()),
+            Where::column('docmodel', $transferencia1->modelClassName()),
+            Where::column('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(10, $movDest1->cantidad);
+        $this->assertEquals(10, $movDest1->saldo);
+
+        // comprobamos el movimiento de la segunda transferencia en el almacén de destino
+        // saldo acumulado: 10 + 7 = 17
+        $movDest2 = new MovimientoStock();
+        $this->assertTrue($movDest2->loadWhere([
+            Where::column('codalmacen', $warehouse2->codalmacen),
+            Where::column('docid', $transferencia2->id()),
+            Where::column('docmodel', $transferencia2->modelClassName()),
+            Where::column('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(7, $movDest2->cantidad);
+        $this->assertEquals(17, $movDest2->saldo);
+
+        // comprobamos los stocks finales: origen 100 - 17 = 83, destino 17
+        $stock->load($stock->idstock);
+        $this->assertEquals(83, $stock->cantidad);
+
+        $stockDest = new Stock();
+        $this->assertTrue($stockDest->loadWhere([
+            Where::column('codalmacen', $warehouse2->codalmacen),
+            Where::column('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(17, $stockDest->cantidad);
+
+        // eliminamos
+        $this->assertTrue($transferencia2->delete());
+        $this->assertTrue($transferencia1->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testDeleteUncompletedTransfer(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al almacén de origen
+        $stock = new Stock();
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->referencia = $product->referencia;
+        $stock->idproducto = $product->idproducto;
+        $stock->cantidad = 50;
+        $this->assertTrue($stock->save());
+
+        // creamos una transferencia y añadimos una línea, pero NO la ejecutamos
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Transferencia no ejecutada test';
+        $this->assertTrue($transferencia->save());
+
+        $linea = $transferencia->addLine($product->referencia, $product->idproducto, 10);
+        $this->assertTrue($linea->exists());
+
+        // comprobamos que no está completada
+        $this->assertFalse($transferencia->completed);
+
+        // eliminamos la transferencia sin haberla ejecutado
+        $this->assertTrue($transferencia->delete());
+
+        // la línea debe haberse eliminado
+        $this->assertFalse($linea->exists());
+
+        // el stock del almacén de origen no debe haberse alterado
+        $stock->load($stock->idstock);
+        $this->assertEquals(50, $stock->cantidad);
+
+        // no debe existir stock en el almacén de destino
+        $stockDest = new Stock();
+        $this->assertFalse($stockDest->loadWhere([
+            Where::column('codalmacen', $warehouse2->codalmacen),
+            Where::column('referencia', $product->referencia)
+        ]));
+
+        // no debe existir ningún movimiento de stock para esta transferencia
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadWhere([
+            Where::column('docid', $transferencia->id()),
+            Where::column('docmodel', $transferencia->modelClassName())
+        ]));
+
+        // eliminamos
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCantAddLineForNostockProduct(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto que no gestiona stock
+        $product = $this->getRandomProduct();
+        $product->nostock = true;
+        $this->assertTrue($product->save());
+
+        // creamos una transferencia
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Transferencia producto nostock test';
+        $this->assertTrue($transferencia->save());
+
+        // intentamos añadir el producto nostock a la transferencia, debe fallar
+        $linea = $transferencia->addLine($product->referencia, $product->idproducto, 5);
+        $this->assertFalse($linea->exists());
+
+        // la transferencia no debe tener líneas
+        $this->assertCount(0, $transferencia->getLines());
+
+        // eliminamos
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCantTransferIfProductTurnsNostockAfterAddLine(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto que sí gestiona stock
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al almacén de origen
+        $stock = new Stock();
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->referencia = $product->referencia;
+        $stock->idproducto = $product->idproducto;
+        $stock->cantidad = 30;
+        $this->assertTrue($stock->save());
+
+        // creamos una transferencia y añadimos la línea (todavía nostock=false)
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Transferencia con cambio nostock';
+        $this->assertTrue($transferencia->save());
+
+        $linea = $transferencia->addLine($product->referencia, $product->idproducto, 5);
+        $this->assertTrue($linea->exists());
+
+        // ahora marcamos el producto como nostock
+        $product->nostock = true;
+        $this->assertTrue($product->save());
+
+        // ejecutar la transferencia debe fallar
+        $this->assertFalse($transferencia->transferStock());
+
+        // la transferencia no debe estar completada
+        $transferencia->load($transferencia->idtrans);
+        $this->assertFalse($transferencia->completed);
+
+        // el stock del almacén de origen no debe haberse alterado
+        $stock->load($stock->idstock);
+        $this->assertEquals(30, $stock->cantidad);
+
+        // no debe existir stock en el almacén de destino
+        $stockDest = new Stock();
+        $this->assertFalse($stockDest->loadWhere([
+            Where::column('codalmacen', $warehouse2->codalmacen),
+            Where::column('referencia', $product->referencia)
+        ]));
+
+        // no debe existir ningún movimiento de stock para esta transferencia
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadWhere([
+            Where::column('docid', $transferencia->id()),
+            Where::column('docmodel', $transferencia->modelClassName())
+        ]));
+
+        // eliminamos
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
     public function testCantTransferToSameWarehouse(): void
     {
         // creamos un almacén
@@ -365,6 +644,120 @@ final class TransferenciaStockTest extends TestCase
             Where::column('referencia', $product->referencia)
         ];
         $this->assertFalse($stock2->loadWhere($where2));
+
+        // eliminamos
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCantTransferWithInsufficientStock(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al almacén de origen (5 unidades)
+        $stock = new Stock();
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->referencia = $product->referencia;
+        $stock->idproducto = $product->idproducto;
+        $stock->cantidad = 5;
+        $this->assertTrue($stock->save());
+
+        // creamos una transferencia de stock pidiendo más cantidad de la disponible
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Transferencia stock insuficiente test';
+        $this->assertTrue($transferencia->save());
+
+        // añadimos el producto a la transferencia con cantidad mayor que la disponible
+        $lineaTrans = $transferencia->addLine($product->referencia, $product->idproducto, 10);
+        $this->assertTrue($lineaTrans->exists());
+
+        // ejecutamos la transferencia, debe fallar
+        $this->assertFalse($transferencia->transferStock());
+
+        // comprobamos que la transferencia no está completada
+        $transferencia->load($transferencia->idtrans);
+        $this->assertFalse($transferencia->completed);
+
+        // comprobamos que el stock del almacén de origen no se ha alterado
+        $stock->load($stock->idstock);
+        $this->assertEquals(5, $stock->cantidad);
+
+        // comprobamos que no hay stock en el almacén de destino
+        $stock2 = new Stock();
+        $where2 = [
+            Where::column('codalmacen', $warehouse2->codalmacen),
+            Where::column('referencia', $product->referencia)
+        ];
+        $this->assertFalse($stock2->loadWhere($where2));
+
+        // comprobamos que no se ha creado movimiento de stock para esta transferencia
+        $movement = new MovimientoStock();
+        $whereMov = [
+            Where::column('docid', $transferencia->id()),
+            Where::column('docmodel', $transferencia->modelClassName())
+        ];
+        $this->assertFalse($movement->loadWhere($whereMov));
+
+        // eliminamos
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCantAddLineWithZeroOrNegativeQuantity(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al almacén de origen
+        $stock = new Stock();
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->referencia = $product->referencia;
+        $stock->idproducto = $product->idproducto;
+        $stock->cantidad = 50;
+        $this->assertTrue($stock->save());
+
+        // creamos una transferencia
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->observaciones = 'Transferencia cantidad invalida test';
+        $this->assertTrue($transferencia->save());
+
+        // intentamos añadir una línea con cantidad 0
+        $lineaCero = $transferencia->addLine($product->referencia, $product->idproducto, 0);
+        $this->assertFalse($lineaCero->exists());
+
+        // intentamos añadir una línea con cantidad negativa
+        $lineaNeg = $transferencia->addLine($product->referencia, $product->idproducto, -5);
+        $this->assertFalse($lineaNeg->exists());
+
+        // comprobamos que la transferencia no tiene líneas
+        $this->assertCount(0, $transferencia->getLines());
 
         // eliminamos
         $this->assertTrue($transferencia->delete());
