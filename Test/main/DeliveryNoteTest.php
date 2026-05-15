@@ -107,6 +107,57 @@ final class DeliveryNoteTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testAlbaranClienteNostockProductDoesNotGenerateMovement(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto que no gestiona stock
+        $product = $this->getRandomProduct();
+        $product->nostock = true;
+        $this->assertTrue($product->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos un albarán en ese almacén
+        $albaran = new AlbaranCliente();
+        $this->assertTrue($albaran->setSubject($customer));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+
+        // añadimos una línea al albarán
+        $linea = $albaran->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // no debe existir registro de stock para este producto
+        $stock = new Stock();
+        $this->assertFalse($stock->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ]));
+
+        // no debe existir movimiento de stock para este albarán
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia),
+            Where::eq('docid', $albaran->id()),
+            Where::eq('docmodel', $albaran->modelClassName())
+        ]));
+
+        // eliminamos
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     public function testAlbaranClienteConsolidatesSameReferenceLines(): void
     {
         // creamos un almacén
@@ -721,6 +772,57 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals(10, $movement->saldo);
         $this->assertEquals($albaran->id(), $movement->docid);
         $this->assertEquals($albaran->modelClassName(), $movement->docmodel);
+
+        // eliminamos
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testAlbaranProveedorNostockProductDoesNotGenerateMovement(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto que no gestiona stock
+        $product = $this->getRandomProduct();
+        $product->nostock = true;
+        $this->assertTrue($product->save());
+
+        // creamos un proveedor
+        $proveedor = $this->getRandomSupplier();
+        $this->assertTrue($proveedor->save());
+
+        // creamos el albarán de proveedor
+        $albaran = new AlbaranProveedor();
+        $this->assertTrue($albaran->setSubject($proveedor));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+
+        // añadimos una línea al albarán
+        $linea = $albaran->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // no debe existir registro de stock para este producto
+        $stock = new Stock();
+        $this->assertFalse($stock->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ]));
+
+        // no debe existir movimiento de stock para este albarán
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia),
+            Where::eq('docid', $albaran->id()),
+            Where::eq('docmodel', $albaran->modelClassName())
+        ]));
 
         // eliminamos
         $this->assertTrue($albaran->delete());
