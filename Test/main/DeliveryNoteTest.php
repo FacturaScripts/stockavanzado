@@ -352,6 +352,187 @@ final class DeliveryNoteTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testAlbaranClienteInvoicedAndInvoiceDeleted(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al producto
+        $stock = new Stock();
+        $stock->referencia = $product->referencia;
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->cantidad = 10;
+        $stock->disponible = 10;
+        $this->assertTrue($stock->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos un albarán en ese almacén
+        $albaran = new AlbaranCliente();
+        $this->assertTrue($albaran->setSubject($customer));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+        $originalStatusId = $albaran->idestado;
+
+        // añadimos una línea al albarán
+        $linea = $albaran->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // el stock baja a 0 y hay movimiento de -10 para el albarán
+        $this->assertTrue($stock->reload());
+        $this->assertEquals(0, $stock->cantidad);
+
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $whereAlbaran = array_merge($whereRef, [
+            Where::eq('docid', $albaran->id()),
+            Where::eq('docmodel', $albaran->modelClassName())
+        ]);
+        $movement = new MovimientoStock();
+        $this->assertTrue($movement->loadWhere($whereAlbaran));
+        $this->assertEquals(-10, $movement->cantidad);
+
+        // buscamos el estado que genera factura
+        $invoiceStatusId = null;
+        foreach ($albaran->getAvailableStatus() as $status) {
+            if ('FacturaCliente' === $status->generadoc) {
+                $invoiceStatusId = $status->idestado;
+                break;
+            }
+        }
+        $this->assertNotNull($invoiceStatusId, 'no-invoice-status-found');
+
+        // pasamos el albarán al estado que genera factura
+        $albaran->idestado = $invoiceStatusId;
+        $this->assertTrue($albaran->save());
+        $this->runWorkQueue();
+
+        // se ha creado la factura
+        $facturas = $albaran->childrenDocuments();
+        $this->assertCount(1, $facturas);
+
+        // hay 2 movimientos: el del albarán (-10) y el de la factura (delta 0)
+        $movimientos = MovimientoStock::all($whereRef);
+        $this->assertCount(2, $movimientos);
+
+        // borramos la factura
+        $this->assertTrue($facturas[0]->delete());
+        $this->runWorkQueue();
+
+        // el albarán vuelve al estado original (editable, actualizastock = -1)
+        $this->assertTrue($albaran->reload());
+        $this->assertEquals($originalStatusId, $albaran->idestado);
+
+        // el movimiento del albarán sigue existiendo con -10
+        $movement = new MovimientoStock();
+        $this->assertTrue($movement->loadWhere($whereAlbaran));
+        $this->assertEquals(-10, $movement->cantidad);
+
+        // y el stock sigue en 0
+        $this->assertTrue($stock->reload());
+        $this->assertEquals(0, $stock->cantidad);
+        $this->assertEquals(0, $stock->disponible);
+
+        // eliminamos
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testAlbaranClienteReturnedWithMultipleLinesSameReference(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al producto
+        $stock = new Stock();
+        $stock->referencia = $product->referencia;
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->cantidad = 10;
+        $stock->disponible = 10;
+        $this->assertTrue($stock->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos un albarán en ese almacén
+        $albaran = new AlbaranCliente();
+        $this->assertTrue($albaran->setSubject($customer));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+
+        // añadimos dos líneas con la misma referencia (4 + 6 = 10 unidades)
+        $linea1 = $albaran->getNewProductLine($product->referencia);
+        $linea1->cantidad = 4;
+        $linea1->pvpunitario = 10;
+        $this->assertTrue($linea1->save());
+
+        $linea2 = $albaran->getNewProductLine($product->referencia);
+        $linea2->cantidad = 6;
+        $linea2->pvpunitario = 10;
+        $this->assertTrue($linea2->save());
+
+        // un único movimiento consolidado de -10
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $movimientos = MovimientoStock::all($whereRef);
+        $this->assertCount(1, $movimientos);
+        $this->assertEquals(-10, $movimientos[0]->cantidad);
+
+        // buscamos el estado devuelto
+        $returnedStatusId = null;
+        foreach ($albaran->getAvailableStatus() as $status) {
+            if (false === (bool)$status->editable
+                && 0 === (int)$status->actualizastock
+                && empty($status->generadoc)) {
+                $returnedStatusId = $status->idestado;
+                break;
+            }
+        }
+        $this->assertNotNull($returnedStatusId, 'no-returned-status-found');
+
+        // cambiamos el albarán al estado devuelto
+        $albaran->idestado = $returnedStatusId;
+        $this->assertTrue($albaran->save());
+        $this->runWorkQueue();
+
+        // el stock vuelve a 10
+        $this->assertTrue($stock->reload());
+        $this->assertEquals(10, $stock->cantidad);
+        $this->assertEquals(10, $stock->disponible);
+
+        // no debe quedar el movimiento consolidado
+        $this->assertCount(0, MovimientoStock::all($whereRef));
+
+        // eliminamos
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     public function testAlbaranClienteConsolidatesSameReferenceLines(): void
     {
         // creamos un almacén
@@ -1094,6 +1275,108 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docid', $albaran->id()),
             Where::eq('docmodel', $albaran->modelClassName())
         ])));
+
+        // eliminamos
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testAlbaranProveedorReturnedThenInvoicedAndInvoiceDeleted(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un proveedor
+        $proveedor = $this->getRandomSupplier();
+        $this->assertTrue($proveedor->save());
+
+        // creamos el albarán de proveedor
+        $albaran = new AlbaranProveedor();
+        $this->assertTrue($albaran->setSubject($proveedor));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+
+        // añadimos una línea al albarán
+        $linea = $albaran->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // buscamos el estado devuelto y el estado que genera factura
+        $returnedStatusId = null;
+        $invoiceStatusId = null;
+        foreach ($albaran->getAvailableStatus() as $status) {
+            if (false === (bool)$status->editable
+                && 0 === (int)$status->actualizastock
+                && empty($status->generadoc)) {
+                $returnedStatusId = $status->idestado;
+            }
+            if ('FacturaProveedor' === $status->generadoc) {
+                $invoiceStatusId = $status->idestado;
+            }
+        }
+        $this->assertNotNull($returnedStatusId, 'no-returned-status-found');
+        $this->assertNotNull($invoiceStatusId, 'no-invoice-status-found');
+
+        // pasamos el albarán a devuelto
+        $albaran->idestado = $returnedStatusId;
+        $this->assertTrue($albaran->save());
+        $this->runWorkQueue();
+
+        // no hay movimiento de stock para el albarán
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $whereAlbaran = array_merge($whereRef, [
+            Where::eq('docid', $albaran->id()),
+            Where::eq('docmodel', $albaran->modelClassName())
+        ]);
+        $movement = new MovimientoStock();
+        $this->assertFalse($movement->loadWhere($whereAlbaran));
+
+        // ahora pasamos el albarán al estado que genera factura
+        $albaran->idestado = $invoiceStatusId;
+        $this->assertTrue($albaran->save());
+        $this->runWorkQueue();
+
+        // se ha creado la factura
+        $facturas = $albaran->childrenDocuments();
+        $this->assertCount(1, $facturas);
+
+        // hay 2 movimientos: el del albarán (+10) y el de la factura (delta 0)
+        $movimientos = MovimientoStock::all($whereRef);
+        $this->assertCount(2, $movimientos);
+
+        // borramos la factura
+        $this->assertTrue($facturas[0]->delete());
+        $this->runWorkQueue();
+
+        // el albarán debe volver al estado devuelto
+        $this->assertTrue($albaran->reload());
+        $this->assertEquals($returnedStatusId, $albaran->idestado);
+
+        // por tanto NO debe quedar movimiento de stock para el albarán
+        $movement = new MovimientoStock();
+        $this->assertFalse(
+            $movement->loadWhere($whereAlbaran),
+            'el albarán en estado devuelto no debe tener movimiento de stock'
+        );
+
+        // y el stock debe estar en 0
+        $stock = new Stock();
+        if ($stock->loadWhere($whereRef)) {
+            $this->assertEquals(0, $stock->cantidad);
+            $this->assertEquals(0, $stock->disponible);
+        }
 
         // eliminamos
         $this->assertTrue($albaran->delete());
