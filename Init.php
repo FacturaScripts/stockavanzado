@@ -58,6 +58,7 @@ class Init extends InitClass
         $this->loadExtension(new Extension\Lib\BusinessDocumentGenerator());
         $this->loadExtension(new Extension\Lib\ManualTemplates\Products());
         $this->loadExtension(new Extension\Model\Stock());
+        $this->loadExtension(new Extension\Model\Base\BusinessDocument());
         $this->loadExtension(new Extension\Model\Base\BusinessDocumentLine());
 
         // API

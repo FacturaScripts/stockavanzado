@@ -133,6 +133,34 @@ class StockMovementManager
         }
     }
 
+    public static function cleanResidualMovements(TransformerDocument $doc): void
+    {
+        // recorremos los movimientos asociados a este documento
+        $where = [
+            Where::eq('docid', $doc->id()),
+            Where::eq('docmodel', $doc->modelClassName()),
+        ];
+        foreach (MovimientoStock::all($where, [], 0, 0) as $movement) {
+            // ¿alguna línea del documento sigue justificando el movimiento?
+            $stillValid = false;
+            foreach ($doc->getLines() as $line) {
+                if ($line->referencia !== $movement->referencia) {
+                    continue;
+                }
+                if (static::mustCreateBusinessDocumentMovement($line)) {
+                    $stillValid = true;
+                    break;
+                }
+            }
+            if ($stillValid) {
+                continue;
+            }
+
+            $movement->delete();
+            static::updateReferenceSaldos($movement->codalmacen, $movement->referencia);
+        }
+    }
+
     public static function deleteLineCounting(LineaConteoStock $line, ConteoStock $stockCount): bool
     {
         $movement = static::findMovement($stockCount->codalmacen, $stockCount, $line->referencia);
