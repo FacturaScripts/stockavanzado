@@ -26,6 +26,7 @@ use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Model\Almacen;
+use FacturaScripts\Dinamic\Model\ConteoStock as DinConteoStock;
 use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Stock;
@@ -335,5 +336,51 @@ class TransferenciaStock extends ModelClass
         $warehouse = new Almacen;
         $warehouse->load($codalmacen);
         return $warehouse->idempresa;
+    }
+
+    protected function onChange(string $field): bool
+    {
+        if ($field === 'fecha' && false === $this->testDate()) {
+            return false;
+        }
+
+        return parent::onChange($field);
+    }
+
+    protected function saveInsert(): bool
+    {
+        if (false === $this->testDate()) {
+            return false;
+        }
+
+        return parent::saveInsert();
+    }
+
+    protected function testDate(): bool
+    {
+        // la fecha de la transferencia no puede ser anterior al último conteo
+        // completado de los almacenes implicados (origen o destino)
+        if (empty($this->fecha)) {
+            return true;
+        }
+
+        foreach ([$this->codalmacenorigen, $this->codalmacendestino] as $codalmacen) {
+            if (empty($codalmacen)) {
+                continue;
+            }
+            $where = [
+                Where::eq('codalmacen', $codalmacen),
+                Where::eq('completed', true),
+            ];
+            foreach (DinConteoStock::all($where, ['fechafin' => 'DESC'], 0, 1) as $last) {
+                $lastDate = $last->fechafin ?? $last->fechainicio;
+                if (!empty($lastDate) && strtotime(Tools::date($this->fecha)) < strtotime(Tools::date($lastDate))) {
+                    Tools::log()->warning('date-before-last-counting');
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }

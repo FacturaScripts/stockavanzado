@@ -1058,6 +1058,204 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($company2->delete());
     }
 
+    public function testGetWarehouseOrigAndDest(): void
+    {
+        // creamos dos almacenes
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos una transferencia
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $this->assertTrue($transferencia->save());
+
+        // comprobamos el almacén de origen
+        $orig = $transferencia->getWarehouseOrig();
+        $this->assertEquals($warehouse->codalmacen, $orig->codalmacen);
+        $this->assertEquals($warehouse->nombre, $orig->nombre);
+
+        // comprobamos el almacén de destino
+        $dest = $transferencia->getWarehouseDest();
+        $this->assertEquals($warehouse2->codalmacen, $dest->codalmacen);
+        $this->assertEquals($warehouse2->nombre, $dest->nombre);
+
+        // eliminamos
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testLineaGetStockOrigAndDest(): void
+    {
+        // creamos dos almacenes
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock en ambos almacenes
+        $stockOrig = new Stock();
+        $stockOrig->codalmacen = $warehouse->codalmacen;
+        $stockOrig->referencia = $product->referencia;
+        $stockOrig->idproducto = $product->idproducto;
+        $stockOrig->cantidad = 40;
+        $this->assertTrue($stockOrig->save());
+
+        $stockDest = new Stock();
+        $stockDest->codalmacen = $warehouse2->codalmacen;
+        $stockDest->referencia = $product->referencia;
+        $stockDest->idproducto = $product->idproducto;
+        $stockDest->cantidad = 15;
+        $this->assertTrue($stockDest->save());
+
+        // creamos una transferencia con una línea
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $this->assertTrue($transferencia->save());
+
+        $linea = $transferencia->addLine($product->referencia, $product->idproducto, 5);
+        $this->assertTrue($linea->exists());
+
+        // getStockOrig debe devolver el stock del almacén de origen
+        $resultOrig = $linea->getStockOrig();
+        $this->assertEquals($stockOrig->idstock, $resultOrig->idstock);
+        $this->assertEquals($warehouse->codalmacen, $resultOrig->codalmacen);
+        $this->assertEquals(40, $resultOrig->cantidad);
+
+        // getStockDest debe devolver el stock del almacén de destino
+        $resultDest = $linea->getStockDest();
+        $this->assertEquals($stockDest->idstock, $resultDest->idstock);
+        $this->assertEquals($warehouse2->codalmacen, $resultDest->codalmacen);
+        $this->assertEquals(15, $resultDest->cantidad);
+
+        // eliminamos
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testLineaGetTransferenceAndVariant(): void
+    {
+        // creamos dos almacenes
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos una variante (con producto detrás)
+        $variant = $this->getRandomVariant();
+        $this->assertTrue($variant->save());
+
+        // añadimos stock para que addLine se complete
+        $stock = new Stock();
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->referencia = $variant->referencia;
+        $stock->idproducto = $variant->idproducto;
+        $stock->cantidad = 10;
+        $this->assertTrue($stock->save());
+
+        // creamos una transferencia con una línea
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $this->assertTrue($transferencia->save());
+
+        $linea = $transferencia->addLine($variant->referencia, $variant->idproducto, 2);
+        $this->assertTrue($linea->exists());
+
+        // getTransference debe devolver la transferencia padre
+        $trans = $linea->getTransference();
+        $this->assertEquals($transferencia->idtrans, $trans->idtrans);
+        $this->assertEquals($warehouse->codalmacen, $trans->codalmacenorigen);
+        $this->assertEquals($warehouse2->codalmacen, $trans->codalmacendestino);
+
+        // getVariant debe devolver la variante asociada a la referencia
+        $resultVariant = $linea->getVariant();
+        $this->assertEquals($variant->referencia, $resultVariant->referencia);
+        $this->assertEquals($variant->idproducto, $resultVariant->idproducto);
+
+        // eliminamos
+        $this->assertTrue($transferencia->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($variant->getProducto()->delete());
+    }
+
+    public function testCantTransferBeforeLastCounting(): void
+    {
+        // creamos dos almacenes
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // hacemos un conteo en el almacén de origen (queda completado con fechafin = ahora)
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo previo';
+        $this->assertTrue($conteo->save());
+        $lineaConteo = $conteo->addLine($product->referencia, $product->idproducto, 50);
+        $this->assertTrue($lineaConteo->exists());
+        $this->assertTrue($conteo->updateStock());
+
+        // intentamos crear una transferencia con fecha anterior al conteo: debe fallar
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->fecha = date('Y-m-d H:i:s', strtotime('-1 day'));
+        $transferencia->observaciones = 'Transferencia anterior a conteo (origen)';
+        $this->assertFalse($transferencia->save());
+
+        // también debe fallar si el conteo es sobre el almacén de destino
+        $conteoDest = new ConteoStock();
+        $conteoDest->codalmacen = $warehouse2->codalmacen;
+        $conteoDest->observaciones = 'Conteo previo destino';
+        $this->assertTrue($conteoDest->save());
+        $lineaConteoDest = $conteoDest->addLine($product->referencia, $product->idproducto, 10);
+        $this->assertTrue($lineaConteoDest->exists());
+        $this->assertTrue($conteoDest->updateStock());
+
+        $transferencia2 = new TransferenciaStock();
+        $transferencia2->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia2->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia2->fecha = date('Y-m-d H:i:s', strtotime('-1 day'));
+        $transferencia2->observaciones = 'Transferencia anterior a conteo (destino)';
+        $this->assertFalse($transferencia2->save());
+
+        // una transferencia con fecha posterior al conteo sí debe guardarse
+        $transferencia3 = new TransferenciaStock();
+        $transferencia3->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia3->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia3->fecha = date('Y-m-d H:i:s', strtotime('+1 minute'));
+        $transferencia3->observaciones = 'Transferencia posterior a conteo';
+        $this->assertTrue($transferencia3->save());
+
+        // eliminamos
+        $this->assertTrue($transferencia3->delete());
+        $this->assertTrue($conteoDest->delete());
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
     public function testHtmlOnFields(): void
     {
         // creamos un almacén

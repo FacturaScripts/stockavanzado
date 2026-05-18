@@ -219,24 +219,6 @@ class ConteoStock extends ModelClass
             return false;
         }
 
-        // no se permiten fechas futuras
-        $now = time();
-        if (!empty($this->fechainicio) && strtotime($this->fechainicio) > $now) {
-            Tools::log()->warning('future-date-not-allowed');
-            return false;
-        }
-        if (!empty($this->fechafin) && strtotime($this->fechafin) > $now) {
-            Tools::log()->warning('future-date-not-allowed');
-            return false;
-        }
-
-        // la fecha de fin no puede ser anterior a la de inicio
-        if (!empty($this->fechafin) && !empty($this->fechainicio)
-            && strtotime($this->fechafin) < strtotime($this->fechainicio)) {
-            Tools::log()->warning('end-date-before-start-date');
-            return false;
-        }
-
         // no puede haber dos conteos abiertos (no completados) en el mismo almacén
         if (!empty($this->codalmacen) && false === (bool)$this->completed) {
             $where = [
@@ -249,24 +231,6 @@ class ConteoStock extends ModelClass
             foreach (DinConteoStock::all($where, [], 0, 1) as $open) {
                 Tools::log()->warning('open-counting-already-exists', ['%idconteo%' => $open->idconteo]);
                 return false;
-            }
-        }
-
-        // la fecha de inicio no puede ser anterior al último conteo completado del mismo almacén
-        if (!empty($this->codalmacen) && !empty($this->fechainicio)) {
-            $where = [
-                Where::eq('codalmacen', $this->codalmacen),
-                Where::eq('completed', true),
-            ];
-            if (!empty($this->idconteo)) {
-                $where[] = Where::notEq('idconteo', $this->idconteo);
-            }
-            foreach (DinConteoStock::all($where, ['fechafin' => 'DESC'], 0, 1) as $last) {
-                $lastDate = $last->fechafin ?? $last->fechainicio;
-                if (!empty($lastDate) && strtotime(Tools::date($this->fechainicio)) < strtotime(Tools::date($lastDate))) {
-                    Tools::log()->warning('date-before-last-counting');
-                    return false;
-                }
             }
         }
 
@@ -383,6 +347,61 @@ class ConteoStock extends ModelClass
             return false;
         }
 
+        // si cambia una fecha, revalidamos las restricciones temporales
+        if (in_array($field, ['fechainicio', 'fechafin'], true) && false === $this->testDate()) {
+            return false;
+        }
+
         return parent::onChange($field);
+    }
+
+    protected function saveInsert(): bool
+    {
+        if (false === $this->testDate()) {
+            return false;
+        }
+
+        return parent::saveInsert();
+    }
+
+    protected function testDate(): bool
+    {
+        // no se permiten fechas futuras
+        $now = time();
+        if (!empty($this->fechainicio) && strtotime($this->fechainicio) > $now) {
+            Tools::log()->warning('future-date-not-allowed');
+            return false;
+        }
+        if (!empty($this->fechafin) && strtotime($this->fechafin) > $now) {
+            Tools::log()->warning('future-date-not-allowed');
+            return false;
+        }
+
+        // la fecha de fin no puede ser anterior a la de inicio
+        if (!empty($this->fechafin) && !empty($this->fechainicio)
+            && strtotime($this->fechafin) < strtotime($this->fechainicio)) {
+            Tools::log()->warning('end-date-before-start-date');
+            return false;
+        }
+
+        // la fecha de inicio no puede ser anterior al último conteo completado del mismo almacén
+        if (!empty($this->codalmacen) && !empty($this->fechainicio)) {
+            $where = [
+                Where::eq('codalmacen', $this->codalmacen),
+                Where::eq('completed', true),
+            ];
+            if (!empty($this->idconteo)) {
+                $where[] = Where::notEq('idconteo', $this->idconteo);
+            }
+            foreach (DinConteoStock::all($where, ['fechafin' => 'DESC'], 0, 1) as $last) {
+                $lastDate = $last->fechafin ?? $last->fechainicio;
+                if (!empty($lastDate) && strtotime(Tools::date($this->fechainicio)) < strtotime(Tools::date($lastDate))) {
+                    Tools::log()->warning('date-before-last-counting');
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }
