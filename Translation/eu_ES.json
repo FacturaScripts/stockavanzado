@@ -14,7 +14,7 @@
     "rebuild-stock-after-moviments": "Stocka berreraiki mugimenduen ondoren",
     "rebuilding-movements": "Produktuaren %reference% mugimenduak berreskuratzea (%offset%\/%total%)",
     "rebuilding-movements-finished": "Mugimenduen berreraikitzea amaitu da, %total% produkturekin",
-    "rebuilding-stock": "Reconstruyendo stock del producto %reference% (producto %offset% de %total%)",
+    "rebuilding-stock": "%reference% produktuen stock-a berreraikitzen (%offset%\/%total% produktua)",
     "rebuilding-stock-finished": "Stockaren berreraikitzea amaitu da: %total% produktu",
     "rebuilt-movements": "Mugimenduak berreraiki dira",
     "rebuilt-stock": "Berritutako stocka",
