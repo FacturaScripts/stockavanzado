@@ -31,6 +31,7 @@ use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\ConteoStock as DinConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\Producto;
+use FacturaScripts\Dinamic\Model\Variante;
 
 /**
  * Description of ConteoStock
@@ -66,6 +67,19 @@ class ConteoStock extends ModelClass
     {
         if ($this->completed) {
             Tools::log()->warning('cannot-modify-completed-counting');
+            return new LineaConteoStock();
+        }
+
+        // la referencia debe existir; si no se indica idproducto, se resuelve desde la variante
+        $variante = new Variante();
+        if (false === $variante->loadWhereEq('referencia', $referencia)) {
+            Tools::log()->warning('reference-product-mismatch', ['%referencia%' => $referencia]);
+            return new LineaConteoStock();
+        }
+        if (empty($idproducto)) {
+            $idproducto = $variante->idproducto;
+        } elseif ($variante->idproducto !== $idproducto) {
+            Tools::log()->warning('reference-product-mismatch', ['%referencia%' => $referencia]);
             return new LineaConteoStock();
         }
 
@@ -199,6 +213,12 @@ class ConteoStock extends ModelClass
     {
         $this->observaciones = Tools::noHtml($this->observaciones);
 
+        // el almacén debe existir
+        if (empty($this->codalmacen) || false === $this->getAlmacen()->exists()) {
+            Tools::log()->warning('warehouse-not-found');
+            return false;
+        }
+
         // no se permiten fechas futuras
         $now = time();
         if (!empty($this->fechainicio) && strtotime($this->fechainicio) > $now) {
@@ -229,16 +249,6 @@ class ConteoStock extends ModelClass
             foreach (DinConteoStock::all($where, [], 0, 1) as $open) {
                 Tools::log()->warning('open-counting-already-exists', ['%idconteo%' => $open->idconteo]);
                 return false;
-            }
-        }
-
-        // si el conteo ya estaba completado, no se pueden modificar fechas ni almacén
-        if ($this->getOriginal('completed')) {
-            foreach (['codalmacen', 'fechainicio', 'fechafin'] as $field) {
-                if ($this->{$field} !== $this->getOriginal($field)) {
-                    Tools::log()->warning('cannot-modify-completed-counting');
-                    return false;
-                }
             }
         }
 
@@ -356,5 +366,23 @@ class ConteoStock extends ModelClass
     public function url(string $type = 'auto', string $list = 'ListAlmacen?activetab=List'): string
     {
         return parent::url($type, $list);
+    }
+
+    protected function onChange(string $field): bool
+    {
+        // si el conteo ya estaba completado, no se pueden modificar fechas ni almacén
+        if ($this->getOriginal('completed')
+            && in_array($field, ['codalmacen', 'fechainicio', 'fechafin'], true)) {
+            Tools::log()->warning('cannot-modify-completed-counting');
+            return false;
+        }
+
+        // no se puede cambiar el almacén si el conteo ya tiene líneas
+        if ($field === 'codalmacen' && !empty($this->idconteo) && false === empty($this->getLines())) {
+            Tools::log()->warning('cannot-change-warehouse-with-lines');
+            return false;
+        }
+
+        return parent::onChange($field);
     }
 }

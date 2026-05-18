@@ -311,6 +311,42 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($product->delete());
     }
 
+    public function testCantChangeWarehouseWithLines(): void
+    {
+        // creamos dos almacenes
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un conteo y le añadimos una línea
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo cambiar almacen test';
+        $this->assertTrue($conteo->save());
+
+        $linea = $conteo->addLine($product->referencia, $product->idproducto, 4);
+        $this->assertTrue($linea->exists());
+
+        // intentar cambiar el almacén debe fallar mientras tenga líneas
+        $conteo->codalmacen = $warehouse2->codalmacen;
+        $this->assertFalse($conteo->save());
+
+        // restauramos
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $this->assertTrue($conteo->save());
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
     public function testCantHaveTwoOpenCountingsSameWarehouse(): void
     {
         // creamos un almacén
@@ -422,6 +458,44 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($conteo1->delete());
         $this->assertTrue($warehouse->delete());
         $this->assertTrue($product->delete());
+    }
+
+    public function testCantAddLineWithMismatchedReferenceAndProduct(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos dos productos distintos
+        $product1 = $this->getRandomProduct();
+        $this->assertTrue($product1->save());
+        $product2 = $this->getRandomProduct();
+        $this->assertTrue($product2->save());
+
+        // creamos un conteo
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo referencia producto mismatch';
+        $this->assertTrue($conteo->save());
+
+        // referencia del producto1 con idproducto del producto2 debe fallar
+        $linea = $conteo->addLine($product1->referencia, $product2->idproducto, 5);
+        $this->assertFalse($linea->exists());
+        $this->assertCount(0, $conteo->getLines());
+
+        // referencia inexistente también debe fallar
+        $lineaInexistente = $conteo->addLine('REF-INEXISTENTE', $product1->idproducto, 5);
+        $this->assertFalse($lineaInexistente->exists());
+
+        // con referencia e idproducto coherentes sí debe añadir
+        $lineaOk = $conteo->addLine($product1->referencia, $product1->idproducto, 5);
+        $this->assertTrue($lineaOk->exists());
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product1->delete());
+        $this->assertTrue($product2->delete());
     }
 
     public function testCantAddLineWithNegativeQuantity(): void
