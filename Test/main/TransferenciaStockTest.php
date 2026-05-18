@@ -1193,6 +1193,28 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($variant->getProducto()->delete());
     }
 
+    public function testCantTransferWithFutureDate(): void
+    {
+        // creamos dos almacenes
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // una transferencia con fecha en el futuro debe fallar
+        $transferencia = new TransferenciaStock();
+        $transferencia->codalmacenorigen = $warehouse->codalmacen;
+        $transferencia->codalmacendestino = $warehouse2->codalmacen;
+        $transferencia->fecha = date('Y-m-d H:i:s', strtotime('+1 day'));
+        $transferencia->observaciones = 'Transferencia fecha futura';
+        $this->assertFalse($transferencia->save());
+
+        // eliminamos
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     public function testCantTransferBeforeLastCounting(): void
     {
         // creamos dos almacenes
@@ -1243,7 +1265,7 @@ final class TransferenciaStockTest extends TestCase
         $transferencia3 = new TransferenciaStock();
         $transferencia3->codalmacenorigen = $warehouse->codalmacen;
         $transferencia3->codalmacendestino = $warehouse2->codalmacen;
-        $transferencia3->fecha = date('Y-m-d H:i:s', strtotime('+1 minute'));
+        $transferencia3->fecha = date('Y-m-d H:i:s');
         $transferencia3->observaciones = 'Transferencia posterior a conteo';
         $this->assertTrue($transferencia3->save());
 

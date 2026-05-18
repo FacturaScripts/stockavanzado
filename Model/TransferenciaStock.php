@@ -358,12 +358,18 @@ class TransferenciaStock extends ModelClass
 
     protected function testDate(): bool
     {
-        // la fecha de la transferencia no puede ser anterior al último conteo
-        // completado de los almacenes implicados (origen o destino)
         if (empty($this->fecha)) {
             return true;
         }
 
+        // no se permiten fechas futuras
+        if (strtotime($this->fecha) > time()) {
+            Tools::log()->warning('future-date-not-allowed');
+            return false;
+        }
+
+        // la fecha de la transferencia no puede ser anterior al último conteo
+        // completado de los almacenes implicados (origen o destino)
         foreach ([$this->codalmacenorigen, $this->codalmacendestino] as $codalmacen) {
             if (empty($codalmacen)) {
                 continue;
