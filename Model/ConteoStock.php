@@ -198,6 +198,68 @@ class ConteoStock extends ModelClass
     public function test(): bool
     {
         $this->observaciones = Tools::noHtml($this->observaciones);
+
+        // no se permiten fechas futuras
+        $now = time();
+        if (!empty($this->fechainicio) && strtotime($this->fechainicio) > $now) {
+            Tools::log()->warning('future-date-not-allowed');
+            return false;
+        }
+        if (!empty($this->fechafin) && strtotime($this->fechafin) > $now) {
+            Tools::log()->warning('future-date-not-allowed');
+            return false;
+        }
+
+        // la fecha de fin no puede ser anterior a la de inicio
+        if (!empty($this->fechafin) && !empty($this->fechainicio)
+            && strtotime($this->fechafin) < strtotime($this->fechainicio)) {
+            Tools::log()->warning('end-date-before-start-date');
+            return false;
+        }
+
+        // no puede haber dos conteos abiertos (no completados) en el mismo almacén
+        if (!empty($this->codalmacen) && false === (bool)$this->completed) {
+            $where = [
+                Where::eq('codalmacen', $this->codalmacen),
+                Where::eq('completed', false),
+            ];
+            if (!empty($this->idconteo)) {
+                $where[] = Where::notEq('idconteo', $this->idconteo);
+            }
+            foreach (DinConteoStock::all($where, [], 0, 1) as $open) {
+                Tools::log()->warning('open-counting-already-exists', ['%idconteo%' => $open->idconteo]);
+                return false;
+            }
+        }
+
+        // si el conteo ya estaba completado, no se pueden modificar fechas ni almacén
+        if ($this->getOriginal('completed')) {
+            foreach (['codalmacen', 'fechainicio', 'fechafin'] as $field) {
+                if ($this->{$field} !== $this->getOriginal($field)) {
+                    Tools::log()->warning('cannot-modify-completed-counting');
+                    return false;
+                }
+            }
+        }
+
+        // la fecha de inicio no puede ser anterior al último conteo completado del mismo almacén
+        if (!empty($this->codalmacen) && !empty($this->fechainicio)) {
+            $where = [
+                Where::eq('codalmacen', $this->codalmacen),
+                Where::eq('completed', true),
+            ];
+            if (!empty($this->idconteo)) {
+                $where[] = Where::notEq('idconteo', $this->idconteo);
+            }
+            foreach (DinConteoStock::all($where, ['fechafin' => 'DESC'], 0, 1) as $last) {
+                $lastDate = $last->fechafin ?? $last->fechainicio;
+                if (!empty($lastDate) && strtotime(Tools::date($this->fechainicio)) < strtotime(Tools::date($lastDate))) {
+                    Tools::log()->warning('date-before-last-counting');
+                    return false;
+                }
+            }
+        }
+
         return parent::test();
     }
 

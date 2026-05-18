@@ -231,6 +231,199 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testCantCreateWithFutureDate(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un conteo con fechainicio futura
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo fecha futura test';
+        $conteo->fechainicio = date('d-m-Y', strtotime('+1 day'));
+        $this->assertFalse($conteo->save());
+
+        // con fechafin futura tampoco debe guardar
+        $conteo->fechainicio = date('d-m-Y');
+        $conteo->fechafin = date('d-m-Y H:i:s', strtotime('+1 day'));
+        $this->assertFalse($conteo->save());
+
+        // con fechas válidas sí debe guardar
+        $conteo->fechafin = null;
+        $this->assertTrue($conteo->save());
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testCantModifyDatesOrWarehouseOnCompletedCounting(): void
+    {
+        // creamos un almacén y un producto
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos y completamos un conteo
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo completado no modificable';
+        $this->assertTrue($conteo->save());
+        $linea = $conteo->addLine($product->referencia, $product->idproducto, 7);
+        $this->assertTrue($linea->exists());
+        $this->assertTrue($conteo->updateStock());
+
+        // recargamos para tener el estado completado
+        $conteo->load($conteo->idconteo);
+        $this->assertTrue($conteo->completed);
+
+        $originalFechainicio = $conteo->fechainicio;
+        $originalFechafin = $conteo->fechafin;
+        $originalAlmacen = $conteo->codalmacen;
+
+        // no debe permitir modificar fechainicio
+        $conteo->fechainicio = date('d-m-Y', strtotime('-1 day'));
+        $this->assertFalse($conteo->save());
+        $conteo->fechainicio = $originalFechainicio;
+
+        // no debe permitir modificar fechafin
+        $conteo->fechafin = date('d-m-Y H:i:s', strtotime('-1 hour'));
+        $this->assertFalse($conteo->save());
+        $conteo->fechafin = $originalFechafin;
+
+        // no debe permitir cambiar el almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+        $conteo->codalmacen = $warehouse2->codalmacen;
+        $this->assertFalse($conteo->save());
+        $conteo->codalmacen = $originalAlmacen;
+
+        // observaciones sí debería poder modificarse
+        $conteo->observaciones = 'Modificado';
+        $this->assertTrue($conteo->save());
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCantHaveTwoOpenCountingsSameWarehouse(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // primer conteo abierto
+        $conteo1 = new ConteoStock();
+        $conteo1->codalmacen = $warehouse->codalmacen;
+        $conteo1->observaciones = 'Primer conteo abierto';
+        $this->assertTrue($conteo1->save());
+
+        // segundo conteo en el mismo almacén debe fallar mientras el primero esté abierto
+        $conteo2 = new ConteoStock();
+        $conteo2->codalmacen = $warehouse->codalmacen;
+        $conteo2->observaciones = 'Segundo conteo abierto';
+        $this->assertFalse($conteo2->save());
+
+        // en otro almacén sí debe permitirse otro conteo abierto
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+        $conteoOtroAlmacen = new ConteoStock();
+        $conteoOtroAlmacen->codalmacen = $warehouse2->codalmacen;
+        $conteoOtroAlmacen->observaciones = 'Conteo otro almacen';
+        $this->assertTrue($conteoOtroAlmacen->save());
+
+        // completamos el primero y entonces sí debe permitirse uno nuevo en el almacén
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+        $linea = $conteo1->addLine($product->referencia, $product->idproducto, 1);
+        $this->assertTrue($linea->exists());
+        $this->assertTrue($conteo1->updateStock());
+
+        $conteo3 = new ConteoStock();
+        $conteo3->codalmacen = $warehouse->codalmacen;
+        $conteo3->observaciones = 'Tercer conteo tras completar';
+        $this->assertTrue($conteo3->save());
+
+        // eliminamos
+        $this->assertTrue($conteo3->delete());
+        $this->assertTrue($conteo1->delete());
+        $this->assertTrue($conteoOtroAlmacen->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testCantCreateWithEndDateBeforeStartDate(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // intentamos crear un conteo con fechafin anterior a fechainicio
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo fechafin anterior test';
+        $conteo->fechainicio = date('d-m-Y', strtotime('-1 day'));
+        $conteo->fechafin = date('d-m-Y H:i:s', strtotime('-3 days'));
+        $this->assertFalse($conteo->save());
+
+        // con fechafin posterior a fechainicio sí debe guardar
+        $conteo->fechafin = date('d-m-Y H:i:s');
+        $this->assertTrue($conteo->save());
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testCantCreateWithDateBeforeLastCounting(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos y completamos un primer conteo (fechafin = ahora)
+        $conteo1 = new ConteoStock();
+        $conteo1->codalmacen = $warehouse->codalmacen;
+        $conteo1->observaciones = 'Primer conteo fecha test';
+        $this->assertTrue($conteo1->save());
+        $linea = $conteo1->addLine($product->referencia, $product->idproducto, 10);
+        $this->assertTrue($linea->exists());
+        $this->assertTrue($conteo1->updateStock());
+
+        // intentamos crear un nuevo conteo con fechainicio anterior al fechafin del primero
+        $conteo2 = new ConteoStock();
+        $conteo2->codalmacen = $warehouse->codalmacen;
+        $conteo2->observaciones = 'Conteo fecha anterior test';
+        $conteo2->fechainicio = date('d-m-Y', strtotime('-2 days'));
+        $this->assertFalse($conteo2->save());
+
+        // pero en otro almacén sí debe permitirse
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+        $conteo3 = new ConteoStock();
+        $conteo3->codalmacen = $warehouse2->codalmacen;
+        $conteo3->observaciones = 'Conteo otro almacen test';
+        $conteo3->fechainicio = date('d-m-Y', strtotime('-2 days'));
+        $this->assertTrue($conteo3->save());
+
+        // eliminamos
+        $this->assertTrue($conteo3->delete());
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($conteo1->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
     public function testCantAddLineWithNegativeQuantity(): void
     {
         // creamos un almacén
