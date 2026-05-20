@@ -107,6 +107,68 @@ final class DeliveryNoteTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testAlbaranClienteMovementUpdatesWhenDateChanges(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al producto
+        $stock = new Stock();
+        $stock->referencia = $product->referencia;
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->cantidad = 10;
+        $stock->disponible = 10;
+        $this->assertTrue($stock->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos un albarán en ese almacén
+        $albaran = new AlbaranCliente();
+        $this->assertTrue($albaran->setSubject($customer));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+
+        // añadimos una línea al albarán
+        $linea = $albaran->getNewProductLine($product->referencia);
+        $linea->cantidad = 5;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // comprobamos que el movimiento se ha creado con la fecha del albarán
+        $movement = new MovimientoStock();
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $this->assertTrue($movement->loadWhere($whereRef));
+        $this->assertEquals($albaran->fecha, $movement->fecha);
+
+        // cambiamos la fecha del albarán a un día antes
+        $newDate = date('d-m-Y', strtotime($albaran->fecha . ' -1 day'));
+        $albaran->fecha = $newDate;
+        $this->assertTrue($albaran->save());
+
+        // comprobamos que el movimiento refleja la nueva fecha
+        $this->assertTrue($movement->loadWhere($whereRef));
+        $this->assertEquals($newDate, $movement->fecha);
+        $this->assertEquals($albaran->id(), $movement->docid);
+        $this->assertEquals(-5, $movement->cantidad);
+
+        // eliminamos
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     public function testAlbaranClienteNostockProductDoesNotGenerateMovement(): void
     {
         // creamos un almacén

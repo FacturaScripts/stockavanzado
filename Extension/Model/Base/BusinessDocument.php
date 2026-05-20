@@ -30,6 +30,7 @@ class BusinessDocument
     public function saveUpdate(): Closure
     {
         return function () {
+            StockMovementManager::updateDocumentDate($this);
             StockMovementManager::cleanResidualMovements($this);
             return true;
         };

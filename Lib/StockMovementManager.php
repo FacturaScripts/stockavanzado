@@ -262,6 +262,31 @@ class StockMovementManager
         static::$idproducto = $idproducto;
     }
 
+    public static function updateDocumentDate(TransformerDocument $doc): void
+    {
+        // si no han cambiado fecha ni hora, no hacemos nada
+        if ($doc->getOriginal('fecha') === $doc->fecha && $doc->getOriginal('hora') === $doc->hora) {
+            return;
+        }
+
+        $where = [
+            Where::eq('docid', $doc->id()),
+            Where::eq('docmodel', $doc->modelClassName()),
+        ];
+        $pairs = [];
+        foreach (MovimientoStock::all($where, [], 0, 0) as $movement) {
+            $movement->fecha = $doc->fecha;
+            $movement->hora = $doc->hora;
+            $movement->save();
+            $pairs[$movement->codalmacen . '|' . $movement->referencia] = [$movement->codalmacen, $movement->referencia];
+        }
+
+        // recalculamos saldos de los pares (almacén, referencia) afectados
+        foreach ($pairs as [$codalmacen, $referencia]) {
+            static::updateReferenceSaldos($codalmacen, $referencia);
+        }
+    }
+
     public static function updateReferenceSaldos(string $codalmacen, string $referencia): void
     {
         // durante un rebuild aplazamos el recálculo y lo hacemos una sola vez por par al final
