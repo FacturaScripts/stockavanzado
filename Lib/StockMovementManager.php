@@ -54,7 +54,13 @@ class StockMovementManager
     private static $mods = [];
 
     /** @var array */
+    private static $pendingSaldos = [];
+
+    /** @var array */
     private static $products = [];
+
+    /** @var bool */
+    private static $rebuilding = false;
 
     /** @var array */
     private static $variants = [];
@@ -208,19 +214,33 @@ class StockMovementManager
             return;
         }
 
-        if (!empty(static::$idproducto)) {
-            static::rebuildBusinessDocument();
+        // activamos el modo rebuild para aplazar el recálculo de saldos
+        static::$rebuilding = true;
+        static::$pendingSaldos = [];
 
-            // creamos los movimientos de las transferencias de stock
-            static::rebuildTransferStock();
+        try {
+            if (!empty(static::$idproducto)) {
+                static::rebuildBusinessDocument();
 
-            // creamos los movimientos de los conteos de stock
-            static::rebuildStockCounting();
-        }
+                // creamos los movimientos de las transferencias de stock
+                static::rebuildTransferStock();
 
-        // añadimos los mods para otros plugins
-        foreach (static::$mods as $mod) {
-            $mod->run(static::$idproducto);
+                // creamos los movimientos de los conteos de stock
+                static::rebuildStockCounting();
+            }
+
+            // añadimos los mods para otros plugins
+            foreach (static::$mods as $mod) {
+                $mod->run(static::$idproducto);
+            }
+        } finally {
+            // recalculamos los saldos una sola vez por (almacén, referencia)
+            $pending = static::$pendingSaldos;
+            static::$pendingSaldos = [];
+            static::$rebuilding = false;
+            foreach ($pending as [$codalmacen, $referencia]) {
+                static::updateReferenceSaldos($codalmacen, $referencia);
+            }
         }
 
         // reseteamos el idproducto
@@ -244,6 +264,12 @@ class StockMovementManager
 
     public static function updateReferenceSaldos(string $codalmacen, string $referencia): void
     {
+        // durante un rebuild aplazamos el recálculo y lo hacemos una sola vez por par al final
+        if (static::$rebuilding) {
+            static::$pendingSaldos[$codalmacen . '|' . $referencia] = [$codalmacen, $referencia];
+            return;
+        }
+
         $saldo = 0.0;
         $where = [
             Where::eq('codalmacen', $codalmacen),

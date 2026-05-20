@@ -116,10 +116,13 @@ class EditProducto
                 ->setSettings('btnNew', false)
                 ->setSettings('checkBoxes', false);
 
-            // filtros
-            $this->listView($viewName)->addFilterPeriod('fecha', 'date', 'fecha')
+            // filtros: referencia, cantidad, periodo, almacén
+            $references = $this->codeModel->all('variantes', 'referencia', 'referencia', false, [Where::eq('idproducto', $this->request->get('code'))]);
+            $this->listView($viewName)
+                ->addFilterSelect('referencia', 'reference', 'referencia', $references)
                 ->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=')
-                ->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=');
+                ->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=')
+                ->addFilterPeriod('fecha', 'date', 'fecha');
 
             // desactivamos la columna de almacén si solo hay uno
             if (count(Almacenes::codeModel(false)) <= 1) {
