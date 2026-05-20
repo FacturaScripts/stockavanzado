@@ -412,13 +412,13 @@ class StockMovementManager
         // El hook se dispara antes de persistir la línea, así que $line puede no estar
         // todavía en $doc->getLines(). Tratamos $line como autoritativa para su propia
         // contribución y sumamos las del resto de líneas con la misma referencia.
-        $linePk = $line->primaryColumnValue();
+        $linePk = $line->id();
         $quantity = static::getBusinessDocumentMovementQuantity($line);
         foreach ($doc->getLines() as $docLine) {
             if ($docLine->referencia !== $line->referencia) {
                 continue;
             }
-            if (!empty($linePk) && $docLine->primaryColumnValue() == $linePk) {
+            if (!empty($linePk) && $docLine->id() == $linePk) {
                 continue;
             }
             $quantity += static::getBusinessDocumentMovementQuantity($docLine);
@@ -487,7 +487,7 @@ class StockMovementManager
     protected static function getSignedChildrenTransformationQuantity(BusinessDocumentLine $line): float
     {
         $doc = $line->getDocument();
-        if (empty($doc->id()) || empty($line->primaryColumnValue())) {
+        if (empty($doc->id()) || empty($line->id())) {
             return 0.0;
         }
 
@@ -495,7 +495,7 @@ class StockMovementManager
         $where = [
             Where::eq('model1', $doc->modelClassName()),
             Where::eq('iddoc1', $line->documentColumnValue()),
-            Where::eq('idlinea1', $line->primaryColumnValue())
+            Where::eq('idlinea1', $line->id())
         ];
         foreach (DocTransformation::all($where, ['id' => 'ASC'], 0, 0) as $transformation) {
             if (false === static::isSupportedStockTransformation($transformation)) {
@@ -516,14 +516,14 @@ class StockMovementManager
     protected static function getTransformationFromChildLine(BusinessDocumentLine $line): ?DocTransformation
     {
         $doc = $line->getDocument();
-        if (empty($doc->id()) || empty($line->primaryColumnValue())) {
+        if (empty($doc->id()) || empty($line->id())) {
             return null;
         }
 
         $where = [
             Where::eq('model2', $doc->modelClassName()),
             Where::eq('iddoc2', $line->documentColumnValue()),
-            Where::eq('idlinea2', $line->primaryColumnValue())
+            Where::eq('idlinea2', $line->id())
         ];
         foreach (DocTransformation::all($where, ['id' => 'ASC'], 0, 1) as $transformation) {
             if (static::isSupportedStockTransformation($transformation)) {
