@@ -101,6 +101,67 @@ final class InvoiceTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testFacturaClienteMovementUpdatesWhenDateChanges(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto con stock
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        $stock = new Stock();
+        $stock->referencia = $product->referencia;
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->cantidad = 10;
+        $stock->disponible = 10;
+        $this->assertTrue($stock->save());
+
+        // creamos un cliente
+        $customer = $this->getRandomCustomer();
+        $this->assertTrue($customer->save());
+
+        // creamos una factura directa
+        $factura = new FacturaCliente();
+        $this->assertTrue($factura->setSubject($customer));
+        $this->assertTrue($factura->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($factura->save());
+
+        // añadimos una línea
+        $linea = $factura->getNewProductLine($product->referencia);
+        $linea->cantidad = 3;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // comprobamos que el movimiento se ha creado con la fecha de la factura
+        $movement = new MovimientoStock();
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $this->assertTrue($movement->loadWhere($whereRef));
+        $this->assertEquals($factura->fecha, $movement->fecha);
+
+        // cambiamos la fecha de la factura a un día antes
+        $newDate = date('d-m-Y', strtotime($factura->fecha . ' -1 day'));
+        $factura->fecha = $newDate;
+        $this->assertTrue($factura->save());
+
+        // comprobamos que el movimiento refleja la nueva fecha
+        $this->assertTrue($movement->loadWhere($whereRef));
+        $this->assertEquals($newDate, $movement->fecha);
+        $this->assertEquals($factura->id(), $movement->docid);
+        $this->assertEquals(-3, $movement->cantidad);
+
+        // eliminamos
+        $this->assertTrue($factura->delete());
+        $this->assertTrue($customer->delete());
+        $this->assertTrue($customer->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     public function testCreateFacturaProveedor(): void
     {
         // creamos un almacén
