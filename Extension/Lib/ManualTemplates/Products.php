@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2026 Carlos García Gómez <carlos@facturascripts.com>
  */
 
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Lib\ManualTemplates;
@@ -17,9 +17,6 @@ use FacturaScripts\Dinamic\Model\Variante;
  */
 class Products
 {
-    /** @var ConteoStock */
-    public $conteo;
-
     public function getConteo(): Closure
     {
         return function (string $codalmacen) {
