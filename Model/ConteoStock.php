@@ -31,6 +31,7 @@ use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\ConteoStock as DinConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\Producto;
+use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
 
 /**
@@ -111,6 +112,23 @@ class ConteoStock extends ModelClass
 
         $line->save();
         return $line;
+    }
+
+    public function addLineIfChanged(string $referencia, int $idproducto, float $quantity): LineaConteoStock
+    {
+        // comparamos con el stock actual del almacén; si no varía, no añadimos línea
+        $stock = new Stock();
+        $where = [
+            Where::eq('codalmacen', $this->codalmacen),
+            Where::eq('referencia', $referencia),
+        ];
+        $current = $stock->loadWhere($where) ? (float)$stock->cantidad : 0.0;
+
+        if (Tools::floatCmp($current, $quantity, FS_NF0, true)) {
+            return new LineaConteoStock();
+        }
+
+        return $this->addLine($referencia, $idproducto, $quantity);
     }
 
     public function clear(): void

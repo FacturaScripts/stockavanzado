@@ -207,6 +207,64 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($product->delete());
     }
 
+    public function testAddLineIfChanged(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos dos productos
+        $product1 = $this->getRandomProduct();
+        $this->assertTrue($product1->save());
+        $product2 = $this->getRandomProduct();
+        $this->assertTrue($product2->save());
+
+        // stock del producto1 = 5 en el almacén
+        $stock1 = new Stock();
+        $stock1->cantidad = 5;
+        $stock1->codalmacen = $warehouse->codalmacen;
+        $stock1->idproducto = $product1->idproducto;
+        $stock1->referencia = $product1->referencia;
+        $this->assertTrue($stock1->save());
+
+        // el producto2 no tiene registro de stock todavía (stock real = 0)
+
+        // creamos un conteo
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Conteo addLineIfChanged test';
+        $this->assertTrue($conteo->save());
+
+        // mismo valor que el stock actual: no debe crear línea
+        $sinCambio = $conteo->addLineIfChanged($product1->referencia, $product1->idproducto, 5);
+        $this->assertFalse($sinCambio->exists());
+        $this->assertCount(0, $conteo->getLines());
+
+        // valor distinto: debe crear línea
+        $conCambio = $conteo->addLineIfChanged($product1->referencia, $product1->idproducto, 8);
+        $this->assertTrue($conCambio->exists());
+        $this->assertEquals(8, $conCambio->cantidad);
+
+        // producto sin registro de stock: stock actual = 0; pedir 0 no crea línea
+        $sinStockIgual = $conteo->addLineIfChanged($product2->referencia, $product2->idproducto, 0);
+        $this->assertFalse($sinStockIgual->exists());
+
+        // producto sin registro de stock con valor distinto de 0: sí crea línea
+        $sinStockDistinto = $conteo->addLineIfChanged($product2->referencia, $product2->idproducto, 3);
+        $this->assertTrue($sinStockDistinto->exists());
+        $this->assertEquals(3, $sinStockDistinto->cantidad);
+
+        // el conteo debe tener exactamente 2 líneas
+        $this->assertCount(2, $conteo->getLines());
+
+        // eliminamos
+        $this->assertTrue($conteo->delete());
+        $this->assertTrue($stock1->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product1->delete());
+        $this->assertTrue($product2->delete());
+    }
+
     public function testCantUpdateStockWithoutLines(): void
     {
         // creamos un almacén
