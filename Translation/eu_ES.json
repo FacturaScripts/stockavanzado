@@ -6,7 +6,7 @@
     "new-quantity-description": "Sartu zenbatekoa",
     "no-movements-to-rebuild-stock": "Ez dago stock-a berreraikitzeko mugimendurik",
     "no-products": "Ez da produkturik",
-    "no-stock-this-product": "No se puede añadir el producto %referencia% por que no controla stock",
+    "no-stock-this-product": "Ezin da %referencia% produktua gehitu, ez duelako stocka kontrolatzen.",
     "preload": "Aurrez Kargatu",
     "preload-products": "Produktu guztiak aurretik kargatu",
     "reason-for-change": "Aldaketaren arrazoia",
