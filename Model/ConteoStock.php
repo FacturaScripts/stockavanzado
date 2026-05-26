@@ -237,21 +237,6 @@ class ConteoStock extends ModelClass
             return false;
         }
 
-        // no puede haber dos conteos abiertos (no completados) en el mismo almacén
-        if (!empty($this->codalmacen) && false === (bool)$this->completed) {
-            $where = [
-                Where::eq('codalmacen', $this->codalmacen),
-                Where::eq('completed', false),
-            ];
-            if (!empty($this->idconteo)) {
-                $where[] = Where::notEq('idconteo', $this->idconteo);
-            }
-            foreach (DinConteoStock::all($where, [], 0, 1) as $open) {
-                Tools::log()->warning('open-counting-already-exists', ['%idconteo%' => $open->idconteo]);
-                return false;
-            }
-        }
-
         return parent::test();
     }
 

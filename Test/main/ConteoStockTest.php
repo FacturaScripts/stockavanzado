@@ -405,7 +405,7 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($product->delete());
     }
 
-    public function testCantHaveTwoOpenCountingsSameWarehouse(): void
+    public function testCanHaveTwoOpenCountingsSameWarehouse(): void
     {
         // creamos un almacén
         $warehouse = $this->getRandomWarehouse();
@@ -417,39 +417,16 @@ final class ConteoStockTest extends TestCase
         $conteo1->observaciones = 'Primer conteo abierto';
         $this->assertTrue($conteo1->save());
 
-        // segundo conteo en el mismo almacén debe fallar mientras el primero esté abierto
+        // segundo conteo en el mismo almacén debe permitirse aunque el primero siga abierto
         $conteo2 = new ConteoStock();
         $conteo2->codalmacen = $warehouse->codalmacen;
         $conteo2->observaciones = 'Segundo conteo abierto';
-        $this->assertFalse($conteo2->save());
-
-        // en otro almacén sí debe permitirse otro conteo abierto
-        $warehouse2 = $this->getRandomWarehouse();
-        $this->assertTrue($warehouse2->save());
-        $conteoOtroAlmacen = new ConteoStock();
-        $conteoOtroAlmacen->codalmacen = $warehouse2->codalmacen;
-        $conteoOtroAlmacen->observaciones = 'Conteo otro almacen';
-        $this->assertTrue($conteoOtroAlmacen->save());
-
-        // completamos el primero y entonces sí debe permitirse uno nuevo en el almacén
-        $product = $this->getRandomProduct();
-        $this->assertTrue($product->save());
-        $linea = $conteo1->addLine($product->referencia, $product->idproducto, 1);
-        $this->assertTrue($linea->exists());
-        $this->assertTrue($conteo1->updateStock());
-
-        $conteo3 = new ConteoStock();
-        $conteo3->codalmacen = $warehouse->codalmacen;
-        $conteo3->observaciones = 'Tercer conteo tras completar';
-        $this->assertTrue($conteo3->save());
+        $this->assertTrue($conteo2->save());
 
         // eliminamos
-        $this->assertTrue($conteo3->delete());
+        $this->assertTrue($conteo2->delete());
         $this->assertTrue($conteo1->delete());
-        $this->assertTrue($conteoOtroAlmacen->delete());
-        $this->assertTrue($warehouse2->delete());
         $this->assertTrue($warehouse->delete());
-        $this->assertTrue($product->delete());
     }
 
     public function testCantCreateWithEndDateBeforeStartDate(): void
