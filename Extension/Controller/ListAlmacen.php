@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
  * Copyright (C) 2020-2025 Carlos García Gómez <carlos@facturascripts.com>
@@ -21,6 +22,8 @@ namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
 use FacturaScripts\Core\DataSrc\Almacenes;
+use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 
 /**
  * Description of ListAlmacen
@@ -45,7 +48,12 @@ class ListAlmacen
                 ->addOrderBy(['fechainicio', 'idconteo'], 'date', 2)
                 ->addSearchFields(['idconteo', 'observaciones'])
                 ->addFilterPeriod('fechainicio', 'date', 'fechainicio')
-                ->addFilterCheckbox('completed', 'completed', 'completed');
+                ->addFilterSelectWhere(
+                    'completed', 
+                    [['label' => Tools::trans('all'), 'where' => []],
+                    ['label' => Tools::trans('not-completed'), 'where' => [Where::eq('completed', false)]],
+                    ['label' => Tools::trans('completed'), 'where' => [Where::eq('completed', true)]]]
+                );
 
             $warehouses = Almacenes::codeModel();
             if (count($warehouses) > 2) {
@@ -84,8 +92,13 @@ class ListAlmacen
                 ->addOrderBy(['fecha', 'idtrans'], 'date', 2)
                 ->addSearchFields(['idtrans', 'observaciones'])
                 ->addFilterPeriod('fecha', 'date', 'fecha')
-                ->addFilterCheckbox('completed', 'completed', 'completed')
-                ->addFilterAutocomplete('nick', 'user', 'nick', 'users', 'nick', 'nick');
+                ->addFilterAutocomplete('nick', 'user', 'nick', 'users', 'nick', 'nick')
+                ->addFilterSelectWhere(
+                    'completed', 
+                    [['label' => Tools::trans('all'), 'where' => []],
+                    ['label' => Tools::trans('not-completed'), 'where' => [Where::eq('completed', false)]],
+                    ['label' => Tools::trans('completed'), 'where' => [Where::eq('completed', true)]]]
+                );
 
             $warehouses = Almacenes::codeModel();
             if (count($warehouses) > 2) {
