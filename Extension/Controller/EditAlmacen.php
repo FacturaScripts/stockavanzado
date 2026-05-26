@@ -20,6 +20,7 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 
 /**
@@ -46,7 +47,15 @@ class EditAlmacen
                 ->addSearchFields(['observaciones'])
                 ->disableColumn('warehouse')
                 ->setSettings('btnDelete', false)
-                ->setSettings('checkBoxes', false);
+                ->setSettings('checkBoxes', false)
+                ->addFilterPeriod('fechainicio', 'date', 'fechainicio')
+                ->addFilterSelectWhere(
+                    'completed', 
+                    [['label' => Tools::trans('all'), 'where' => []],
+                    ['label' => Tools::trans('not-completed'), 'where' => [Where::eq('completed', false)]],
+                    ['label' => Tools::trans('completed'), 'where' => [Where::eq('completed', true)]]]
+                )
+                ->addFilterAutocomplete('nick', 'user', 'nick', 'users', 'nick', 'nick');
         };
     }
     protected function createViewsHistorico(): Closure
