@@ -7,6 +7,7 @@
     "no-movements-to-rebuild-stock": "No hi ha moviments d'estoc per poder reconstruir-lo",
     "no-products": "No hi ha productes",
     "no-stock-this-product": "No es pot afegir el producte %referencia% perquè no controla l'estoc",
+    "not-completed": "No completat",
     "preload": "Precarregar",
     "preload-products": "Precarregar tots els productes",
     "reason-for-change": "Motiu del canvi",

@@ -7,6 +7,7 @@
     "no-movements-to-rebuild-stock": "Yeniden inşa edilecek stok hareketi yok",
     "no-products": "Ürün yok",
     "no-stock-this-product": "Stok takibi yapmadığı için %referencia% ürünü eklenemiyor.",
+    "not-completed": "Tamamlanmadı",
     "preload": "Ön Yükle",
     "preload-products": "Tüm ürünleri ön yükle",
     "reason-for-change": "Değişiklik nedeni",
@@ -26,10 +27,10 @@
     "stock-rebuild-inconsistency-detected": "%codalmacen% deposundaki %referencia% ürününün stokunda bir tutarsızlık tespit edildi: hareketlerin toplamı (%sum_movements%) son hareketin bakiyesi (%last_saldo%) ile eşleşmiyor",
     "stock-valorado-historico": "Değerlenmiş stok geçmişi",
     "total_cost": "Toplam maliyet",
-    "total_price": "Toplam fiyat",
+    "total_price": "Toplam tutar",
     "transfer-stock": "Stok transferi",
     "valued-stock-cost": "Maliyet Bedeli ile Değerlenmiş Stok",
     "valued-stock-price": "Değerli stok fiyatı",
-    "wait-stock-movements-rebuild": "Stok yeniden oluşturma tamamlanmadı, hareketlerin yeniden oluşturulmasının bitmesini bekleyin",
+    "wait-stock-movements-rebuild": "Stok yeniden oluşturma tamamlanmadı, hareketlerin yeniden oluşturulmasının tamamlanmasını bekleyin",
     "without-stock-count": "Sayım dışı bırak"
 }

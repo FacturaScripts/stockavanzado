@@ -7,6 +7,7 @@
     "no-movements-to-rebuild-stock": "Nejsou k dispozici žádné pohyby pro obnovení zásob",
     "no-products": "Žádné produkty nejsou k dispozici",
     "no-stock-this-product": "Nelze přidat produkt %referencia%, protože nevede evidenci zásob",
+    "not-completed": "Nedokončeno",
     "preload": "Přednačíst",
     "preload-products": "Přednačíst všechny produkty",
     "reason-for-change": "Motivo del cambio",

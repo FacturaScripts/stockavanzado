@@ -7,6 +7,7 @@
     "no-movements-to-rebuild-stock": "There are no stock movements to rebuild",
     "no-products": "No products available.",
     "no-stock-this-product": "Cannot add product %referencia% because it does not track stock.",
+    "not-completed": "Incomplete",
     "preload": "Preload",
     "preload-products": "Preload all products",
     "reason-for-change": "Reason for change",

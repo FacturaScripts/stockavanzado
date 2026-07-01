@@ -7,6 +7,7 @@
     "no-movements-to-rebuild-stock": "Pas de mouvements de stock pour pouvoir le reconstruire",
     "no-products": "Il n’y a pas de produits",
     "no-stock-this-product": "Impossible d'ajouter le produit %referencia% car il ne gère pas les stocks",
+    "not-completed": "Non complété",
     "preload": "Précharge",
     "preload-products": "Précharger tous les produits",
     "reason-for-change": "Motivo del cambio",
