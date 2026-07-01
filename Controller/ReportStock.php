@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2025 Carlos García Gómez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2026 Carlos García Gómez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -112,9 +112,9 @@ class ReportStock extends ListController
         $families = $this->codeModel->all('familias', 'codfamilia', 'descripcion');
 
         $this->addView($viewName, 'Join\StockVariante', 'stock', 'fa-solid fa-dolly')
-            ->addOrderBy(['referencia', 'codalmacen'], 'reference')
+            ->addOrderBy(['referencia', 'codalmacen'], 'reference', 1)
             ->addOrderBy(['disponible'], 'available')
-            ->addOrderBy(['cantidad'], 'quantity', 2)
+            ->addOrderBy(['cantidad'], 'quantity')
             ->addOrderBy(['total_movimientos'], 'movements')
             ->addOrderBy(['coste'], 'cost-price')
             ->addOrderBy(['total_precio'], 'total-precio')
