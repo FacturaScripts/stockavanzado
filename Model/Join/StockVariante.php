@@ -64,24 +64,17 @@ class StockVariante extends JoinModel
             'stockmin' => 'stocks.stockmin',
             'total_coste' => 'stocks.cantidad*variantes.coste',
             'total_precio' => 'stocks.cantidad*variantes.precio',
-            'total_movimientos' => 'COALESCE(SUM(stocks_movimientos.cantidad), 0)',
+            // subconsulta correlacionada en lugar de JOIN + SUM: evita el GROUP BY que obligaba
+            // a JoinModel::count() a materializar una fila por variante en memoria
+            'total_movimientos' => '(SELECT COALESCE(SUM(sm.cantidad), 0) FROM stocks_movimientos sm'
+                . ' WHERE sm.referencia = variantes.referencia)',
             'tipo' => 'productos.tipo',
         ];
-    }
-
-    protected function getGroupFields(): string
-    {
-        return 'productos.bloqueado, stocks.cantidad, stocks.codalmacen, productos.codfabricante, '
-            . 'productos.codfamilia, variantes.coste, productos.descripcion, stocks.disponible, '
-            . 'stocks.pterecibir, stocks.reservada, stocks.idproducto, stocks.idstock, '
-            . 'productos.nostock, variantes.precio, stocks.referencia, stocks.stockmax, '
-            . 'stocks.stockmin, productos.tipo, variantes.referencia';
     }
 
     protected function getSQLFrom(): string
     {
         return 'variantes'
-            . ' LEFT JOIN stocks_movimientos ON variantes.referencia = stocks_movimientos.referencia'
             . ' LEFT JOIN stocks ON variantes.referencia = stocks.referencia'
             . ' LEFT JOIN productos ON productos.idproducto = variantes.idproducto';
     }

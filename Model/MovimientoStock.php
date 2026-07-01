@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2025 Carlos García Gómez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2026 Carlos García Gómez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -69,6 +69,9 @@ class MovimientoStock extends ModelClass
     /** @var float */
     public $saldo;
 
+    /** @var array */
+    private static $docUrlCache = [];
+
     public function clear(): void
     {
         parent::clear();
@@ -116,10 +119,16 @@ class MovimientoStock extends ModelClass
     public function url(string $type = 'auto', string $list = 'List'): string
     {
         $modelClass = '\\FacturaScripts\\Dinamic\\Model\\' . $this->docmodel;
-        if (!empty($this->docmodel) && class_exists($modelClass)) {
+        if (!empty($this->docmodel) && !empty($this->docid) && class_exists($modelClass)) {
+            // cacheamos la url del documento para no recargarlo en cada fila del listado
+            $cacheKey = $this->docmodel . '|' . $this->docid;
+            if (isset(self::$docUrlCache[$cacheKey])) {
+                return self::$docUrlCache[$cacheKey];
+            }
+
             $model = new $modelClass();
             if ($model->load($this->docid)) {
-                return $model->url();
+                return self::$docUrlCache[$cacheKey] = $model->url();
             }
         }
 
