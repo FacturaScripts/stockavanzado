@@ -27,7 +27,7 @@
     "stock-rebuild-inconsistency-detected": "Foi detetada uma inconsistência no stock do produto %referencia% do armazém %codalmacen%: a soma dos movimentos (%sum_movements%) não coincide com o saldo do último movimento (%last_saldo%)",
     "stock-valorado-historico": "Histórico de stock valorizado",
     "total_cost": "Custo total",
-    "total_price": "Preço Total",
+    "total_price": "Preço total",
     "transfer-stock": "Transferir stock",
     "valued-stock-cost": "Stock avaliado a custo",
     "valued-stock-price": "Preço de stock valorizado",
