@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2013-2025 Carlos García Gómez <carlos@facturascripts.com>
+ * Copyright (C) 2013-2026 Carlos García Gómez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -184,10 +184,10 @@ class TransferenciaStock extends ModelClass
         return true;
     }
 
-    public function getLines(array $order = []): array
+    public function getLines(array $order = [], int $offset = 0, int $limit = 0): array
     {
         $where = [Where::eq('idtrans', $this->id())];
-        return LineaTransferenciaStock::all($where, $order);
+        return LineaTransferenciaStock::all($where, $order, $offset, $limit);
     }
 
     public function getWarehouseDest(): Almacen

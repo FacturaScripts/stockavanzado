@@ -171,8 +171,10 @@
         sendTransferFormAction('preloadProduct', formData);
     }
 
-    function renderLines() {
-        sendTransferFormAction('renderLines', new FormData());
+    function renderLines(offset = 0) {
+        let formData = new FormData();
+        formData.append('offset', offset);
+        sendTransferFormAction('renderLines', formData);
     }
 
     function sendTransferFormAction(action, formData) {
@@ -207,8 +209,17 @@
             }
 
             if (data.renderLines) {
-                $('#transferLines').html(data.html);
+                if (data.offset > 0) {
+                    $('#transferLines tbody').append(data.html);
+                } else {
+                    $('#transferLines').html(data.html);
+                }
                 $('#countLines').text(data.count);
+
+                // si quedan más líneas, pedimos el siguiente bloque
+                if (data.count > data.offset + data.limit) {
+                    renderLines(data.offset + data.limit);
+                }
             }
 
             if (data.updateLine) {

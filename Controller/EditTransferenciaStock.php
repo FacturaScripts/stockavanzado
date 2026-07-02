@@ -35,6 +35,9 @@ use FacturaScripts\Dinamic\Model\Variante;
  */
 class EditTransferenciaStock extends EditController
 {
+    /** número máximo de líneas por cada petición ajax de renderLines */
+    const RENDER_LINES_LIMIT = 1000;
+
     public function getFamilySelect(): array
     {
         $families = [];
@@ -293,13 +296,17 @@ class EditTransferenciaStock extends EditController
 
     protected function getRenderLines(): array
     {
+        $offset = (int)$this->request->request->get('offset', 0);
+
         // permisos
         if (false === $this->permissions->allowUpdate) {
             Tools::log()->warning('not-allowed-update');
             return [
                 'renderLines' => false,
                 'count' => 0,
-                'html' => $this->getRenderLinesTable([], []),
+                'offset' => $offset,
+                'limit' => self::RENDER_LINES_LIMIT,
+                'html' => '',
             ];
         }
 
@@ -309,19 +316,24 @@ class EditTransferenciaStock extends EditController
             return [
                 'renderLines' => false,
                 'count' => 0,
-                'html' => $this->getRenderLinesTable([], []),
+                'offset' => $offset,
+                'limit' => self::RENDER_LINES_LIMIT,
+                'html' => '',
             ];
         }
 
-        // obtenemos las líneas
-        $lines = $transferencia->getLines(['idlinea' => 'DESC']);
+        // contamos las líneas y obtenemos el bloque solicitado
+        $count = LineaTransferenciaStock::count([Where::eq('idtrans', $transferencia->idtrans)]);
+        $lines = $transferencia->getLines(['idlinea' => 'DESC'], $offset, self::RENDER_LINES_LIMIT);
 
         // si no hay líneas, terminamos
         if (empty($lines)) {
             return [
                 'renderLines' => true,
-                'count' => 0,
-                'html' => $this->getRenderLinesTable([], []),
+                'count' => $count,
+                'offset' => $offset,
+                'limit' => self::RENDER_LINES_LIMIT,
+                'html' => '',
             ];
         }
 
@@ -383,9 +395,25 @@ class EditTransferenciaStock extends EditController
 
         return [
             'renderLines' => true,
-            'count' => count($lines),
-            'html' => $this->getRenderLinesTable($tableHead, $tableBody),
+            'count' => $count,
+            'offset' => $offset,
+            'limit' => self::RENDER_LINES_LIMIT,
+            'html' => $offset > 0 ?
+                $this->getRenderLinesRows($tableBody) :
+                $this->getRenderLinesTable($tableHead, $tableBody),
         ];
+    }
+
+    protected function getRenderLinesRows(array $tableBody): string
+    {
+        $html = '';
+        foreach ($tableBody as $idlinea => $line) {
+            $html .= '<tr data-idlinea="' . $idlinea . '">'
+                . implode('', $line)
+                . '</tr>';
+        }
+
+        return $html;
     }
 
     protected function getRenderLinesTable(array $tableHead, array $tableBody): string
@@ -394,20 +422,14 @@ class EditTransferenciaStock extends EditController
             return '';
         }
 
-        $html = '<thead>'
+        return '<thead>'
             . '<tr>'
             . implode('', $tableHead)
             . '</tr>'
             . '</thead>'
-            . '<tbody>';
-
-        foreach ($tableBody as $idlinea => $line) {
-            $html .= '<tr data-idlinea="' . $idlinea . '">'
-                . implode('', $line)
-                . '</tr>';
-        }
-
-        return $html . '</tbody>';
+            . '<tbody>'
+            . $this->getRenderLinesRows($tableBody)
+            . '</tbody>';
     }
 
     protected function loadData($viewName, $view)

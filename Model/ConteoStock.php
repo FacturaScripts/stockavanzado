@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2025 Carlos García Gómez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2026 Carlos García Gómez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -203,10 +203,10 @@ class ConteoStock extends ModelClass
         return Almacenes::get($this->codalmacen);
     }
 
-    public function getLines(array $order = []): array
+    public function getLines(array $order = [], int $offset = 0, int $limit = 0): array
     {
         $where = [Where::eq('idconteo', $this->idconteo)];
-        return LineaConteoStock::all($where, $order);
+        return LineaConteoStock::all($where, $order, $offset, $limit);
     }
 
     public function install(): string
