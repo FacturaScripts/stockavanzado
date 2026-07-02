@@ -19,9 +19,9 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Controller;
 
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\ListController;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\ProductType;
 
 /**
@@ -94,11 +94,11 @@ class ReportStock extends ListController
             ],
             [
                 'label' => Tools::trans('under-minimums'),
-                'where' => [new DataBaseWhere('disponible', 'field:stockmin', '<', 'AND', true)]
+                'where' => [Where::lt('disponible', 'field:stockmin')->useField()]
             ],
             [
                 'label' => Tools::trans('excess'),
-                'where' => [new DataBaseWhere('disponible', 'field:stockmax', '>', 'AND', true)]
+                'where' => [Where::gt('disponible', 'field:stockmax')->useField()]
             ]
         ];
 
@@ -122,9 +122,9 @@ class ReportStock extends ListController
             ->addFilterSelectWhere('type', $values)
             ->addFilterSelectWhere('status', [
                 ['label' => Tools::trans('all'), 'where' => []],
-                ['label' => Tools::trans('only-active'), 'where' => [new DataBaseWhere('productos.bloqueado', false)]],
-                ['label' => Tools::trans('blocked'), 'where' => [new DataBaseWhere('productos.bloqueado', true)]],
-                ['label' => Tools::trans('public'), 'where' => [new DataBaseWhere('productos.publico', true)]],
+                ['label' => Tools::trans('only-active'), 'where' => [Where::eq('productos.bloqueado', false)]],
+                ['label' => Tools::trans('blocked'), 'where' => [Where::eq('productos.bloqueado', true)]],
+                ['label' => Tools::trans('public'), 'where' => [Where::eq('productos.publico', true)]],
             ])
             ->addFilterSelect('tipo', 'type', 'tipo', $types)
             ->addFilterSelect('codalmacen', 'warehouse', 'stocks.codalmacen', $warehouses)

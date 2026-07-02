@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2022-2025 Carlos García Gómez <carlos@facturascripts.com>
+ * Copyright (C) 2022-2026 Carlos García Gómez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,7 +20,6 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Controller;
 
 use Closure;
-use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
@@ -50,8 +49,8 @@ class ReportProducto
                 ->addFilterSelectWhere('type', [
                     ['label' => Tools::trans('all'), 'where' => []],
                     ['label' => '------', 'where' => []],
-                    ['label' => Tools::trans('purchases'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '>')]],
-                    ['label' => Tools::trans('sales'), 'where' => [new DataBaseWhere('sm.cantidad', 0, '<')]],
+                    ['label' => Tools::trans('purchases'), 'where' => [Where::gt('sm.cantidad', 0)]],
+                    ['label' => Tools::trans('sales'), 'where' => [Where::lt('sm.cantidad', 0)]],
                 ])
                 ->addFilterNumber('cantidadgt', 'quantity', 'cantidad', '>=')
                 ->addFilterNumber('cantidadlt', 'quantity', 'cantidad', '<=')
