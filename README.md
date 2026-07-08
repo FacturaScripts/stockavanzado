@@ -17,3 +17,4 @@ Como con todos los plugins, la carpeta se debe llamar igual que el plugin. En es
 - [Hacer inventario del almacén](https://facturascripts.com/publicaciones/como-hacer-inventario-del-almacen).
 - [Reconstruir los movimientos de stock](https://facturascripts.com/publicaciones/como-reconstruir-los-movimientos-de-stock).
 - [Usar el informe de stock](https://facturascripts.com/publicaciones/como-usar-el-informe-de-stock).
+- [API: ejecutar conteos y transferencias de stock](https://facturascripts.com/publicaciones/api-ejecutar-conteos-y-transferencias-de-stock).
