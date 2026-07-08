@@ -514,6 +514,109 @@ final class DeliveryNoteTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testAlbaranProveedorGroupedIntoInvoice(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un proveedor
+        $supplier = $this->getRandomSupplier();
+        $this->assertTrue($supplier->save());
+
+        // creamos un albarán en ese almacén
+        $albaran = new AlbaranProveedor();
+        $this->assertTrue($albaran->setSubject($supplier));
+        $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($albaran->save());
+
+        // añadimos una línea al albarán
+        $linea = $albaran->getNewProductLine($product->referencia);
+        $linea->cantidad = 5;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // hay un movimiento de +5 para el albarán
+        $whereRef = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $whereAlbaran = array_merge($whereRef, [
+            Where::eq('docid', $albaran->id()),
+            Where::eq('docmodel', $albaran->modelClassName())
+        ]);
+        $movement = new MovimientoStock();
+        $this->assertTrue($movement->loadWhere($whereAlbaran));
+        $this->assertEquals(5, $movement->cantidad);
+
+        // buscamos el estado que genera factura
+        $invoiceStatusId = null;
+        foreach ($albaran->getAvailableStatus() as $status) {
+            if ('FacturaProveedor' === $status->generadoc) {
+                $invoiceStatusId = $status->idestado;
+                break;
+            }
+        }
+        $this->assertNotNull($invoiceStatusId, 'no-invoice-status-found');
+
+        // agrupamos el albarán en una factura, reproduciendo el flujo de DocumentStitcher:
+        // captura las líneas antes de cambiar el estado, de modo que las líneas
+        // que recibe el generador pueden estar desactualizadas
+        $staleLines = $albaran->getLines();
+        $this->assertCount(1, $staleLines);
+        $quantities = [$staleLines[0]->id() => 5.0];
+
+        $albaran->setDocumentGeneration(false);
+        $albaran->idestado = $invoiceStatusId;
+        $saved = $albaran->save();
+
+        // restauramos la generación de documentos, porque es un flag estático
+        // y afecta a los demás tests
+        $albaran->setDocumentGeneration(true);
+        $this->assertTrue($saved);
+
+        $generator = new BusinessDocumentGenerator();
+        $this->assertTrue($generator->generate($albaran, 'FacturaProveedor', $staleLines, $quantities));
+        $this->runWorkQueue();
+
+        // se ha creado la factura
+        $facturas = $albaran->childrenDocuments();
+        $this->assertCount(1, $facturas);
+
+        // hay 2 movimientos: el del albarán (+5) y el de la factura (delta 0)
+        $movimientos = MovimientoStock::all($whereRef);
+        $this->assertCount(2, $movimientos);
+
+        $movement = new MovimientoStock();
+        $this->assertTrue($movement->loadWhere($whereAlbaran));
+        $this->assertEquals(5, $movement->cantidad, 'el movimiento del albarán debe ser 5');
+
+        $whereFactura = array_merge($whereRef, [
+            Where::eq('docid', $facturas[0]->id()),
+            Where::eq('docmodel', $facturas[0]->modelClassName())
+        ]);
+        $movement = new MovimientoStock();
+        $this->assertTrue($movement->loadWhere($whereFactura));
+        $this->assertEquals(0, $movement->cantidad, 'el movimiento de la factura debe ser 0');
+
+        // el stock es 5
+        $stock = new Stock();
+        $this->assertTrue($stock->loadWhere($whereRef));
+        $this->assertEquals(5, $stock->cantidad);
+
+        // eliminamos
+        $this->assertTrue($facturas[0]->delete());
+        $this->assertTrue($albaran->delete());
+        $this->assertTrue($supplier->delete());
+        $this->assertTrue($supplier->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     public function testAlbaranClienteReturnedWithMultipleLinesSameReference(): void
     {
         // creamos un almacén
@@ -690,7 +793,6 @@ final class DeliveryNoteTest extends TestCase
         // añadimos una línea al albarán
         $linea = $albaran->getNewProductLine($product->referencia);
         $linea->cantidad = 10;
-        $linea->servido = 5;
         $linea->pvpunitario = 10;
         $this->assertTrue($linea->save());
 
@@ -698,7 +800,7 @@ final class DeliveryNoteTest extends TestCase
         $lines = $albaran->getLines();
         $this->assertTrue(Calculator::calculate($albaran, $lines, true));
 
-        // probamos parcialmente el albarán
+        // facturamos parcialmente el albarán
         $generator = new BusinessDocumentGenerator();
         $this->assertTrue($generator->generate($albaran, 'FacturaCliente', [$linea], [$linea->idlinea => 5]), 'can-not-generate-document');
         $this->runWorkQueue();
@@ -857,7 +959,6 @@ final class DeliveryNoteTest extends TestCase
         // añadimos una línea al albarán
         $linea = $albaran->getNewProductLine($product->referencia);
         $linea->cantidad = 10;
-        $linea->servido = 5;
         $linea->pvpunitario = 10;
         $this->assertTrue($linea->save());
 
@@ -865,7 +966,7 @@ final class DeliveryNoteTest extends TestCase
         $lines = $albaran->getLines();
         $this->assertTrue(Calculator::calculate($albaran, $lines, true));
 
-        // probamos parcialmente el albarán
+        // facturamos parcialmente el albarán
         $generator = new BusinessDocumentGenerator();
         $this->assertTrue($generator->generate($albaran, 'FacturaProveedor', [$linea], [$linea->idlinea => 5]), 'can-not-generate-document');
         $this->runWorkQueue();
