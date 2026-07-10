@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2025 Carlos García Gómez <carlos@facturascripts.com>
+ * Copyright (C) 2025-2026 Carlos García Gómez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,17 +20,28 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
-use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\ConteoStock;
+use FacturaScripts\Dinamic\Model\PedidoProveedor;
+use FacturaScripts\Dinamic\Model\Stock;
+use FacturaScripts\Dinamic\Model\Variante;
+use FacturaScripts\Test\Traits\DefaultSettingsTrait;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
 
 final class StockRebuildTest extends TestCase
 {
+    use DefaultSettingsTrait;
     use LogErrorsTrait;
     use RandomDataTrait;
+
+    public static function setUpBeforeClass(): void
+    {
+        self::setDefaultSettings();
+        self::installAccountingPlan();
+        self::removeTaxRegularization();
+    }
 
     public function testCreate(): void
     {
@@ -85,5 +96,66 @@ final class StockRebuildTest extends TestCase
         $this->assertTrue($conteo->delete());
         $this->assertTrue($product->delete());
         $this->assertTrue($warehouse->delete());
+    }
+
+    public function testRebuildSkipsOrphanReference(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // creamos un proveedor
+        $proveedor = $this->getRandomSupplier();
+        $this->assertTrue($proveedor->save());
+
+        // creamos un pedido en ese almacén con una línea pendiente de recibir
+        $pedido = new PedidoProveedor();
+        $this->assertTrue($pedido->setSubject($proveedor));
+        $this->assertTrue($pedido->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($pedido->save());
+
+        // añadimos una línea al pedido
+        $linea = $pedido->getNewProductLine($product->referencia);
+        $linea->cantidad = 10;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+
+        // renombramos la referencia de la variante;
+        // la línea del pedido conserva la referencia antigua, que queda huérfana
+        $oldRef = $product->referencia;
+        $variante = new Variante();
+        $this->assertTrue($variante->loadWhereEq('referencia', $oldRef));
+        $variante->referencia = $oldRef . '-R';
+        $this->assertTrue($variante->save());
+        $this->assertEquals($oldRef, $pedido->getLines()[0]->referencia);
+
+        // reconstruimos el stock; la referencia huérfana se debe omitir sin errores
+        $messages = [];
+        StockRebuildManager::rebuild($product->idproducto, $messages);
+        $this->assertEmpty($messages);
+
+        // comprobamos que no se ha creado stock para la referencia huérfana
+        $stock = new Stock();
+        $where = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $oldRef)
+        ];
+        $this->assertFalse($stock->loadWhere($where));
+
+        // eliminamos
+        $this->assertTrue($pedido->delete());
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    protected function tearDown(): void
+    {
+        $this->logErrors();
     }
 }

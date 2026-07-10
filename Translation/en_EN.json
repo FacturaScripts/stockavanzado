@@ -25,6 +25,7 @@
     "start-with-zero-stock": "Initialize with stock 0",
     "stock-count-line-p": "Add lines to this count by typing\/scanning a barcode or reference. If the product was already in the list, the quantity increases",
     "stock-rebuild-inconsistency-detected": "An inconsistency has been detected in the stock of product %reference% from warehouse %warehouse_code%: the sum of the movements (%sum_movements%) does not match the balance of the last movement (%last_balance%).",
+    "stock-rebuild-reference-not-found": "The stock of reference %referencia% in warehouse %codalmacen% has not been rebuilt because the reference no longer exists",
     "stock-valorado-historico": "Valued stock history",
     "total_cost": "Total cost",
     "total_price": "Total Price",

@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of StockAvanzado plugin for FacturaScripts
- * Copyright (C) 2020-2025 Carlos García Gómez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2026 Carlos García Gómez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -26,6 +26,7 @@ use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Stock;
+use FacturaScripts\Dinamic\Model\Variante;
 
 /**
  * Está clase sirve para recalcular el stock de todos los productos
@@ -63,8 +64,19 @@ class StockRebuildManager
                     // el stock ya existe
                     $stock->loadFromData($data);
                 } else {
+                    // si la referencia ya no existe (renombrada o eliminada), la omitimos
+                    $variante = new Variante();
+                    if (false === $variante->loadWhereEq('referencia', $data['referencia'])) {
+                        Tools::log()->warning('stock-rebuild-reference-not-found', [
+                            '%referencia%' => $data['referencia'],
+                            '%codalmacen%' => $data['codalmacen']
+                        ]);
+                        continue;
+                    }
+
                     // creamos un nuevo stock
                     $stock = new Stock($data);
+                    $stock->idproducto = $variante->idproducto;
                 }
 
                 if (false === $stock->save()) {
