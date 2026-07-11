@@ -617,8 +617,7 @@ class StockMovementManager
     protected static function rebuildStockCounting(): void
     {
         // recorremos todas las líneas de conteo de stock
-        $where = [Where::eq('idproducto', static::$idproducto)];
-        foreach (LineaConteoStock::all($where, ['idlinea' => 'ASC']) as $line) {
+        foreach (LineaConteoStock::allWhereEq('idproducto', static::$idproducto, ['idlinea' => 'ASC']) as $line) {
             // si el conteo no está finalizado, lo omitimos
             $conteo = $line->getConteo();
             if (!$conteo->completed) {
@@ -633,8 +632,7 @@ class StockMovementManager
     protected static function rebuildTransferStock(): void
     {
         // recorremos todas las líneas de transferencias de stock
-        $where = [Where::eq('idproducto', static::$idproducto)];
-        foreach (LineaTransferenciaStock::all($where, ['idlinea' => 'ASC']) as $line) {
+        foreach (LineaTransferenciaStock::allWhereEq('idproducto', static::$idproducto, ['idlinea' => 'ASC']) as $line) {
             // si la transferencia no está finalizada, la omitimos
             $transfer = $line->getTransference();
             if (!$transfer->completed) {

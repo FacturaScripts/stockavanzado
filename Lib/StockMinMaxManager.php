@@ -22,7 +22,6 @@ namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\Email\MailNotifier;
 use FacturaScripts\Dinamic\Lib\Email\TextBlock;
 use FacturaScripts\Dinamic\Lib\Email\TitleBlock;
@@ -94,8 +93,7 @@ class StockMinMaxManager
 
     private static function getUsers(): array
     {
-        $where = [Where::eq('admin', true)];
-        return User::all($where);
+        return User::allWhereEq('admin', true);
     }
 
     private static function stockMax(array &$messages): void

@@ -206,8 +206,8 @@ class EditConteoStock extends EditController
 
             if ($selectedView->getViewName() === 'EditConteoStockLines') {
                 $lines = [];
-                $where = [Where::eq('idconteo', $this->views[$this->active]->model->id())];
-                foreach (LineaConteoStock::all($where) as $line) {
+                $idconteo = $this->views[$this->active]->model->id();
+                foreach (LineaConteoStock::allWhereEq('idconteo', $idconteo) as $line) {
                     $lines[] = [
                         Tools::trans('reference') => $line->referencia,
                         Tools::trans('quantity') => $line->cantidad,
@@ -223,7 +223,7 @@ class EditConteoStock extends EditController
 
                 if (Plugins::isEnabled('Trazabilidad')) {
                     $lotes = [];
-                    foreach (LineaConteoStockTraza::all($where) as $lineTraza) {
+                    foreach (LineaConteoStockTraza::allWhereEq('idconteo', $idconteo) as $lineTraza) {
                         $lote = $lineTraza->getLote();
                         $line = $lineTraza->getCountingLine();
                         $lotes[] = [

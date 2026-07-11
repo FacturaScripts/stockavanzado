@@ -206,8 +206,7 @@ class EditTransferenciaStock extends EditController
 
             if ($selectedView->getViewName() === 'EditTransferenciaStockLines') {
                 $lines = [];
-                $where = [Where::eq('idtrans', $this->views[$this->active]->model->id())];
-                foreach (LineaTransferenciaStock::all($where) as $line) {
+                foreach (LineaTransferenciaStock::allWhereEq('idtrans', $this->views[$this->active]->model->id()) as $line) {
                     $row = [
                         Tools::trans('reference') => $line->referencia,
                         Tools::trans('quantity') => $line->cantidad,

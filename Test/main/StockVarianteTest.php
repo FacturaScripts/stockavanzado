@@ -74,7 +74,7 @@ final class StockVarianteTest extends TestCase
         $this->assertEquals(2, StockVariante::count($where), 'count() incorrecto');
 
         // cargamos las filas ordenadas por almacén
-        $rows = StockVariante::all($where, ['stocks.codalmacen' => 'ASC']);
+        $rows = StockVariante::allWhereEq('variantes.referencia', $product->referencia, ['stocks.codalmacen' => 'ASC']);
         $this->assertCount(2, $rows, 'Número de filas incorrecto');
 
         foreach ($rows as $row) {
@@ -121,8 +121,7 @@ final class StockVarianteTest extends TestCase
         $stock->referencia = $product->referencia;
         $this->assertTrue($stock->save());
 
-        $where = [Where::eq('variantes.referencia', $product->referencia)];
-        $rows = StockVariante::all($where);
+        $rows = StockVariante::allWhereEq('variantes.referencia', $product->referencia);
         $this->assertCount(1, $rows);
 
         // sin movimientos, total_movimientos debe ser 0 (no null)
