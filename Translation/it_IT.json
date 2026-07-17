@@ -25,6 +25,7 @@
     "start-with-zero-stock": "Inizializza con stock 0",
     "stock-count-line-p": "Aggiungi righe a questo elenco digitando\/scansionando un codice a barre o un riferimento. Se il prodotto era già presente, la quantità viene incrementata.",
     "stock-rebuild-inconsistency-detected": "È stata rilevata un'incongruenza nell'inventario del prodotto %referencia% del magazzino %codalmacen%: la somma dei movimenti (%sum_movements%) non corrisponde al saldo dell'ultimo movimento (%last_saldo%)",
+    "stock-rebuild-reference-not-found": "Non è stato ricostruito lo stock del riferimento %referencia% nel magazzino %codalmacen% perché il riferimento non esiste più",
     "stock-valorado-historico": "Storico dello stock valorizzato",
     "total_cost": "Costo totale",
     "total_price": "Prezzo totale",

@@ -25,6 +25,7 @@
     "start-with-zero-stock": "0 stockarekin hasi",
     "stock-count-line-p": "Zerrenda honi lerroak gehitu barra kode edo erreferentzi bat idatziz\/eskaneatuz. Produktua lehendik bertan bazegoen, kantitatea handitu egingo da.",
     "stock-rebuild-inconsistency-detected": "Biltegian (%codalmacen%) dagoen %referencia% produktuen stockean irregulartasuna detektatu da: mugimenduen batura (%sum_movements%) azken mugimenduaren saldoarekin (%last_saldo%) bat ez dator.",
+    "stock-rebuild-reference-not-found": "Ez da %codalmacen% biltegiko %referencia% erreferentziaren stocka berreraiki, erreferentzia jada ez dagoelako",
     "stock-valorado-historico": "Balioztatutako stockaren historikoa",
     "total_cost": "Guztizko kostua",
     "total_price": "Prezio osoa",

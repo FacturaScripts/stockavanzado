@@ -25,6 +25,7 @@
     "start-with-zero-stock": "Zainicjuj z zerowym stanem magazynowym",
     "stock-count-line-p": "Dodaj linie do tej listy wpisując\/zeskanując kod kreskowy lub referencję. Jeśli produkt już istniał, zwiększa się ilość.",
     "stock-rebuild-inconsistency-detected": "Wykryto niespójność w zapasach produktu %referencia% w magazynie %codalmacen%: suma ruchów (%sum_movements%) nie zgadza się z saldem ostatniego ruchu (%last_saldo%)",
+    "stock-rebuild-reference-not-found": "Stan magazynowy dla referencji %referencia% w magazynie %codalmacen% nie został odbudowany, ponieważ referencja już nie istnieje",
     "stock-valorado-historico": "Historia wyceny zapasów",
     "total_cost": "Koszt całkowity",
     "total_price": "Cena całkowita",

@@ -25,6 +25,7 @@
     "start-with-zero-stock": "Inicialitzar amb estoc 0",
     "stock-count-line-p": "stock-count-line-p",
     "stock-rebuild-inconsistency-detected": "S'ha detectat una incoherència en l'estoc del producte %referencia% del magatzem %codalmacen%: la suma dels moviments (%sum_movements%) no coincideix amb el saldo de l'últim moviment (%last_saldo%)",
+    "stock-rebuild-reference-not-found": "No s'ha reconstruït l'estoc de la referència %referencia% al magatzem %codalmacen% perquè la referència ja no existix",
     "stock-valorado-historico": "Històric d'estoc valorat",
     "total_cost": "Cost Total",
     "total_price": "Preu total",

@@ -25,6 +25,7 @@
     "start-with-zero-stock": "Stoku 0 ile başlat",
     "stock-count-line-p": "Bu listeye bir barkod veya referans yazarak\/taramayla satır ekleyin. Ürün zaten varsa, miktarı artırılır.",
     "stock-rebuild-inconsistency-detected": "%codalmacen% deposundaki %referencia% ürününün stokunda bir tutarsızlık tespit edildi: hareketlerin toplamı (%sum_movements%) son hareketin bakiyesi (%last_saldo%) ile eşleşmiyor",
+    "stock-rebuild-reference-not-found": "%codalmacen% deposundaki %referencia% referansı için stok yeniden oluşturulmadı çünkü referans artık mevcut değil",
     "stock-valorado-historico": "Değerlenmiş stok geçmişi",
     "total_cost": "Toplam maliyet",
     "total_price": "Toplam tutar",

@@ -25,6 +25,7 @@
     "start-with-zero-stock": "Inicializovat s množstvím 0",
     "stock-count-line-p": "Añade líneas a este listado escribiendo\/escaneando un código de barras o referencia. Si el producto ya estaba, se incrementa la cantidad.",
     "stock-rebuild-inconsistency-detected": "Byla zjištěna nesrovnalost ve skladu produktu %referencia% v skladu %codalmacen%: součet pohybů (%sum_movements%) se neshoduje s posledním zůstatkem (%last_saldo%)",
+    "stock-rebuild-reference-not-found": "Zásoba reference %referencia% ve skladu %codalmacen% nebyla přepočítána, protože reference již neexistuje",
     "stock-valorado-historico": "Historie oceněných zásob",
     "total_cost": "Celkové náklady",
     "total_price": "Celková cena",

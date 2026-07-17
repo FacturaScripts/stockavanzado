@@ -25,6 +25,7 @@
     "start-with-zero-stock": "Mit einem Lagerbestand von 0 initialisieren",
     "stock-count-line-p": "Bestandszählungszeile-p",
     "stock-rebuild-inconsistency-detected": "Für das Produkt %referencia% im Lager %codalmacen% wurde eine Bestandsinkonsistenz festgestellt: die Summe der Bewegungen (%sum_movements%) stimmt nicht mit dem Saldo der letzten Bewegung (%last_saldo%) überein.",
+    "stock-rebuild-reference-not-found": "Der Bestand der Referenz %referencia% im Lager %codalmacen% wurde nicht neu aufgebaut, da die Referenz nicht mehr existiert",
     "stock-valorado-historico": "Historischer bewerteter Bestand",
     "total_cost": "Gesamtkosten",
     "total_price": "Gesamtpreis",
