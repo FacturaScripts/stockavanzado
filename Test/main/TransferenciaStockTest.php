@@ -19,12 +19,10 @@
 
 namespace FacturaScripts\Test\Plugins;
 
-use FacturaScripts\Core\Model\Stock;
+use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\ConteoStock;
-use FacturaScripts\Dinamic\Model\LineaConteoStock;
-use FacturaScripts\Dinamic\Model\LineaTransferenciaStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\TransferenciaStock;
 use FacturaScripts\Test\Traits\LogErrorsTrait;

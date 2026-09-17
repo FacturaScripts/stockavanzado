@@ -22,7 +22,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\Lib;
 use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Plugins\StockAvanzado\Model\ConteoStock;
+use FacturaScripts\Dinamic\Model\ConteoStock;
 
 /**
  * Está clase, es para crear movimientos iniciales de stock

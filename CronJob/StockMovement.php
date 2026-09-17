@@ -23,7 +23,6 @@ use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
-use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\Producto;
 
 /**

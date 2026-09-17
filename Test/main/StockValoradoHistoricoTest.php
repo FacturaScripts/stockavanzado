@@ -10,7 +10,7 @@ use FacturaScripts\Dinamic\Model\Stock as DinStock;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use FacturaScripts\Plugins\StockAvanzado\CronJob\StockValue;
-use FacturaScripts\Plugins\StockAvanzado\Model\StockValoradoHistorico;
+use FacturaScripts\Dinamic\Model\StockValoradoHistorico;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\Tools;
 use PHPUnit\Framework\TestCase;
