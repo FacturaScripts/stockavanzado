@@ -53,7 +53,13 @@ class BusinessDocumentLine
             // creamos el movimiento de stock
             StockMovementManager::addLineBusinessDocument($this, $doc);
 
-            // añadimos el evento para actualizar los saldos de los movimientos de stock
+            // añadimos el evento para actualizar los saldos de los movimientos de stock.
+            // Dentro de un lote lo anotamos para enviar un único evento por producto.
+            if (StockMovementManager::inBatch()) {
+                StockMovementManager::queueProductUpdate($this->idproducto);
+                return;
+            }
+
             WorkQueue::send('Model.Producto.updateStockMovements', $this->idproducto);
         };
     }

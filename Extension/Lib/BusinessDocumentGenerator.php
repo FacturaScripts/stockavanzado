@@ -23,6 +23,13 @@ use Closure;
 use FacturaScripts\Core\Model\Base\TransformerDocument;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 
+/**
+ * Extensión del generador de documentos. Agrupa en un único lote el cálculo de los
+ * movimientos de stock de todas las líneas clonadas, en lugar de recalcular los saldos
+ * de cada referencia una vez por línea.
+ *
+ * @author Carlos García Gómez <carlos@facturascripts.com>
+ */
 class BusinessDocumentGenerator
 {
     public function cloneLine(): Closure
@@ -38,6 +45,29 @@ class BusinessDocumentGenerator
             }
 
             StockMovementManager::addLineBusinessDocument($newLine, $newDoc);
+        };
+    }
+
+    public function generateBefore(): Closure
+    {
+        return function () {
+            // abrimos un lote para aplazar el cálculo de movimientos y saldos
+            StockMovementManager::beginBatch('gen:' . spl_object_hash($this));
+            return true;
+        };
+    }
+
+    public function generateFalse(): Closure
+    {
+        return function () {
+            StockMovementManager::flushBatch('gen:' . spl_object_hash($this));
+        };
+    }
+
+    public function generateTrue(): Closure
+    {
+        return function () {
+            StockMovementManager::flushBatch('gen:' . spl_object_hash($this));
         };
     }
 }

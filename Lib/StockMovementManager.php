@@ -25,6 +25,7 @@ use FacturaScripts\Core\Model\Base\BusinessDocumentLine;
 use FacturaScripts\Core\Model\Base\TransformerDocument;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\DocTransformation;
 use FacturaScripts\Dinamic\Model\LineaAlbaranCliente;
@@ -42,16 +43,52 @@ use FacturaScripts\Plugins\StockAvanzado\Contract\StockMovementModInterface;
 /**
  * Está clase se encarga de gestionar los movimientos de stock.
  *
+ * Para evitar recalcular el saldo de una referencia una y otra vez mientras se guarda
+ * un documento (o mientras se genera uno nuevo a partir de otro), esta clase dispone de
+ * un sistema de lotes: entre beginBatch() y flushBatch() los movimientos no se crean de
+ * inmediato, sino que se anota el par (documento, referencia) afectado y, al cerrar el
+ * lote, se calcula una sola vez cada movimiento y una sola vez cada saldo.
+ *
  * @author       Carlos García Gómez            <carlos@facturascripts.com>
  * @collaborator Jerónimo Pedro Sánchez Manzano <socger@gmail.com>
  */
 class StockMovementManager
 {
+    /** @var string[] pila de lotes abiertos */
+    private static $batchStack = [];
+
+    /** @var array documentos cacheados durante una ventana de caché */
+    private static $cacheDocuments = [];
+
+    /** @var array líneas de documento cacheadas durante una ventana de caché */
+    private static $cacheDocLines = [];
+
+    /** @var bool indica si la caché de documentos y transformaciones está activa */
+    private static $cacheEnabled = false;
+
+    /** @var array documentos de línea cacheados durante una ventana de caché */
+    private static $cacheLineDocuments = [];
+
+    /** @var array transformaciones en las que el documento es el hijo, indexadas por idlinea2 */
+    private static $cacheTransAsChild = [];
+
+    /** @var array transformaciones en las que el documento es el padre, indexadas por idlinea1 */
+    private static $cacheTransAsParent = [];
+
+    /** @var bool indica si el cálculo de saldos está aplazado */
+    private static $deferSaldos = false;
+
     /** @var int|null */
     private static $idproducto = null;
 
     /** @var StockMovementModInterface[] */
     private static $mods = [];
+
+    /** @var array pares (documento, referencia) pendientes de procesar al cerrar el lote */
+    private static $pendingDocRefs = [];
+
+    /** @var array productos pendientes de notificar al cerrar el lote */
+    private static $pendingProducts = [];
 
     /** @var array */
     private static $pendingSaldos = [];
@@ -62,34 +99,78 @@ class StockMovementManager
     /** @var bool */
     private static $rebuilding = false;
 
+    /** @var bool indica si ya hemos registrado la función de cierre de PHP */
+    private static $shutdownRegistered = false;
+
     /** @var array */
     private static $variants = [];
 
+    /**
+     * Crea o actualiza el movimiento de stock de una línea de documento.
+     * Si hay un lote abierto, sólo anota el par (documento, referencia) para procesarlo al cerrarlo.
+     *
+     * @param BusinessDocumentLine $line
+     * @param TransformerDocument $doc
+     */
     public static function addLineBusinessDocument(BusinessDocumentLine $line, TransformerDocument $doc): void
     {
         if (empty($line->referencia)) {
             return;
         }
 
-        if (false === static::mustCreateBusinessDocumentMovement($line)) {
+        // si hay un lote abierto, aplazamos el cálculo hasta cerrarlo
+        if (static::inBatch()) {
+            $key = $doc->modelClassName() . '|' . $doc->id() . '|' . $line->referencia;
+            static::$pendingDocRefs[$key] = [
+                'codalmacen' => $doc->codalmacen,
+                'docid' => $doc->id(),
+                'docmodel' => $doc->modelClassName(),
+                'referencia' => $line->referencia,
+            ];
+            static::queueProductUpdate($line->idproducto);
             return;
         }
 
-        $movement = static::getBusinessDocumentMovement($line, $doc);
-        $movement->cantidad = static::getBusinessDocumentMovementQuantityForReference($line, $doc);
-        $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
-        $movement->fecha = $doc->fecha;
-        $movement->hora = $doc->hora;
-        $movement->saldo = 0;
+        $changed = false;
+        $opened = static::openCache();
+        try {
+            if (false === static::mustCreateBusinessDocumentMovement($line)) {
+                return;
+            }
 
-        if (empty($movement->cantidad) && false === static::shouldSaveZeroBusinessDocumentMovement($line)) {
-            $movement->delete();
-            static::updateReferenceSaldos($doc->codalmacen, $line->referencia);
-            return;
+            $movement = static::getBusinessDocumentMovement($line, $doc);
+            $cantidad = static::getBusinessDocumentMovementQuantityForReference($line, $doc);
+
+            // ¿cambia algo que afecte al saldo acumulado?
+            $existed = $movement->exists();
+            $changed = false === $existed
+                || $movement->cantidad != $cantidad
+                || $movement->fecha !== $doc->fecha
+                || $movement->hora !== $doc->hora;
+
+            $saldo = $movement->saldo;
+            $movement->cantidad = $cantidad;
+            $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
+            $movement->fecha = $doc->fecha;
+            $movement->hora = $doc->hora;
+            $movement->saldo = $changed ? 0 : $saldo;
+
+            if (empty($movement->cantidad) && false === static::shouldSaveZeroBusinessDocumentMovement($line)) {
+                $movement->delete();
+                $changed = $existed;
+                return;
+            }
+
+            $movement->save();
+        } finally {
+            if ($opened) {
+                static::closeCache();
+            }
+            if ($changed) {
+                // sólo hay que recalcular desde la fecha del documento en adelante
+                static::updateReferenceSaldos($doc->codalmacen, $line->referencia, $doc->fecha);
+            }
         }
-
-        $movement->save();
-        static::updateReferenceSaldos($doc->codalmacen, $line->referencia);
     }
 
     public static function addLineCounting(LineaConteoStock $line, ConteoStock $stockCount, float $stock): bool
@@ -139,6 +220,28 @@ class StockMovementManager
         }
     }
 
+    /**
+     * Abre un lote. Mientras haya lotes abiertos, los movimientos de documentos se aplazan.
+     *
+     * @param string $owner identificador del propietario del lote
+     */
+    public static function beginBatch(string $owner): void
+    {
+        // si no hay lotes abiertos pero quedó trabajo pendiente de un ciclo anterior
+        // que terminó mal, lo procesamos ahora
+        if (empty(static::$batchStack) && (static::$pendingDocRefs || static::$pendingProducts)) {
+            static::processBatch();
+        }
+
+        static::$batchStack[] = $owner;
+
+        // registramos una válvula de seguridad, por si el proceso termina con lotes abiertos
+        if (false === static::$shutdownRegistered) {
+            static::$shutdownRegistered = true;
+            register_shutdown_function([static::class, 'shutdownFlush']);
+        }
+    }
+
     public static function cleanResidualMovements(TransformerDocument $doc): void
     {
         // recorremos los movimientos asociados a este documento
@@ -146,24 +249,67 @@ class StockMovementManager
             Where::eq('docid', $doc->id()),
             Where::eq('docmodel', $doc->modelClassName()),
         ];
-        foreach (MovimientoStock::all($where, [], 0, 0) as $movement) {
-            // ¿alguna línea del documento sigue justificando el movimiento?
-            $stillValid = false;
-            foreach ($doc->getLines() as $line) {
-                if ($line->referencia !== $movement->referencia) {
-                    continue;
-                }
-                if (static::mustCreateBusinessDocumentMovement($line)) {
-                    $stillValid = true;
-                    break;
-                }
+        $movements = MovimientoStock::all($where, [], 0, 0);
+        if (empty($movements)) {
+            return;
+        }
+
+        // dentro de un lote basta con anotar los pares: al cerrarlo se comprueba
+        // si alguna línea sigue justificando cada movimiento
+        if (static::inBatch()) {
+            foreach ($movements as $movement) {
+                $key = $doc->modelClassName() . '|' . $doc->id() . '|' . $movement->referencia;
+                static::$pendingDocRefs[$key] = [
+                    'codalmacen' => $movement->codalmacen,
+                    'docid' => $doc->id(),
+                    'docmodel' => $doc->modelClassName(),
+                    'referencia' => $movement->referencia,
+                ];
             }
-            if ($stillValid) {
-                continue;
+            return;
+        }
+
+        $pairs = [];
+        $opened = static::openCache();
+        try {
+            static::preloadDocTransformations($doc->modelClassName(), $doc->id());
+
+            // agrupamos las líneas por referencia para no consultarlas dentro del bucle
+            $linesByRef = [];
+            foreach (static::getDocLines($doc) as $line) {
+                $linesByRef[$line->referencia][] = $line;
             }
 
-            $movement->delete();
-            static::updateReferenceSaldos($movement->codalmacen, $movement->referencia);
+            foreach ($movements as $movement) {
+                // ¿alguna línea del documento sigue justificando el movimiento?
+                $stillValid = false;
+                foreach ($linesByRef[$movement->referencia] ?? [] as $line) {
+                    if (static::mustCreateBusinessDocumentMovement($line)) {
+                        $stillValid = true;
+                        break;
+                    }
+                }
+                if ($stillValid) {
+                    continue;
+                }
+
+                $movement->delete();
+
+                $key = $movement->codalmacen . '|' . $movement->referencia;
+                $fromFecha = $movement->fecha;
+                if (isset($pairs[$key]) && strtotime($pairs[$key][2]) < strtotime($fromFecha)) {
+                    $fromFecha = $pairs[$key][2];
+                }
+                $pairs[$key] = [$movement->codalmacen, $movement->referencia, $fromFecha];
+            }
+        } finally {
+            if ($opened) {
+                static::closeCache();
+            }
+        }
+
+        foreach ($pairs as [$codalmacen, $referencia, $fromFecha]) {
+            static::updateReferenceSaldos($codalmacen, $referencia, $fromFecha);
         }
     }
 
@@ -203,6 +349,51 @@ class StockMovementManager
         return $db->exec($sql);
     }
 
+    /**
+     * Cierra el lote del propietario indicado. Si no quedan lotes abiertos, procesa lo pendiente.
+     *
+     * @param string $owner identificador del propietario del lote
+     */
+    public static function flushBatch(string $owner): void
+    {
+        // si este propietario no tiene ningún lote abierto, no hacemos nada
+        if (false === in_array($owner, static::$batchStack, true)) {
+            return;
+        }
+
+        // desapilamos hasta el propio lote, descartando los lotes huérfanos que hubiera encima
+        while (static::$batchStack) {
+            $top = array_pop(static::$batchStack);
+            if ($top === $owner) {
+                break;
+            }
+        }
+
+        if (static::$batchStack) {
+            // seguimos dentro de un lote exterior
+            return;
+        }
+
+        static::processBatch();
+    }
+
+    public static function inBatch(): bool
+    {
+        return !empty(static::$batchStack);
+    }
+
+    /**
+     * Anota un producto para enviar un único evento de actualización al cerrar el lote.
+     *
+     * @param int|null $idproducto
+     */
+    public static function queueProductUpdate(?int $idproducto): void
+    {
+        if (!empty($idproducto)) {
+            static::$pendingProducts[$idproducto] = $idproducto;
+        }
+    }
+
     public static function rebuild(?int $idproducto = null, array &$messages = [], bool $cron = false): void
     {
         self::setIdProducto($idproducto);
@@ -238,8 +429,8 @@ class StockMovementManager
             $pending = static::$pendingSaldos;
             static::$pendingSaldos = [];
             static::$rebuilding = false;
-            foreach ($pending as [$codalmacen, $referencia]) {
-                static::updateReferenceSaldos($codalmacen, $referencia);
+            foreach ($pending as [$codalmacen, $referencia, $fromFecha]) {
+                static::updateReferenceSaldos($codalmacen, $referencia, $fromFecha);
             }
         }
 
@@ -262,6 +453,15 @@ class StockMovementManager
         static::$idproducto = $idproducto;
     }
 
+    /**
+     * Válvula de seguridad: procesa lo pendiente aunque queden lotes abiertos.
+     */
+    public static function shutdownFlush(): void
+    {
+        static::$batchStack = [];
+        static::processBatch();
+    }
+
     public static function updateDocumentDate(TransformerDocument $doc): void
     {
         // si no han cambiado fecha ni hora, no hacemos nada
@@ -275,46 +475,65 @@ class StockMovementManager
         ];
         $pairs = [];
         foreach (MovimientoStock::all($where, [], 0, 0) as $movement) {
+            // hay que recalcular desde la más antigua de las dos fechas
+            $fromFecha = strtotime($movement->fecha) < strtotime($doc->fecha) ? $movement->fecha : $doc->fecha;
+
             $movement->fecha = $doc->fecha;
             $movement->hora = $doc->hora;
             $movement->save();
-            $pairs[$movement->codalmacen . '|' . $movement->referencia] = [$movement->codalmacen, $movement->referencia];
+
+            $key = $movement->codalmacen . '|' . $movement->referencia;
+            if (isset($pairs[$key]) && strtotime($pairs[$key][2]) < strtotime($fromFecha)) {
+                $fromFecha = $pairs[$key][2];
+            }
+            $pairs[$key] = [$movement->codalmacen, $movement->referencia, $fromFecha];
         }
 
         // recalculamos saldos de los pares (almacén, referencia) afectados
-        foreach ($pairs as [$codalmacen, $referencia]) {
-            static::updateReferenceSaldos($codalmacen, $referencia);
+        foreach ($pairs as [$codalmacen, $referencia, $fromFecha]) {
+            static::updateReferenceSaldos($codalmacen, $referencia, $fromFecha);
         }
     }
 
-    public static function updateReferenceSaldos(string $codalmacen, string $referencia): void
+    /**
+     * Recalcula el saldo acumulado de los movimientos de una referencia en un almacén.
+     *
+     * @param string $codalmacen
+     * @param string $referencia
+     * @param string|null $fromFecha si se indica, sólo se recalcula desde esa fecha en adelante,
+     *                               partiendo del saldo del último movimiento anterior.
+     */
+    public static function updateReferenceSaldos(string $codalmacen, string $referencia, ?string $fromFecha = null): void
     {
-        // durante un rebuild aplazamos el recálculo y lo hacemos una sola vez por par al final
-        if (static::$rebuilding) {
-            static::$pendingSaldos[$codalmacen . '|' . $referencia] = [$codalmacen, $referencia];
+        // durante un rebuild o un lote aplazamos el recálculo y lo hacemos una sola vez por par al final
+        if (static::$rebuilding || static::$deferSaldos) {
+            $key = $codalmacen . '|' . $referencia;
+            if (array_key_exists($key, static::$pendingSaldos)) {
+                // nos quedamos con la fecha más antigua de las solicitadas
+                $previous = static::$pendingSaldos[$key][2];
+                if (is_null($previous)) {
+                    $fromFecha = null;
+                } elseif (false === is_null($fromFecha) && strtotime($previous) < strtotime($fromFecha)) {
+                    $fromFecha = $previous;
+                }
+            }
+            static::$pendingSaldos[$key] = [$codalmacen, $referencia, $fromFecha];
             return;
         }
 
-        $saldo = 0.0;
         $where = [
             Where::eq('codalmacen', $codalmacen),
             Where::eq('referencia', $referencia)
         ];
-        $movements = MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC'], 0, 0);
-        usort($movements, function (MovimientoStock $a, MovimientoStock $b) {
-            $dateA = strtotime($a->fecha . ' ' . $a->hora);
-            $dateB = strtotime($b->fecha . ' ' . $b->hora);
-            if ($dateA !== $dateB) {
-                return $dateA <=> $dateB;
-            }
 
-            $priority = static::getMovementSortPriority($a->docmodel) <=> static::getMovementSortPriority($b->docmodel);
-            if ($priority !== 0) {
-                return $priority;
-            }
+        // si sólo recalculamos una parte, partimos del saldo que había justo antes
+        $saldo = 0.0;
+        if (false === is_null($fromFecha)) {
+            $saldo = static::getSaldoBeforeDate($codalmacen, $referencia, $fromFecha);
+            $where[] = Where::gte('fecha', $fromFecha);
+        }
 
-            return $a->id() <=> $b->id();
-        });
+        $movements = static::sortMovements(MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC'], 0, 0));
 
         foreach ($movements as $movement) {
             if ($movement->docmodel === 'ConteoStock') {
@@ -356,6 +575,49 @@ class StockMovementManager
         $movement->saldo = $previousSaldo + $movement->cantidad;
 
         return empty($movement->cantidad) ? $movement->delete() : $movement->save();
+    }
+
+    /**
+     * Devuelve la primera transformación en la que el documento indicado es el hijo de la línea dada.
+     *
+     * @param string $docmodel
+     * @param mixed $docid
+     * @param mixed $idlinea
+     *
+     * @return DocTransformation|null
+     */
+    protected static function cachedChildTransformation(string $docmodel, $docid, $idlinea): ?DocTransformation
+    {
+        $key = $docmodel . '|' . $docid;
+        return static::$cacheTransAsChild[$key][$idlinea] ?? null;
+    }
+
+    /**
+     * Devuelve las transformaciones en las que el documento indicado es el padre de la línea dada.
+     *
+     * @param string $docmodel
+     * @param mixed $docid
+     * @param mixed $idlinea
+     *
+     * @return DocTransformation[]
+     */
+    protected static function cachedParentTransformations(string $docmodel, $docid, $idlinea): array
+    {
+        $key = $docmodel . '|' . $docid;
+        return static::$cacheTransAsParent[$key][$idlinea] ?? [];
+    }
+
+    /**
+     * Desactiva y vacía la caché de documentos y transformaciones.
+     */
+    protected static function closeCache(): void
+    {
+        static::$cacheEnabled = false;
+        static::$cacheDocuments = [];
+        static::$cacheDocLines = [];
+        static::$cacheLineDocuments = [];
+        static::$cacheTransAsChild = [];
+        static::$cacheTransAsParent = [];
     }
 
     protected static function deleteLineTransferMovement(string $codalmacen, LineaTransferenciaStock $line, TransferenciaStock $stockCount): bool
@@ -414,7 +676,7 @@ class StockMovementManager
         // contribución y sumamos las del resto de líneas con la misma referencia.
         $linePk = $line->id();
         $quantity = static::getBusinessDocumentMovementQuantity($line);
-        foreach ($doc->getLines() as $docLine) {
+        foreach (static::getDocLines($doc) as $docLine) {
             if ($docLine->referencia !== $line->referencia) {
                 continue;
             }
@@ -431,6 +693,49 @@ class StockMovementManager
         return in_array($line->actualizastock, [-1, 1], true) ?
             $line->actualizastock * ((float)$line->cantidad - (float)$line->servido) :
             0.0;
+    }
+
+    /**
+     * Devuelve las líneas de un documento, cacheadas si la caché está activa.
+     *
+     * @param TransformerDocument $doc
+     *
+     * @return BusinessDocumentLine[]
+     */
+    protected static function getDocLines(TransformerDocument $doc): array
+    {
+        if (false === static::$cacheEnabled) {
+            return $doc->getLines();
+        }
+
+        $key = $doc->modelClassName() . '|' . $doc->id();
+        if (false === isset(static::$cacheDocLines[$key])) {
+            static::$cacheDocLines[$key] = $doc->getLines();
+        }
+
+        return static::$cacheDocLines[$key];
+    }
+
+    /**
+     * Devuelve el documento de una línea, cacheado si la caché está activa.
+     * Sólo debe usarse para leer, nunca para modificar el documento.
+     *
+     * @param BusinessDocumentLine $line
+     *
+     * @return TransformerDocument|mixed
+     */
+    protected static function getLineDocument(BusinessDocumentLine $line)
+    {
+        if (false === static::$cacheEnabled) {
+            return $line->getDocument();
+        }
+
+        $key = get_class($line) . '|' . $line->documentColumnValue();
+        if (false === isset(static::$cacheLineDocuments[$key])) {
+            static::$cacheLineDocuments[$key] = $line->getDocument();
+        }
+
+        return static::$cacheLineDocuments[$key];
     }
 
     protected static function getMovementSortPriority(string $docmodel): int
@@ -486,18 +791,13 @@ class StockMovementManager
 
     protected static function getSignedChildrenTransformationQuantity(BusinessDocumentLine $line): float
     {
-        $doc = $line->getDocument();
+        $doc = static::getLineDocument($line);
         if (empty($doc->id()) || empty($line->id())) {
             return 0.0;
         }
 
         $quantity = 0.0;
-        $where = [
-            Where::eq('model1', $doc->modelClassName()),
-            Where::eq('iddoc1', $line->documentColumnValue()),
-            Where::eq('idlinea1', $line->id())
-        ];
-        foreach (DocTransformation::all($where, ['id' => 'ASC'], 0, 0) as $transformation) {
+        foreach (static::getTransformationsAsParent($doc, $line) as $transformation) {
             if (false === static::isSupportedStockTransformation($transformation)) {
                 continue;
             }
@@ -515,9 +815,19 @@ class StockMovementManager
 
     protected static function getTransformationFromChildLine(BusinessDocumentLine $line): ?DocTransformation
     {
-        $doc = $line->getDocument();
+        $doc = static::getLineDocument($line);
         if (empty($doc->id()) || empty($line->id())) {
             return null;
+        }
+
+        if (static::$cacheEnabled) {
+            static::preloadDocTransformations($doc->modelClassName(), $line->documentColumnValue());
+            $transformation = static::cachedChildTransformation($doc->modelClassName(), $line->documentColumnValue(), $line->id());
+            if (is_null($transformation) || false === static::isSupportedStockTransformation($transformation)) {
+                return null;
+            }
+
+            return $transformation;
         }
 
         $where = [
@@ -547,6 +857,29 @@ class StockMovementManager
         return 0;
     }
 
+    /**
+     * Devuelve las transformaciones en las que la línea es el origen.
+     *
+     * @param mixed $doc
+     * @param BusinessDocumentLine $line
+     *
+     * @return DocTransformation[]
+     */
+    protected static function getTransformationsAsParent($doc, BusinessDocumentLine $line): array
+    {
+        if (static::$cacheEnabled) {
+            static::preloadDocTransformations($doc->modelClassName(), $line->documentColumnValue());
+            return static::cachedParentTransformations($doc->modelClassName(), $line->documentColumnValue(), $line->id());
+        }
+
+        $where = [
+            Where::eq('model1', $doc->modelClassName()),
+            Where::eq('iddoc1', $line->documentColumnValue()),
+            Where::eq('idlinea1', $line->id())
+        ];
+        return DocTransformation::all($where, ['id' => 'ASC'], 0, 0);
+    }
+
     protected static function getVariant(string $referencia): Variante
     {
         if (!isset(static::$variants[$referencia])) {
@@ -564,6 +897,36 @@ class StockMovementManager
             ($transformation->model1 === 'AlbaranProveedor' && $transformation->model2 === 'FacturaProveedor');
     }
 
+    /**
+     * Carga un documento a partir de su modelo e identificador.
+     *
+     * @param string $docmodel
+     * @param mixed $docid
+     *
+     * @return TransformerDocument|null
+     */
+    protected static function loadDocument(string $docmodel, $docid)
+    {
+        $key = $docmodel . '|' . $docid;
+        if (static::$cacheEnabled && array_key_exists($key, static::$cacheDocuments)) {
+            return static::$cacheDocuments[$key];
+        }
+
+        $className = '\\FacturaScripts\\Dinamic\\Model\\' . $docmodel;
+        if (false === class_exists($className)) {
+            return null;
+        }
+
+        $doc = new $className();
+        $result = ($doc instanceof TransformerDocument) && $doc->load($docid) ? $doc : null;
+
+        if (static::$cacheEnabled) {
+            static::$cacheDocuments[$key] = $result;
+        }
+
+        return $result;
+    }
+
     protected static function mustCreateBusinessDocumentMovement(BusinessDocumentLine $line): bool
     {
         if (in_array($line->actualizastock, [-1, 1], true) || in_array($line->getOriginal('actualizastock'), [-1, 1], true)) {
@@ -575,6 +938,212 @@ class StockMovementManager
         }
 
         return !empty(static::getSignedChildrenTransformationQuantity($line));
+    }
+
+    /**
+     * Activa y vacía la caché de documentos y transformaciones.
+     *
+     * @return bool True si esta llamada ha abierto la caché y debe cerrarla.
+     */
+    protected static function openCache(): bool
+    {
+        if (static::$cacheEnabled) {
+            return false;
+        }
+
+        static::closeCache();
+        static::$cacheEnabled = true;
+        return true;
+    }
+
+    /**
+     * Carga en memoria, con sólo dos consultas, todas las transformaciones de un documento.
+     *
+     * @param string $docmodel
+     * @param mixed $docid
+     */
+    protected static function preloadDocTransformations(string $docmodel, $docid): void
+    {
+        $key = $docmodel . '|' . $docid;
+        if (isset(static::$cacheTransAsChild[$key])) {
+            return;
+        }
+
+        static::$cacheTransAsChild[$key] = [];
+        static::$cacheTransAsParent[$key] = [];
+
+        if (empty($docid)) {
+            return;
+        }
+
+        // transformaciones en las que este documento es el hijo
+        $where = [
+            Where::eq('model2', $docmodel),
+            Where::eq('iddoc2', $docid),
+        ];
+        foreach (DocTransformation::all($where, ['id' => 'ASC'], 0, 0) as $transformation) {
+            // sólo nos interesa la primera de cada línea, igual que la consulta original
+            if (false === isset(static::$cacheTransAsChild[$key][$transformation->idlinea2])) {
+                static::$cacheTransAsChild[$key][$transformation->idlinea2] = $transformation;
+            }
+        }
+
+        // transformaciones en las que este documento es el padre
+        $where2 = [
+            Where::eq('model1', $docmodel),
+            Where::eq('iddoc1', $docid),
+        ];
+        foreach (DocTransformation::all($where2, ['id' => 'ASC'], 0, 0) as $transformation) {
+            static::$cacheTransAsParent[$key][$transformation->idlinea1][] = $transformation;
+        }
+    }
+
+    /**
+     * Procesa todo lo pendiente de un lote: calcula una sola vez cada movimiento
+     * y una sola vez el saldo de cada (almacén, referencia).
+     */
+    protected static function processBatch(): void
+    {
+        $pendingRefs = static::$pendingDocRefs;
+        $pendingProducts = static::$pendingProducts;
+        static::$pendingDocRefs = [];
+        static::$pendingProducts = [];
+
+        if (empty($pendingRefs) && empty($pendingProducts)) {
+            return;
+        }
+
+        if ($pendingRefs) {
+            $opened = static::openCache();
+            static::$deferSaldos = true;
+            try {
+                foreach ($pendingRefs as $item) {
+                    static::rebuildDocumentReferenceMovement(
+                        $item['docmodel'], $item['docid'], $item['referencia'], $item['codalmacen']
+                    );
+                }
+            } finally {
+                static::$deferSaldos = false;
+                if ($opened) {
+                    static::closeCache();
+                }
+
+                $pendingSaldos = static::$pendingSaldos;
+                static::$pendingSaldos = [];
+                foreach ($pendingSaldos as [$codalmacen, $referencia, $fromFecha]) {
+                    static::updateReferenceSaldos($codalmacen, $referencia, $fromFecha);
+                }
+            }
+        }
+
+        // enviamos un único evento por producto
+        foreach ($pendingProducts as $idproducto) {
+            WorkQueue::send('Model.Producto.updateStockMovements', $idproducto);
+        }
+    }
+
+    /**
+     * Crea, actualiza o elimina el movimiento de stock de un documento y una referencia,
+     * a partir del estado actual de la base de datos.
+     *
+     * @param string $docmodel
+     * @param mixed $docid
+     * @param string $referencia
+     * @param string $oldCodalmacen almacén con el que se anotó el movimiento en el lote
+     */
+    protected static function rebuildDocumentReferenceMovement(string $docmodel, $docid, string $referencia, string $oldCodalmacen): void
+    {
+        $doc = static::loadDocument($docmodel, $docid);
+
+        // el documento ya no existe, eliminamos sus movimientos
+        if (is_null($doc)) {
+            $where = [
+                Where::eq('docid', $docid),
+                Where::eq('docmodel', $docmodel),
+                Where::eq('referencia', $referencia),
+            ];
+            foreach (MovimientoStock::all($where, [], 0, 0) as $movement) {
+                $movement->delete();
+                static::updateReferenceSaldos($movement->codalmacen, $referencia, $movement->fecha);
+            }
+            return;
+        }
+
+        // si el documento ha cambiado de almacén, hay que recalcular también el anterior
+        if ($oldCodalmacen !== $doc->codalmacen) {
+            static::updateReferenceSaldos($oldCodalmacen, $referencia, $doc->fecha);
+        }
+
+        static::preloadDocTransformations($docmodel, $docid);
+
+        // líneas del documento con esta referencia
+        $lines = [];
+        foreach (static::getDocLines($doc) as $line) {
+            if ($line->referencia === $referencia) {
+                $lines[] = $line;
+            }
+        }
+
+        $movement = static::findMovement($doc->codalmacen, $doc, $referencia);
+
+        // ¿alguna línea justifica el movimiento?
+        $mustCreate = false;
+        foreach ($lines as $line) {
+            if (static::mustCreateBusinessDocumentMovement($line)) {
+                $mustCreate = true;
+                break;
+            }
+        }
+        if (false === $mustCreate) {
+            if ($movement->exists()) {
+                $movement->delete();
+            }
+            static::updateReferenceSaldos($doc->codalmacen, $referencia, $doc->fecha);
+            return;
+        }
+
+        // sumamos la contribución de todas las líneas con esta referencia
+        $cantidad = 0.0;
+        $keepZero = false;
+        foreach ($lines as $line) {
+            $cantidad += static::getBusinessDocumentMovementQuantity($line);
+            $keepZero = $keepZero || static::shouldSaveZeroBusinessDocumentMovement($line);
+        }
+
+        if (false === $movement->exists()) {
+            $first = $lines[0];
+            $movement->codalmacen = $doc->codalmacen;
+            $movement->docid = $doc->id();
+            $movement->docmodel = $doc->modelClassName();
+            $movement->idproducto = $first->idproducto ?? $first->getProducto()->idproducto;
+            $movement->referencia = $referencia;
+        }
+
+        // ¿cambia algo que afecte al saldo acumulado?
+        $existed = $movement->exists();
+        $saldoChanged = false === $existed
+            || $movement->cantidad != $cantidad
+            || $movement->fecha !== $doc->fecha
+            || $movement->hora !== $doc->hora;
+
+        $saldo = $movement->saldo;
+        $movement->cantidad = $cantidad;
+        $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
+        $movement->fecha = $doc->fecha;
+        $movement->hora = $doc->hora;
+        $movement->saldo = $saldoChanged ? 0 : $saldo;
+
+        if (empty($cantidad) && false === $keepZero) {
+            $movement->delete();
+            $saldoChanged = $existed;
+        } else {
+            $movement->save();
+        }
+
+        // si el movimiento no ha cambiado, el saldo de los posteriores sigue siendo válido
+        if ($saldoChanged) {
+            static::updateReferenceSaldos($doc->codalmacen, $referencia, $doc->fecha);
+        }
     }
 
     protected static function rebuildBusinessDocument(): void
@@ -641,6 +1210,63 @@ class StockMovementManager
 
             static::addLineTransferStock($line, $transfer);
         }
+    }
+
+    /**
+     * Devuelve el saldo acumulado de la referencia justo antes de la fecha indicada.
+     *
+     * @param string $codalmacen
+     * @param string $referencia
+     * @param string $fecha
+     *
+     * @return float
+     */
+    protected static function getSaldoBeforeDate(string $codalmacen, string $referencia, string $fecha): float
+    {
+        // buscamos la fecha del último movimiento anterior
+        $where = [
+            Where::eq('codalmacen', $codalmacen),
+            Where::eq('referencia', $referencia),
+            Where::lt('fecha', $fecha)
+        ];
+        $previous = MovimientoStock::all($where, ['fecha' => 'DESC'], 0, 1);
+        if (empty($previous)) {
+            return 0.0;
+        }
+
+        // cargamos todos los movimientos de ese día y tomamos el saldo del último,
+        // aplicando el mismo criterio de ordenación que usamos para recalcular
+        $where[2] = Where::eq('fecha', $previous[0]->fecha);
+        $movements = static::sortMovements(MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC'], 0, 0));
+
+        return (float)end($movements)->saldo;
+    }
+
+    /**
+     * Ordena los movimientos por fecha, hora, tipo de documento e id.
+     *
+     * @param MovimientoStock[] $movements
+     *
+     * @return MovimientoStock[]
+     */
+    protected static function sortMovements(array $movements): array
+    {
+        usort($movements, function (MovimientoStock $a, MovimientoStock $b) {
+            $dateA = strtotime($a->fecha . ' ' . $a->hora);
+            $dateB = strtotime($b->fecha . ' ' . $b->hora);
+            if ($dateA !== $dateB) {
+                return $dateA <=> $dateB;
+            }
+
+            $priority = static::getMovementSortPriority($a->docmodel) <=> static::getMovementSortPriority($b->docmodel);
+            if ($priority !== 0) {
+                return $priority;
+            }
+
+            return $a->id() <=> $b->id();
+        });
+
+        return $movements;
     }
 
     protected static function shouldSaveZeroBusinessDocumentMovement(BusinessDocumentLine $line): bool

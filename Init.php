@@ -50,6 +50,7 @@ class Init extends InitClass
     public function init(): void
     {
         // extensiones
+        $this->loadExtension(new Extension\Controller\DocumentStitcher());
         $this->loadExtension(new Extension\Controller\EditAlmacen());
         $this->loadExtension(new Extension\Controller\EditProducto());
         $this->loadExtension(new Extension\Controller\ListAlmacen());

@@ -27,11 +27,53 @@ use FacturaScripts\Dinamic\Lib\StockMovementManager;
  */
 class BusinessDocument
 {
+    /**
+     * Abre un lote de movimientos de stock cuando el documento es nuevo o cambia de estado,
+     * que es cuando se generan o recalculan muchos movimientos de golpe.
+     */
+    public function saveBefore(): Closure
+    {
+        return function () {
+            if ($this->exists() && isset($this->idestado) && $this->getOriginal('idestado') == $this->idestado) {
+                return true;
+            }
+
+            StockMovementManager::beginBatch('doc:' . spl_object_hash($this));
+            return true;
+        };
+    }
+
+    /**
+     * Cierra el lote abierto en saveBefore(), procesando los movimientos pendientes.
+     */
+    public function save(): Closure
+    {
+        return function () {
+            StockMovementManager::flushBatch('doc:' . spl_object_hash($this));
+            return true;
+        };
+    }
+
+    /**
+     * Cierra el lote tras insertar un documento nuevo.
+     */
+    public function saveInsert(): Closure
+    {
+        return function () {
+            StockMovementManager::flushBatch('doc:' . spl_object_hash($this));
+            return true;
+        };
+    }
+
     public function saveUpdate(): Closure
     {
         return function () {
             StockMovementManager::updateDocumentDate($this);
             StockMovementManager::cleanResidualMovements($this);
+
+            // cerramos el lote: primero se limpian los movimientos residuales y después
+            // se recalculan los que siguen siendo necesarios
+            StockMovementManager::flushBatch('doc:' . spl_object_hash($this));
             return true;
         };
     }
