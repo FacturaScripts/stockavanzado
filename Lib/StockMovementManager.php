@@ -48,6 +48,21 @@ use FacturaScripts\Plugins\StockAvanzado\Contract\StockMovementModInterface;
  */
 class StockMovementManager
 {
+    /** @var bool indica si la caché de documentos y transformaciones está activa */
+    private static $cacheEnabled = false;
+
+    /** @var array líneas de documento cacheadas, indexadas por modelo|id */
+    private static $cacheDocLines = [];
+
+    /** @var array documentos de línea cacheados, indexados por clase de línea|id documento */
+    private static $cacheLineDocuments = [];
+
+    /** @var array primera transformación de cada línea hija, indexadas por modelo|id e idlinea2 */
+    private static $cacheTransAsChild = [];
+
+    /** @var array transformaciones de cada línea padre, indexadas por modelo|id e idlinea1 */
+    private static $cacheTransAsParent = [];
+
     /** @var int|null */
     private static $idproducto = null;
 
@@ -81,27 +96,48 @@ class StockMovementManager
             return;
         }
 
-        if (false === static::mustCreateBusinessDocumentMovement($line)) {
-            return;
-        }
+        $opened = static::openCache();
+        try {
+            if (false === static::mustCreateBusinessDocumentMovement($line)) {
+                return;
+            }
 
-        $movement = static::getBusinessDocumentMovement($line, $doc);
-        $movement->cantidad = static::getBusinessDocumentMovementQuantityForReference($line, $doc);
-        $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
-        $movement->fecha = $doc->fecha;
-        $movement->hora = $doc->hora;
+            $movement = static::getBusinessDocumentMovement($line, $doc);
+            $cantidad = static::getBusinessDocumentMovementQuantityForReference($line, $doc);
 
-        if (empty($movement->cantidad) && false === static::shouldSaveZeroBusinessDocumentMovement($line)) {
-            $movement->delete();
+            if (empty($cantidad) && false === static::shouldSaveZeroBusinessDocumentMovement($line)) {
+                if ($movement->exists()) {
+                    $movement->delete();
+                    static::deferReferenceSaldos($movement);
+                }
+                return;
+            }
+
+            // si el movimiento no cambia, los saldos siguen siendo válidos
+            $documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
+            if ($movement->exists()
+                && abs($movement->cantidad - $cantidad) < 0.000001
+                && $movement->documento === $documento
+                && $movement->fecha === $doc->fecha
+                && $movement->hora === $doc->hora) {
+                return;
+            }
+
+            $movement->cantidad = $cantidad;
+            $movement->documento = $documento;
+            $movement->fecha = $doc->fecha;
+            $movement->hora = $doc->hora;
+
+            // saldo provisional hasta que el worker recalcule el histórico
+            $movement->saldo = static::$rebuilding ? 0 :
+                static::getPreviousSaldo($movement->codalmacen, $movement->referencia, $movement->fecha, $movement->hora) + $movement->cantidad;
+            $movement->save();
             static::deferReferenceSaldos($movement);
-            return;
+        } finally {
+            if ($opened) {
+                static::closeCache();
+            }
         }
-
-        // saldo provisional hasta que el worker recalcule el histórico
-        $movement->saldo = static::$rebuilding ? 0 :
-            static::getPreviousSaldo($movement->codalmacen, $movement->referencia, $movement->fecha, $movement->hora) + $movement->cantidad;
-        $movement->save();
-        static::deferReferenceSaldos($movement);
     }
 
     public static function addLineCounting(LineaConteoStock $line, ConteoStock $stockCount, float $stock): bool
@@ -159,24 +195,39 @@ class StockMovementManager
             Where::eq('docid', $doc->id()),
             Where::eq('docmodel', $doc->modelClassName()),
         ];
-        foreach (MovimientoStock::all($where, [], 0, 0) as $movement) {
-            // ¿alguna línea del documento sigue justificando el movimiento?
-            $stillValid = false;
-            foreach ($doc->getLines() as $line) {
-                if ($line->referencia !== $movement->referencia) {
-                    continue;
-                }
-                if (static::mustCreateBusinessDocumentMovement($line)) {
-                    $stillValid = true;
-                    break;
-                }
-            }
-            if ($stillValid) {
-                continue;
+        $movements = MovimientoStock::all($where, [], 0, 0);
+        if (empty($movements)) {
+            return;
+        }
+
+        $opened = static::openCache();
+        try {
+            // agrupamos las líneas por referencia para no recorrerlas dentro del bucle
+            $linesByRef = [];
+            foreach (static::getDocLines($doc) as $line) {
+                $linesByRef[$line->referencia][] = $line;
             }
 
-            $movement->delete();
-            static::deferReferenceSaldos($movement);
+            foreach ($movements as $movement) {
+                // ¿alguna línea del documento sigue justificando el movimiento?
+                $stillValid = false;
+                foreach ($linesByRef[$movement->referencia] ?? [] as $line) {
+                    if (static::mustCreateBusinessDocumentMovement($line)) {
+                        $stillValid = true;
+                        break;
+                    }
+                }
+                if ($stillValid) {
+                    continue;
+                }
+
+                $movement->delete();
+                static::deferReferenceSaldos($movement);
+            }
+        } finally {
+            if ($opened) {
+                static::closeCache();
+            }
         }
     }
 
@@ -383,6 +434,18 @@ class StockMovementManager
     }
 
     /**
+     * Desactiva y vacía la caché de documentos y transformaciones.
+     */
+    protected static function closeCache(): void
+    {
+        static::$cacheEnabled = false;
+        static::$cacheDocLines = [];
+        static::$cacheLineDocuments = [];
+        static::$cacheTransAsChild = [];
+        static::$cacheTransAsParent = [];
+    }
+
+    /**
      * Aplaza el recálculo de saldos de los movimientos de documentos: durante un rebuild
      * se hace al final, y en el resto de casos lo hace el worker UpdateStockMovements.
      */
@@ -456,7 +519,7 @@ class StockMovementManager
         // contribución y sumamos las del resto de líneas con la misma referencia.
         $linePk = $line->id();
         $quantity = static::getBusinessDocumentMovementQuantity($line);
-        foreach ($doc->getLines() as $docLine) {
+        foreach (static::getDocLines($doc) as $docLine) {
             if ($docLine->referencia !== $line->referencia) {
                 continue;
             }
@@ -473,6 +536,42 @@ class StockMovementManager
         return in_array($line->actualizastock, [-1, 1], true) ?
             $line->actualizastock * ((float)$line->cantidad - (float)$line->servido) :
             0.0;
+    }
+
+    /**
+     * Devuelve las líneas de un documento, cacheadas si la caché está activa.
+     *
+     * @return BusinessDocumentLine[]
+     */
+    protected static function getDocLines(TransformerDocument $doc): array
+    {
+        if (false === static::$cacheEnabled) {
+            return $doc->getLines();
+        }
+
+        $key = $doc->modelClassName() . '|' . $doc->id();
+        if (false === isset(static::$cacheDocLines[$key])) {
+            static::$cacheDocLines[$key] = $doc->getLines();
+        }
+
+        return static::$cacheDocLines[$key];
+    }
+
+    /**
+     * Devuelve el documento de una línea, cacheado si la caché está activa. Sólo para lectura.
+     */
+    protected static function getLineDocument(BusinessDocumentLine $line)
+    {
+        if (false === static::$cacheEnabled) {
+            return $line->getDocument();
+        }
+
+        $key = get_class($line) . '|' . $line->documentColumnValue();
+        if (false === isset(static::$cacheLineDocuments[$key])) {
+            static::$cacheLineDocuments[$key] = $line->getDocument();
+        }
+
+        return static::$cacheLineDocuments[$key];
     }
 
     protected static function getMovementSortPriority(string $docmodel): int
@@ -528,18 +627,13 @@ class StockMovementManager
 
     protected static function getSignedChildrenTransformationQuantity(BusinessDocumentLine $line): float
     {
-        $doc = $line->getDocument();
+        $doc = static::getLineDocument($line);
         if (empty($doc->id()) || empty($line->id())) {
             return 0.0;
         }
 
         $quantity = 0.0;
-        $where = [
-            Where::eq('model1', $doc->modelClassName()),
-            Where::eq('iddoc1', $line->documentColumnValue()),
-            Where::eq('idlinea1', $line->id())
-        ];
-        foreach (DocTransformation::all($where, ['id' => 'ASC'], 0, 0) as $transformation) {
+        foreach (static::getTransformationsAsParent($doc, $line) as $transformation) {
             if (false === static::isSupportedStockTransformation($transformation)) {
                 continue;
             }
@@ -557,9 +651,15 @@ class StockMovementManager
 
     protected static function getTransformationFromChildLine(BusinessDocumentLine $line): ?DocTransformation
     {
-        $doc = $line->getDocument();
+        $doc = static::getLineDocument($line);
         if (empty($doc->id()) || empty($line->id())) {
             return null;
+        }
+
+        if (static::$cacheEnabled) {
+            $key = static::preloadDocTransformations($doc->modelClassName(), $line->documentColumnValue());
+            $transformation = static::$cacheTransAsChild[$key][$line->id()] ?? null;
+            return $transformation && static::isSupportedStockTransformation($transformation) ? $transformation : null;
         }
 
         $where = [
@@ -587,6 +687,26 @@ class StockMovementManager
         }
 
         return 0;
+    }
+
+    /**
+     * Devuelve las transformaciones en las que la línea es el origen.
+     *
+     * @return DocTransformation[]
+     */
+    protected static function getTransformationsAsParent($doc, BusinessDocumentLine $line): array
+    {
+        if (static::$cacheEnabled) {
+            $key = static::preloadDocTransformations($doc->modelClassName(), $line->documentColumnValue());
+            return static::$cacheTransAsParent[$key][$line->id()] ?? [];
+        }
+
+        $where = [
+            Where::eq('model1', $doc->modelClassName()),
+            Where::eq('iddoc1', $line->documentColumnValue()),
+            Where::eq('idlinea1', $line->id())
+        ];
+        return DocTransformation::all($where, ['id' => 'ASC'], 0, 0);
     }
 
     protected static function getVariant(string $referencia): Variante
@@ -617,6 +737,61 @@ class StockMovementManager
         }
 
         return !empty(static::getSignedChildrenTransformationQuantity($line));
+    }
+
+    /**
+     * Activa la caché de documentos y transformaciones.
+     *
+     * @return bool true si esta llamada ha abierto la caché y debe cerrarla.
+     */
+    protected static function openCache(): bool
+    {
+        if (static::$cacheEnabled) {
+            return false;
+        }
+
+        static::closeCache();
+        static::$cacheEnabled = true;
+        return true;
+    }
+
+    /**
+     * Carga con dos consultas todas las transformaciones de un documento y devuelve su clave en la caché.
+     */
+    protected static function preloadDocTransformations(string $docmodel, $docid): string
+    {
+        $key = $docmodel . '|' . $docid;
+        if (isset(static::$cacheTransAsChild[$key])) {
+            return $key;
+        }
+
+        static::$cacheTransAsChild[$key] = [];
+        static::$cacheTransAsParent[$key] = [];
+        if (empty($docid)) {
+            return $key;
+        }
+
+        // transformaciones en las que este documento es el hijo: sólo la primera de cada línea
+        $where = [
+            Where::eq('model2', $docmodel),
+            Where::eq('iddoc2', $docid),
+        ];
+        foreach (DocTransformation::all($where, ['id' => 'ASC'], 0, 0) as $transformation) {
+            if (false === isset(static::$cacheTransAsChild[$key][$transformation->idlinea2])) {
+                static::$cacheTransAsChild[$key][$transformation->idlinea2] = $transformation;
+            }
+        }
+
+        // transformaciones en las que este documento es el padre
+        $where2 = [
+            Where::eq('model1', $docmodel),
+            Where::eq('iddoc1', $docid),
+        ];
+        foreach (DocTransformation::all($where2, ['id' => 'ASC'], 0, 0) as $transformation) {
+            static::$cacheTransAsParent[$key][$transformation->idlinea1][] = $transformation;
+        }
+
+        return $key;
     }
 
     protected static function rebuildBusinessDocument(): void
