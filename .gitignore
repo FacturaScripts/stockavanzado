@@ -23,6 +23,7 @@ package-lock.json
 *.code-workspace
 
 # IA
+AGENTS.md
 CLAUDE.md
 /.claude
 .codex
