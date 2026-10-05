@@ -175,6 +175,9 @@ class ConteoStock extends ModelClass
                 return false;
             }
 
+            // los saldos de documentos se recalculan en segundo plano, los actualizamos antes de reconstruir el stock
+            StockMovementManager::updateProductSaldos($line->idproducto);
+
             $messages = [];
             StockRebuildManager::rebuild($line->idproducto, $messages);
             if (!empty($messages)) {
@@ -297,6 +300,9 @@ class ConteoStock extends ModelClass
                 }
                 return false;
             }
+
+            // los saldos de documentos se recalculan en segundo plano, los actualizamos antes de reconstruir el stock
+            StockMovementManager::updateProductSaldos($line->idproducto);
 
             $messages = [];
             StockRebuildManager::rebuild($line->idproducto, $messages);

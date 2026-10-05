@@ -25,6 +25,7 @@ use FacturaScripts\Core\Model\Base\BusinessDocumentLine;
 use FacturaScripts\Core\Model\Base\TransformerDocument;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\DocTransformation;
 use FacturaScripts\Dinamic\Model\LineaAlbaranCliente;
@@ -59,6 +60,15 @@ class StockMovementManager
     /** @var array */
     private static $products = [];
 
+    /**
+     * Se incrementa en cada recálculo de saldos de un producto. WorkQueue descarta en todo el proceso
+     * los eventos ya enviados o ejecutados con el mismo hash, así que lo añadimos a los parámetros
+     * para poder volver a encolar un producto después de que el worker lo haya procesado.
+     *
+     * @var int
+     */
+    private static $saldosRound = 0;
+
     /** @var bool */
     private static $rebuilding = false;
 
@@ -80,16 +90,18 @@ class StockMovementManager
         $movement->documento = Tools::trans($doc->modelClassName()) . ' ' . $doc->codigo;
         $movement->fecha = $doc->fecha;
         $movement->hora = $doc->hora;
-        $movement->saldo = 0;
 
         if (empty($movement->cantidad) && false === static::shouldSaveZeroBusinessDocumentMovement($line)) {
             $movement->delete();
-            static::updateReferenceSaldos($doc->codalmacen, $line->referencia);
+            static::deferReferenceSaldos($movement);
             return;
         }
 
+        // saldo provisional hasta que el worker recalcule el histórico
+        $movement->saldo = static::$rebuilding ? 0 :
+            static::getPreviousSaldo($movement->codalmacen, $movement->referencia, $movement->fecha, $movement->hora) + $movement->cantidad;
         $movement->save();
-        static::updateReferenceSaldos($doc->codalmacen, $line->referencia);
+        static::deferReferenceSaldos($movement);
     }
 
     public static function addLineCounting(LineaConteoStock $line, ConteoStock $stockCount, float $stock): bool
@@ -136,6 +148,7 @@ class StockMovementManager
         if ($movement->exists()) {
             $movement->codalmacen = $toCodalmacen;
             $movement->save();
+            static::deferReferenceSaldos($movement);
         }
     }
 
@@ -163,7 +176,7 @@ class StockMovementManager
             }
 
             $movement->delete();
-            static::updateReferenceSaldos($movement->codalmacen, $movement->referencia);
+            static::deferReferenceSaldos($movement);
         }
     }
 
@@ -273,17 +286,27 @@ class StockMovementManager
             Where::eq('docid', $doc->id()),
             Where::eq('docmodel', $doc->modelClassName()),
         ];
-        $pairs = [];
         foreach (MovimientoStock::all($where, [], 0, 0) as $movement) {
             $movement->fecha = $doc->fecha;
             $movement->hora = $doc->hora;
             $movement->save();
-            $pairs[$movement->codalmacen . '|' . $movement->referencia] = [$movement->codalmacen, $movement->referencia];
+            static::deferReferenceSaldos($movement);
         }
+    }
 
-        // recalculamos saldos de los pares (almacén, referencia) afectados
-        foreach ($pairs as [$codalmacen, $referencia]) {
-            static::updateReferenceSaldos($codalmacen, $referencia);
+    /**
+     * Recalcula los saldos de todos los pares (almacén, referencia) con movimientos del producto.
+     */
+    public static function updateProductSaldos(int $idproducto): void
+    {
+        static::$saldosRound++;
+
+        $db = new DataBase();
+        $sql = 'SELECT codalmacen, referencia FROM stocks_movimientos'
+            . ' WHERE idproducto = ' . $db->var2str($idproducto)
+            . ' GROUP BY codalmacen, referencia';
+        foreach ($db->select($sql) as $row) {
+            static::updateReferenceSaldos($row['codalmacen'], $row['referencia']);
         }
     }
 
@@ -322,8 +345,9 @@ class StockMovementManager
                 continue;
             }
 
+            // comparamos con tolerancia para no regrabar movimientos por errores de redondeo
             $saldo += $movement->cantidad;
-            if ($movement->saldo != $saldo) {
+            if (abs($movement->saldo - $saldo) > 0.000001) {
                 $movement->saldo = $saldo;
                 $movement->save();
             }
@@ -356,6 +380,24 @@ class StockMovementManager
         $movement->saldo = $previousSaldo + $movement->cantidad;
 
         return empty($movement->cantidad) ? $movement->delete() : $movement->save();
+    }
+
+    /**
+     * Aplaza el recálculo de saldos de los movimientos de documentos: durante un rebuild
+     * se hace al final, y en el resto de casos lo hace el worker UpdateStockMovements.
+     */
+    protected static function deferReferenceSaldos(MovimientoStock $movement): void
+    {
+        if (static::$rebuilding) {
+            static::updateReferenceSaldos($movement->codalmacen, $movement->referencia);
+            return;
+        }
+
+        if (!empty($movement->idproducto)) {
+            WorkQueue::send('Model.Producto.updateStockMovements', (string)$movement->idproducto, [
+                'round' => static::$saldosRound
+            ]);
+        }
     }
 
     protected static function deleteLineTransferMovement(string $codalmacen, LineaTransferenciaStock $line, TransferenciaStock $stockCount): bool

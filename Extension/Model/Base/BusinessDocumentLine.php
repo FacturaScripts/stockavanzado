@@ -20,7 +20,6 @@
 namespace FacturaScripts\Plugins\StockAvanzado\Extension\Model\Base;
 
 use Closure;
-use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 
 /**
@@ -35,11 +34,8 @@ class BusinessDocumentLine
                 return;
             }
 
-            // creamos el movimiento de stock
+            // movemos el movimiento de stock al nuevo almacén (los saldos los recalcula el worker)
             StockMovementManager::addTransferLine($this, $doc, $fromCodalmacen, $toCodalmacen);
-
-            // añadimos el evento para actualizar los saldos de los movimientos de stock
-            WorkQueue::send('Model.Producto.updateStockMovements', $this->idproducto);
         };
     }
 
@@ -50,11 +46,8 @@ class BusinessDocumentLine
                 return;
             }
 
-            // creamos el movimiento de stock
+            // creamos el movimiento de stock (los saldos los recalcula el worker)
             StockMovementManager::addLineBusinessDocument($this, $doc);
-
-            // añadimos el evento para actualizar los saldos de los movimientos de stock
-            WorkQueue::send('Model.Producto.updateStockMovements', $this->idproducto);
         };
     }
 }

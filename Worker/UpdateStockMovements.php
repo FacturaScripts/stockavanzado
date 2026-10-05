@@ -19,14 +19,12 @@
 
 namespace FacturaScripts\Plugins\StockAvanzado\Worker;
 
-use FacturaScripts\Core\DataSrc\Almacenes;
-use FacturaScripts\Core\Model\Producto;
 use FacturaScripts\Core\Model\WorkEvent;
 use FacturaScripts\Core\Template\WorkerClass;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Core\Where;
-use FacturaScripts\Plugins\StockAvanzado\Lib\StockMovementManager;
-use FacturaScripts\Plugins\StockAvanzado\Lib\StockRebuildManager;
+use FacturaScripts\Dinamic\Lib\StockMovementManager;
+use FacturaScripts\Dinamic\Lib\StockRebuildManager;
+use FacturaScripts\Dinamic\Model\Producto;
 
 class UpdateStockMovements extends WorkerClass
 {
@@ -38,16 +36,10 @@ class UpdateStockMovements extends WorkerClass
             return $this->done();
         }
 
-        // recorremos todas las variantes
-        foreach ($product->getVariants() as $variant) {
-            // recorremos los almacenes
-            foreach (Almacenes::all() as $almacen) {
-                StockMovementManager::updateReferenceSaldos($almacen->codalmacen, $variant->referencia);
-            }
-        }
+        // recalculamos los saldos de los pares (almacén, referencia) con movimientos
+        StockMovementManager::updateProductSaldos($product->idproducto);
 
-        $rebuild = (bool)Tools::settings('default', 'stock_rebuild', false) === true ?? false;
-        if ($rebuild) {
+        if ((bool)Tools::settings('default', 'stock_rebuild', false)) {
             StockRebuildManager::rebuild($product->idproducto);
         }
 
