@@ -80,9 +80,9 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($lineaTrans2->exists());
 
         // comprobamos que no se ha alterado el stock del almacén 1
-        $stock1->load($stock1->idstock);
+        $stock1->reload();
         $this->assertEquals(100, $stock1->cantidad);
-        $stock2->load($stock2->idstock);
+        $stock2->reload();
         $this->assertEquals(25, $stock2->cantidad);
 
         // ejecutamos la transferencia
@@ -92,7 +92,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($transferencia->transferStock());
 
         // comprobamos que la transferencia está completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertTrue($transferencia->completed);
 
         // comprobamos que está el movimiento de stock del almacén 1
@@ -128,11 +128,11 @@ final class TransferenciaStockTest extends TestCase
         $this->assertEquals(10, $movement2->saldo);
 
         // comprobamos que el stock del producto 1 en almacén 1 ahora es 90
-        $stock1->load($stock1->idstock);
+        $stock1->reload();
         $this->assertEquals(90, $stock1->cantidad);
 
         // comprobamos que el stock del producto 2 en almacén 1 ahora es 20
-        $stock2->load($stock2->idstock);
+        $stock2->reload();
         $this->assertEquals(20, $stock2->cantidad);
 
         // comprobamos que el stock del producto 1 en almacén 2 ahora es 10
@@ -166,19 +166,19 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($movement2->exists());
 
         // comprobamos que el stock del almacén 1 vuelve a ser 100
-        $stock1->load($stock1->idstock);
+        $stock1->reload();
         $this->assertEquals(100, $stock1->cantidad);
 
         // comprobamos que el stock del almacén 2 vuelve a ser 25
-        $stock2->load($stock2->idstock);
+        $stock2->reload();
         $this->assertEquals(25, $stock2->cantidad);
 
         // comprobamos que el stock del producto 1 en el almacén 2 ahora es 0
-        $stock21->load($stock21->idstock);
+        $stock21->reload();
         $this->assertEquals(0, $stock21->cantidad);
 
         // comprobamos que el stock del producto 2 en el almacén 2 ahora es 0
-        $stock22->load($stock22->idstock);
+        $stock22->reload();
         $this->assertEquals(0, $stock22->cantidad);
 
         // eliminamos
@@ -233,7 +233,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($transferencia->transferStock());
 
         // comprobamos que la transferencia está completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertTrue($transferencia->completed);
 
         // comprobamos que está el movimiento de stock del almacén 1
@@ -287,11 +287,11 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($movement2->exists());
 
         // comprobamos que el stock del almacén 1 es 100
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(100, $stock->cantidad);
 
         // comprobamos que el stock del almacén 2 es 0
-        $stock2->load($stock2->idstock);
+        $stock2->reload();
         $this->assertEquals(0, $stock2->cantidad);
 
         // eliminamos
@@ -392,7 +392,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertEquals(17, $movDest2->saldo);
 
         // comprobamos los stocks finales: origen 100 - 17 = 83, destino 17
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(83, $stock->cantidad);
 
         $stockDest = new Stock();
@@ -452,7 +452,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($linea->exists());
 
         // el stock del almacén de origen no debe haberse alterado
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(50, $stock->cantidad);
 
         // no debe existir stock en el almacén de destino
@@ -551,11 +551,11 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($transferencia->transferStock());
 
         // la transferencia no debe estar completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertFalse($transferencia->completed);
 
         // el stock del almacén de origen no debe haberse alterado
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(30, $stock->cantidad);
 
         // no debe existir stock en el almacén de destino
@@ -627,7 +627,7 @@ final class TransferenciaStockTest extends TestCase
         // ejecutamos la transferencia y comprobamos que se transfieren 10 unidades
         $this->assertTrue($transferencia->transferStock());
 
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(40, $stock->cantidad);
 
         $stockDest = new Stock();
@@ -686,7 +686,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($transferencia->transferStock());
 
         // recargamos la transferencia y confirmamos que está completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertTrue($transferencia->completed);
 
         // 1) addLine de un producto nuevo debe fallar
@@ -695,17 +695,17 @@ final class TransferenciaStockTest extends TestCase
         $this->assertCount(1, $transferencia->getLines());
 
         // 2) addLine sobre la misma referencia tampoco debe modificar la línea existente
-        $linea->load($linea->idlinea);
+        $linea->reload();
         $cantidadOriginal = $linea->cantidad;
         $reintento = $transferencia->addLine($product1->referencia, $product1->idproducto, 7);
         $this->assertFalse($reintento->exists());
-        $linea->load($linea->idlinea);
+        $linea->reload();
         $this->assertEquals($cantidadOriginal, $linea->cantidad);
 
         // 3) guardar directamente una modificación sobre la línea existente debe fallar
         $linea->cantidad = 99;
         $this->assertFalse($linea->save());
-        $linea->load($linea->idlinea);
+        $linea->reload();
         $this->assertEquals($cantidadOriginal, $linea->cantidad);
 
         // 4) eliminar directamente la línea de una transferencia completada debe fallar
@@ -716,7 +716,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($transferencia->delete());
         $this->assertFalse($linea->exists());
 
-        $stock1->load($stock1->idstock);
+        $stock1->reload();
         $this->assertEquals(30, $stock1->cantidad);
 
         // eliminamos
@@ -747,7 +747,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($transferencia->transferStock());
 
         // la transferencia no debe estar completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertFalse($transferencia->completed);
 
         // eliminamos
@@ -794,7 +794,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($transferencia->transferStock());
 
         // el stock del almacén de origen baja a 12
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(12, $stock->cantidad);
 
         // el almacén de destino tiene 8 unidades de la variante
@@ -880,7 +880,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($transferencia->transferStock());
 
         // comprobamos que la transferencia no está completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertFalse($transferencia->completed);
 
         // comprobamos que no hay stock en el almacén de origen
@@ -950,11 +950,11 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($transferencia->transferStock());
 
         // comprobamos que la transferencia no está completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertFalse($transferencia->completed);
 
         // comprobamos que el stock del almacén de origen no se ha alterado
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(5, $stock->cantidad);
 
         // comprobamos que no hay stock en el almacén de destino
