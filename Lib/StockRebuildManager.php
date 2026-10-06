@@ -106,6 +106,33 @@ class StockRebuildManager
         }
     }
 
+    /**
+     * Actualiza la cantidad en stock de una referencia en un almacén con el saldo de su último movimiento.
+     */
+    public static function rebuildReference(string $codalmacen, string $referencia, array &$messages = []): void
+    {
+        $lastMovement = new MovimientoStock();
+        $where = [
+            Where::eq('codalmacen', $codalmacen),
+            Where::eq('referencia', $referencia)
+        ];
+        if (false === $lastMovement->loadWhere($where, ['fecha' => 'DESC', 'hora' => 'DESC', 'id' => 'DESC'])) {
+            return;
+        }
+
+        $stock = new Stock();
+        if (false === $stock->loadWhere($where)) {
+            $stock->codalmacen = $codalmacen;
+            $stock->idproducto = $lastMovement->idproducto;
+            $stock->referencia = $referencia;
+        }
+
+        $stock->cantidad = $lastMovement->saldo;
+        if (false === $stock->save()) {
+            $messages[] = 'error-saving-stock';
+        }
+    }
+
     protected static function clear(): void
     {
         if (false === static::db()->tableExists('stocks')) {

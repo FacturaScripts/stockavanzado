@@ -88,11 +88,13 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals(0, $stock->reservada);
 
         // comprobamos que hay un movimiento de stock
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $whereRef = [
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals(-10, $movement->cantidad);
         $this->assertEquals(-10, $movement->saldo);
@@ -142,11 +144,13 @@ final class DeliveryNoteTest extends TestCase
         $this->assertTrue($linea->save());
 
         // comprobamos que el movimiento se ha creado con la fecha del albarán
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $whereRef = [
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals($albaran->fecha, $movement->fecha);
 
@@ -156,6 +160,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertTrue($albaran->save());
 
         // comprobamos que el movimiento refleja la nueva fecha
+        $this->runWorkQueue();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals($newDate, $movement->fecha);
         $this->assertEquals($albaran->id(), $movement->docid);
@@ -204,6 +209,7 @@ final class DeliveryNoteTest extends TestCase
         ]));
 
         // no debe existir movimiento de stock para este albarán
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere([
             Where::eq('codalmacen', $warehouse->codalmacen),
@@ -262,6 +268,7 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals(-10, $movement->cantidad);
@@ -289,6 +296,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals(10, $stock->disponible);
 
         // no debe quedar movimiento de stock para este albarán
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere(array_merge($whereRef, [
             Where::eq('docid', $albaran->id()),
@@ -370,6 +378,7 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docid', $albaran->id()),
             Where::eq('docmodel', $albaran->modelClassName())
         ]);
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere($whereAlbaran));
 
@@ -383,6 +392,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertCount(1, $facturas);
 
         // hay 2 movimientos: el del albarán (-10) y el de la factura (delta 0)
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(2, $movimientos);
 
@@ -395,6 +405,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals($returnedStatusId, $albaran->idestado);
 
         // por tanto NO debe quedar movimiento de stock para el albarán
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse(
             $movement->loadWhere($whereAlbaran),
@@ -461,6 +472,7 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docid', $albaran->id()),
             Where::eq('docmodel', $albaran->modelClassName())
         ]);
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertTrue($movement->loadWhere($whereAlbaran));
         $this->assertEquals(-10, $movement->cantidad);
@@ -485,6 +497,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertCount(1, $facturas);
 
         // hay 2 movimientos: el del albarán (-10) y el de la factura (delta 0)
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(2, $movimientos);
 
@@ -497,6 +510,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals($originalStatusId, $albaran->idestado);
 
         // el movimiento del albarán sigue existiendo con -10
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertTrue($movement->loadWhere($whereAlbaran));
         $this->assertEquals(-10, $movement->cantidad);
@@ -549,6 +563,7 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docid', $albaran->id()),
             Where::eq('docmodel', $albaran->modelClassName())
         ]);
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertTrue($movement->loadWhere($whereAlbaran));
         $this->assertEquals(5, $movement->cantidad);
@@ -588,9 +603,11 @@ final class DeliveryNoteTest extends TestCase
         $this->assertCount(1, $facturas);
 
         // hay 2 movimientos: el del albarán (+5) y el de la factura (delta 0)
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(2, $movimientos);
 
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertTrue($movement->loadWhere($whereAlbaran));
         $this->assertEquals(5, $movement->cantidad, 'el movimiento del albarán debe ser 5');
@@ -599,6 +616,7 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docid', $facturas[0]->id()),
             Where::eq('docmodel', $facturas[0]->modelClassName())
         ]);
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertTrue($movement->loadWhere($whereFactura));
         $this->assertEquals(0, $movement->cantidad, 'el movimiento de la factura debe ser 0');
@@ -661,6 +679,7 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(1, $movimientos);
         $this->assertEquals(-10, $movimientos[0]->cantidad);
@@ -688,6 +707,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals(10, $stock->disponible);
 
         // no debe quedar el movimiento consolidado
+        $this->runWorkQueue();
         $this->assertCount(0, MovimientoStock::all($whereRef));
 
         // eliminamos
@@ -749,6 +769,7 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docid', $albaran->id()),
             Where::eq('docmodel', $albaran->modelClassName())
         ];
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(1, $movimientos, 'expected a single consolidated stock movement');
         $this->assertEquals(-10, $movimientos[0]->cantidad);
@@ -814,23 +835,28 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(2, $movimientos);
 
         // el albarán conserva el movimiento histórico y la factura solo aporta el delta
+        $this->runWorkQueue();
         $deliveryMovement = new MovimientoStock();
         $whereDelivery = array_merge($whereRef, [
             Where::eq('docid', $albaran->id()),
             Where::eq('docmodel', $albaran->modelClassName())
         ]);
+        $this->runWorkQueue();
         $this->assertTrue($deliveryMovement->loadWhere($whereDelivery));
         $this->assertEquals(-10, $deliveryMovement->cantidad);
 
+        $this->runWorkQueue();
         $invoiceMovement = new MovimientoStock();
         $whereInvoice = array_merge($whereRef, [
             Where::eq('docid', $facturas[0]->id()),
             Where::eq('docmodel', $facturas[0]->modelClassName())
         ]);
+        $this->runWorkQueue();
         $this->assertTrue($invoiceMovement->loadWhere($whereInvoice));
         $this->assertEquals(0, $invoiceMovement->cantidad);
 
@@ -907,22 +933,27 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(2, $movimientos);
 
+        $this->runWorkQueue();
         $deliveryMovement = new MovimientoStock();
         $whereDelivery = array_merge($whereRef, [
             Where::eq('docid', $albaran->id()),
             Where::eq('docmodel', $albaran->modelClassName())
         ]);
+        $this->runWorkQueue();
         $this->assertTrue($deliveryMovement->loadWhere($whereDelivery));
         $this->assertEquals(-10, $deliveryMovement->cantidad);
 
+        $this->runWorkQueue();
         $invoiceMovement = new MovimientoStock();
         $whereInvoice = array_merge($whereRef, [
             Where::eq('docid', $facturas[0]->id()),
             Where::eq('docmodel', $facturas[0]->modelClassName())
         ]);
+        $this->runWorkQueue();
         $this->assertTrue($invoiceMovement->loadWhere($whereInvoice));
         $this->assertEquals(0, $invoiceMovement->cantidad);
         $this->assertEquals(-10, $invoiceMovement->saldo);
@@ -980,23 +1011,28 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(2, $movimientos);
 
         // el albarán conserva el movimiento histórico y la factura solo aporta el delta
+        $this->runWorkQueue();
         $deliveryMovement = new MovimientoStock();
         $whereDelivery = array_merge($whereRef, [
             Where::eq('docid', $albaran->id()),
             Where::eq('docmodel', $albaran->modelClassName())
         ]);
+        $this->runWorkQueue();
         $this->assertTrue($deliveryMovement->loadWhere($whereDelivery));
         $this->assertEquals(10, $deliveryMovement->cantidad);
 
+        $this->runWorkQueue();
         $invoiceMovement = new MovimientoStock();
         $whereInvoice = array_merge($whereRef, [
             Where::eq('docid', $facturas[0]->id()),
             Where::eq('docmodel', $facturas[0]->modelClassName())
         ]);
+        $this->runWorkQueue();
         $this->assertTrue($invoiceMovement->loadWhere($whereInvoice));
         $this->assertEquals(0, $invoiceMovement->cantidad);
 
@@ -1066,22 +1102,27 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals(10, $stock->disponible);
 
         // el albarán conserva el histórico y la factura refleja solo el delta
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(2, $movimientos);
 
+        $this->runWorkQueue();
         $deliveryMovement = new MovimientoStock();
         $whereDelivery = array_merge($whereRef, [
             Where::eq('docid', $albaran->id()),
             Where::eq('docmodel', $albaran->modelClassName())
         ]);
+        $this->runWorkQueue();
         $this->assertTrue($deliveryMovement->loadWhere($whereDelivery));
         $this->assertEquals(10, $deliveryMovement->cantidad);
 
+        $this->runWorkQueue();
         $invoiceMovement = new MovimientoStock();
         $whereInvoice = array_merge($whereRef, [
             Where::eq('docid', $facturas[0]->id()),
             Where::eq('docmodel', $facturas[0]->modelClassName())
         ]);
+        $this->runWorkQueue();
         $this->assertTrue($invoiceMovement->loadWhere($whereInvoice));
         $this->assertEquals(0, $invoiceMovement->cantidad);
         $this->assertEquals(10, $invoiceMovement->saldo);
@@ -1168,6 +1209,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals(6, $stock->disponible);
 
         // el movimiento del conteo sigue existiendo
+        $this->runWorkQueue();
         $countMovement = new MovimientoStock();
         $whereCount = [
             Where::eq('codalmacen', $warehouse->codalmacen),
@@ -1175,11 +1217,13 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docmodel', $conteo->modelClassName()),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertTrue($countMovement->loadWhere($whereCount));
         $this->assertEquals(0, $countMovement->cantidad);
         $this->assertEquals(6, $countMovement->saldo);
 
         // el albarán conserva el histórico previo al conteo
+        $this->runWorkQueue();
         $deliveryMovement = new MovimientoStock();
         $whereDelivery = [
             Where::eq('codalmacen', $warehouse->codalmacen),
@@ -1187,11 +1231,13 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docmodel', $albaran->modelClassName()),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertTrue($deliveryMovement->loadWhere($whereDelivery));
         $this->assertEquals(10, $deliveryMovement->cantidad);
         $this->assertEquals(10, $deliveryMovement->saldo);
 
         // la factura debe reflejar solo el delta y mantener el saldo real final
+        $this->runWorkQueue();
         $invoiceMovement = new MovimientoStock();
         $whereInvoice = [
             Where::eq('codalmacen', $warehouse->codalmacen),
@@ -1199,6 +1245,7 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docmodel', $facturas[0]->modelClassName()),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertTrue($invoiceMovement->loadWhere($whereInvoice));
         $this->assertEquals(0, $invoiceMovement->cantidad);
         $this->assertEquals(6, $invoiceMovement->saldo);
@@ -1225,6 +1272,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals(8, $scenario['stock']->cantidad);
         $this->assertEquals(8, $scenario['stock']->disponible);
 
+        $this->runWorkQueue();
         $invoiceMovement = new MovimientoStock();
         $whereInvoice = [
             Where::eq('codalmacen', $scenario['warehouse']->codalmacen),
@@ -1232,6 +1280,7 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docmodel', $scenario['invoice']->modelClassName()),
             Where::eq('referencia', $scenario['product']->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertTrue($invoiceMovement->loadWhere($whereInvoice));
         $this->assertEquals(2, $invoiceMovement->cantidad);
         $this->assertEquals(8, $invoiceMovement->saldo);
@@ -1251,6 +1300,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals(4, $scenario['stock']->cantidad);
         $this->assertEquals(4, $scenario['stock']->disponible);
 
+        $this->runWorkQueue();
         $invoiceMovement = new MovimientoStock();
         $whereInvoice = [
             Where::eq('codalmacen', $scenario['warehouse']->codalmacen),
@@ -1258,6 +1308,7 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docmodel', $scenario['invoice']->modelClassName()),
             Where::eq('referencia', $scenario['product']->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertTrue($invoiceMovement->loadWhere($whereInvoice));
         $this->assertEquals(-2, $invoiceMovement->cantidad);
         $this->assertEquals(4, $invoiceMovement->saldo);
@@ -1304,6 +1355,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals(0, $stock->reservada);
 
         // comprobamos que hay un movimiento de stock
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals(10, $movement->cantidad);
@@ -1354,6 +1406,7 @@ final class DeliveryNoteTest extends TestCase
         ]));
 
         // no debe existir movimiento de stock para este albarán
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere([
             Where::eq('codalmacen', $warehouse->codalmacen),
@@ -1405,6 +1458,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertTrue($stock->loadWhere($whereRef));
         $this->assertEquals(10, $stock->cantidad);
 
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals(10, $movement->cantidad);
@@ -1433,6 +1487,7 @@ final class DeliveryNoteTest extends TestCase
         }
 
         // no debe quedar movimiento de stock para este albarán
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere(array_merge($whereRef, [
             Where::eq('docid', $albaran->id()),
@@ -1503,6 +1558,7 @@ final class DeliveryNoteTest extends TestCase
             Where::eq('docid', $albaran->id()),
             Where::eq('docmodel', $albaran->modelClassName())
         ]);
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere($whereAlbaran));
 
@@ -1516,6 +1572,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertCount(1, $facturas);
 
         // hay 2 movimientos: el del albarán (+10) y el de la factura (delta 0)
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(2, $movimientos);
 
@@ -1528,6 +1585,7 @@ final class DeliveryNoteTest extends TestCase
         $this->assertEquals($returnedStatusId, $albaran->idestado);
 
         // por tanto NO debe quedar movimiento de stock para el albarán
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse(
             $movement->loadWhere($whereAlbaran),

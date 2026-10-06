@@ -21,6 +21,7 @@ namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Model\Join\StockVariante;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Stock;
@@ -134,6 +135,7 @@ final class StockVarianteTest extends TestCase
 
     private function createMovement(int $idproducto, string $referencia, string $codalmacen, float $cantidad): void
     {
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $movement->cantidad = $cantidad;
         $movement->codalmacen = $codalmacen;
@@ -148,5 +150,11 @@ final class StockVarianteTest extends TestCase
     protected function tearDown(): void
     {
         $this->logErrors();
+    }
+
+    private function runWorkQueue(): void
+    {
+        while (WorkQueue::run()) {
+        }
     }
 }

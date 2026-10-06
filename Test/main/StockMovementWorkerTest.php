@@ -35,9 +35,9 @@ use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Los saldos de los movimientos de documentos se recalculan en el worker UpdateStockMovements.
+ * Los movimientos de stock de documentos los reconstruye el worker RebuildStockMovements.
  */
-final class StockSaldosWorkerTest extends TestCase
+final class StockMovementWorkerTest extends TestCase
 {
     use LogErrorsTrait;
     use RandomDataTrait;
@@ -50,7 +50,7 @@ final class StockSaldosWorkerTest extends TestCase
         self::removeTaxRegularization();
     }
 
-    public function testSaldosRecalculatedByWorker(): void
+    public function testMovementsRebuiltByWorker(): void
     {
         $warehouse = $this->getRandomWarehouse();
         $this->assertTrue($warehouse->save());
@@ -66,36 +66,48 @@ final class StockSaldosWorkerTest extends TestCase
         $this->runWorkQueue();
         $this->assertEquals(10, $this->getMovement($albaranHoy, $warehouse, $product)->saldo);
 
-        // albarán anterior con 5 unidades y varias líneas de la misma referencia
+        // albarán anterior con 5 unidades en varias líneas de la misma referencia
         $albaranAnterior = $this->createAlbaran($supplier, $warehouse, $product, 2, date('d-m-Y', strtotime('-2 days')));
         $linea = $albaranAnterior->getNewProductLine($product->referencia);
         $linea->cantidad = 3;
         $this->assertTrue($linea->save());
 
-        // el movimiento anterior tiene su saldo provisional, pero el posterior aún no se ha recalculado
-        $this->assertEquals(5, $this->getMovement($albaranAnterior, $warehouse, $product)->saldo);
+        // el stock lo actualiza el core en el momento, los movimientos quedan pendientes
+        $this->assertEquals(15, $this->getStock($warehouse, $product)->cantidad);
+        $this->assertFalse($this->hasMovement($albaranAnterior, $warehouse, $product));
         $this->assertEquals(10, $this->getMovement($albaranHoy, $warehouse, $product)->saldo);
 
         // las líneas del mismo producto generan un único evento pendiente
         $this->assertEquals(1, $this->countPendingEvents($product));
 
-        // el worker recalcula el histórico
+        // el worker reconstruye los movimientos del producto
         $this->runWorkQueue();
         $this->assertEquals(0, $this->countPendingEvents($product));
-        $this->assertEquals(5, $this->getMovement($albaranAnterior, $warehouse, $product)->saldo);
+        $movement = $this->getMovement($albaranAnterior, $warehouse, $product);
+        $this->assertEquals(5, $movement->cantidad);
+        $this->assertEquals(5, $movement->saldo);
         $this->assertEquals(15, $this->getMovement($albaranHoy, $warehouse, $product)->saldo);
+
+        // tras procesarlo, un nuevo cambio del producto vuelve a encolarse
+        $linea->cantidad = 4;
+        $this->assertTrue($linea->save());
+        $this->assertEquals(1, $this->countPendingEvents($product));
+        $this->runWorkQueue();
+        $this->assertEquals(6, $this->getMovement($albaranAnterior, $warehouse, $product)->saldo);
+        $this->assertEquals(16, $this->getMovement($albaranHoy, $warehouse, $product)->saldo);
 
         // eliminamos
         $this->assertTrue($albaranAnterior->delete());
         $this->assertTrue($albaranHoy->delete());
         $this->runWorkQueue();
+        $this->assertFalse($this->hasMovement($albaranHoy, $warehouse, $product));
         $this->assertTrue($supplier->delete());
         $this->assertTrue($supplier->getDefaultAddress()->delete());
         $this->assertTrue($product->delete());
         $this->assertTrue($warehouse->delete());
     }
 
-    public function testCountingWithPendingSaldos(): void
+    public function testCountingWithPendingMovements(): void
     {
         $warehouse1 = $this->getRandomWarehouse();
         $this->assertTrue($warehouse1->save());
@@ -115,7 +127,7 @@ final class StockSaldosWorkerTest extends TestCase
         $albaranAnterior = $this->createAlbaran($supplier, $warehouse2, $product, 5, date('d-m-Y', strtotime('-2 days')));
         $this->assertEquals(1, $this->countPendingEvents($product));
 
-        // el conteo del almacén 1 reconstruye el stock de todo el producto
+        // el conteo del almacén 1 sólo actualiza el stock contado
         $conteo = new ConteoStock();
         $conteo->codalmacen = $warehouse1->codalmacen;
         $conteo->observaciones = 'Test';
@@ -123,13 +135,17 @@ final class StockSaldosWorkerTest extends TestCase
         $this->assertTrue($conteo->addLine($product->referencia, $product->idproducto, 7)->exists());
         $this->assertTrue($conteo->updateStock());
 
-        // el stock del almacén 2 debe tener en cuenta el albarán anterior
+        // el stock del almacén 2 no se deduce de los movimientos pendientes
         $this->assertEquals(7, $this->getStock($warehouse1, $product)->cantidad);
         $this->assertEquals(15, $this->getStock($warehouse2, $product)->cantidad);
+
+        // el conteo encola la reconstrucción del producto, que completa los movimientos pendientes
+        $this->runWorkQueue();
         $this->assertEquals(15, $this->getMovement($albaranHoy, $warehouse2, $product)->saldo);
+        $this->assertEquals(7, $this->getStock($warehouse1, $product)->cantidad);
+        $this->assertEquals(15, $this->getStock($warehouse2, $product)->cantidad);
 
         // eliminamos
-        $this->runWorkQueue();
         $this->assertTrue($conteo->delete());
         $this->assertTrue($albaranAnterior->delete());
         $this->assertTrue($albaranHoy->delete());
@@ -150,7 +166,7 @@ final class StockSaldosWorkerTest extends TestCase
     {
         return WorkEvent::count([
             Where::eq('done', false),
-            Where::eq('name', 'Model.Producto.updateStockMovements'),
+            Where::eq('name', 'Model.Producto.rebuildStockMovements'),
             Where::eq('value', $product->idproducto)
         ]);
     }
@@ -183,6 +199,17 @@ final class StockSaldosWorkerTest extends TestCase
             Where::eq('referencia', $product->referencia)
         ]));
         return $movement;
+    }
+
+    private function hasMovement(AlbaranProveedor $albaran, Almacen $warehouse, Producto $product): bool
+    {
+        $movement = new MovimientoStock();
+        return $movement->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('docid', $albaran->id()),
+            Where::eq('docmodel', $albaran->modelClassName()),
+            Where::eq('referencia', $product->referencia)
+        ]);
     }
 
     private function getStock(Almacen $warehouse, Producto $product): Stock

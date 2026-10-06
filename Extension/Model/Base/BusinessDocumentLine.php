@@ -34,8 +34,8 @@ class BusinessDocumentLine
                 return;
             }
 
-            // movemos el movimiento de stock al nuevo almacén (los saldos los recalcula el worker)
-            StockMovementManager::addTransferLine($this, $doc, $fromCodalmacen, $toCodalmacen);
+            // el documento cambia de almacén: reconstruimos los movimientos del producto en segundo plano
+            StockMovementManager::queueProductRebuild($this->idproducto);
         };
     }
 
@@ -46,8 +46,8 @@ class BusinessDocumentLine
                 return;
             }
 
-            // creamos el movimiento de stock (los saldos los recalcula el worker)
-            StockMovementManager::addLineBusinessDocument($this, $doc);
+            // el stock ya lo actualiza el core: reconstruimos los movimientos del producto en segundo plano
+            StockMovementManager::queueProductRebuild($this->idproducto);
         };
     }
 }

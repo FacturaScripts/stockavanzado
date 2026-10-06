@@ -32,12 +32,9 @@ class BusinessDocumentGenerator
                 return;
             }
 
-            $parentDoc = $line->getDocument();
-            if ($parentDoc instanceof TransformerDocument) {
-                StockMovementManager::addLineBusinessDocument($line, $parentDoc);
-            }
-
-            StockMovementManager::addLineBusinessDocument($newLine, $newDoc);
+            // la transformación cambia los movimientos del documento origen y del nuevo
+            StockMovementManager::queueProductRebuild($line->idproducto);
+            StockMovementManager::queueProductRebuild($newLine->idproducto);
         };
     }
 }

@@ -147,6 +147,7 @@ class ConteoStock extends ModelClass
         }
 
         $newTransaction = false === self::db()->inTransaction() && self::db()->beginTransaction();
+        $idproductos = [];
         foreach ($this->getLines(['fecha' => 'DESC']) as $line) {
             // si no está completado, saltamos
             if (false === $conteo->completed) {
@@ -175,11 +176,17 @@ class ConteoStock extends ModelClass
                 return false;
             }
 
-            // los saldos de documentos se recalculan en segundo plano, los actualizamos antes de reconstruir el stock
-            StockMovementManager::updateProductSaldos($line->idproducto);
+            if (!empty($line->idproducto)) {
+                $idproductos[$line->idproducto] = $line->idproducto;
+            }
+        }
 
+        // con todas las líneas ya eliminadas, reconstruimos una sola vez cada producto:
+        // sus movimientos pueden estar pendientes, así que lo hacemos antes de deducir de ellos el stock
+        foreach ($idproductos as $idproducto) {
             $messages = [];
-            StockRebuildManager::rebuild($line->idproducto, $messages);
+            StockMovementManager::rebuild($idproducto, $messages, true);
+            StockRebuildManager::rebuild($idproducto, $messages);
             if (!empty($messages)) {
                 if ($newTransaction) {
                     self::db()->rollback();
@@ -301,11 +308,11 @@ class ConteoStock extends ModelClass
                 return false;
             }
 
-            // los saldos de documentos se recalculan en segundo plano, los actualizamos antes de reconstruir el stock
-            StockMovementManager::updateProductSaldos($line->idproducto);
-
+            // actualizamos sólo el stock contado: los movimientos de documentos pueden estar pendientes
+            // de reconstruir, así que no podemos deducir de ellos el stock de otros almacenes
             $messages = [];
-            StockRebuildManager::rebuild($line->idproducto, $messages);
+            StockRebuildManager::rebuildReference($conteo->codalmacen, $line->referencia, $messages);
+            StockMovementManager::queueProductRebuild($line->idproducto);
             if (empty($messages)) {
                 continue;
             }

@@ -20,6 +20,7 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\PedidoCliente;
 use FacturaScripts\Dinamic\Model\PedidoProveedor;
@@ -81,6 +82,7 @@ final class OrderTest extends TestCase
         $this->assertEquals(10, $stock->reservada);
 
         // comprobamos que no hay ningún movimiento de stock
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere($whereRef));
 
@@ -131,6 +133,7 @@ final class OrderTest extends TestCase
         $this->assertEquals(0, $stock->reservada);
 
         // comprobamos que no hay ningún movimiento de stock
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere($whereRef));
 
@@ -176,11 +179,13 @@ final class OrderTest extends TestCase
         $this->assertTrue($linea->save());
 
         // comprobamos que aún no hay movimiento de stock
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $whereRef = [
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertFalse($movement->loadWhere($whereRef));
 
         // buscamos el estado del pedido que genera albarán
@@ -208,6 +213,7 @@ final class OrderTest extends TestCase
         $this->assertEquals(0, $stock->disponible);
 
         // comprobamos que el movimiento de stock pertenece al albarán generado
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(1, $movimientos);
         $this->assertEquals(-10, $movimientos[0]->cantidad);
@@ -250,11 +256,13 @@ final class OrderTest extends TestCase
         $this->assertTrue($linea->save());
 
         // comprobamos que aún no hay movimiento de stock
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $whereRef = [
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertFalse($movement->loadWhere($whereRef));
 
         // buscamos el estado del pedido que genera albarán
@@ -283,6 +291,7 @@ final class OrderTest extends TestCase
         $this->assertEquals(10, $stock->disponible);
 
         // comprobamos que el movimiento de stock pertenece al albarán generado
+        $this->runWorkQueue();
         $movimientos = MovimientoStock::all($whereRef);
         $this->assertCount(1, $movimientos);
         $this->assertEquals(10, $movimientos[0]->cantidad);
@@ -301,5 +310,11 @@ final class OrderTest extends TestCase
     protected function tearDown(): void
     {
         $this->logErrors();
+    }
+
+    private function runWorkQueue(): void
+    {
+        while (WorkQueue::run()) {
+        }
     }
 }

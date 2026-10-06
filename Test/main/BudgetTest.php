@@ -20,6 +20,7 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\PresupuestoCliente;
 use FacturaScripts\Dinamic\Model\PresupuestoProveedor;
@@ -77,6 +78,7 @@ final class BudgetTest extends TestCase
         $this->assertFalse($stock->loadWhere($whereRef));
 
         // comprobamos que no hay ningún movimiento de stock
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere($whereRef));
 
@@ -123,6 +125,7 @@ final class BudgetTest extends TestCase
         $this->assertFalse($stock->loadWhere($whereRef));
 
         // comprobamos que no hay ningún movimiento de stock
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertFalse($movement->loadWhere($whereRef));
 
@@ -137,5 +140,11 @@ final class BudgetTest extends TestCase
     protected function tearDown(): void
     {
         $this->logErrors();
+    }
+
+    private function runWorkQueue(): void
+    {
+        while (WorkQueue::run()) {
+        }
     }
 }
