@@ -21,16 +21,19 @@ namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Model\WorkEvent;
 use FacturaScripts\Core\Template\CronJobClass;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\ConteoStock;
+use FacturaScripts\Dinamic\Model\FacturaProveedor;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Proveedor;
 use FacturaScripts\Dinamic\Model\Stock;
+use FacturaScripts\Plugins\StockAvanzado\Contract\StockMovementModInterface;
 use FacturaScripts\Plugins\StockAvanzado\CronJob\StockMovement;
 use FacturaScripts\Test\Traits\DefaultSettingsTrait;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
@@ -287,6 +290,111 @@ final class StockMovementWorkerTest extends TestCase
         $this->runWorkQueue();
         $this->assertTrue($supplier->delete());
         $this->assertTrue($supplier->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testStockFollowsSaldoOrderWithSameDateAndHour(): void
+    {
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        $supplier = $this->getRandomSupplier();
+        $this->assertTrue($supplier->save());
+
+        // completamos un conteo de 10 unidades
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $this->assertTrue($conteo->save());
+        $this->assertTrue($conteo->addLine($product->referencia, $product->idproducto, 10)->exists());
+        $this->assertTrue($conteo->updateStock());
+        $this->assertTrue($conteo->reload());
+
+        // una factura de 3 unidades con la misma fecha y hora que el fin del conteo
+        $factura = new FacturaProveedor();
+        $this->assertTrue($factura->setSubject($supplier));
+        $this->assertTrue($factura->setWarehouse($warehouse->codalmacen));
+        $this->assertTrue($factura->setDate(Tools::date($conteo->fechafin), Tools::hour($conteo->fechafin)));
+        $this->assertTrue($factura->save());
+        $linea = $factura->getNewProductLine($product->referencia);
+        $linea->cantidad = 3;
+        $linea->pvpunitario = 10;
+        $this->assertTrue($linea->save());
+        $this->assertEquals(13, $this->getStock($warehouse, $product)->cantidad);
+
+        // con la misma fecha y hora, la factura va después del conteo: el stock recalculado debe incluirla
+        StockMovementManager::queueProductRebuild($product->idproducto, true);
+        $this->runWorkQueue();
+        $this->assertEquals(13, $this->getStock($warehouse, $product)->cantidad);
+
+        // eliminamos
+        $this->assertTrue($factura->delete());
+        $this->assertTrue($conteo->delete());
+        $this->runWorkQueue();
+        $this->assertTrue($supplier->delete());
+        $this->assertTrue($supplier->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testRebuildCalculatesSaldosOfModMovements(): void
+    {
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // un mod de otro plugin añade dos movimientos, sin saldo, en un par sin documentos
+        StockMovementManager::addMod(new class($product->idproducto, $warehouse->codalmacen, $product->referencia) implements StockMovementModInterface {
+            private $idproducto;
+            private $codalmacen;
+            private $referencia;
+
+            public function __construct(int $idproducto, string $codalmacen, string $referencia)
+            {
+                $this->idproducto = $idproducto;
+                $this->codalmacen = $codalmacen;
+                $this->referencia = $referencia;
+            }
+
+            public function run(?int $idproducto = null): void
+            {
+                if ($idproducto !== $this->idproducto) {
+                    return;
+                }
+
+                foreach ([['10:00:00', 5], ['11:00:00', 2]] as [$hora, $cantidad]) {
+                    $movement = new MovimientoStock();
+                    $movement->codalmacen = $this->codalmacen;
+                    $movement->referencia = $this->referencia;
+                    $movement->idproducto = $this->idproducto;
+                    $movement->fecha = Tools::date();
+                    $movement->hora = $hora;
+                    $movement->docid = 1;
+                    $movement->docmodel = 'TestMod';
+                    $movement->documento = 'Test mod';
+                    $movement->cantidad = $cantidad;
+                    $movement->save();
+                }
+            }
+        });
+
+        StockMovementManager::rebuild($product->idproducto);
+
+        // los saldos se acumulan aunque el par sólo tenga movimientos del mod
+        $movements = MovimientoStock::all([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ], ['hora' => 'ASC']);
+        $this->assertCount(2, $movements);
+        $this->assertEquals(5, $movements[0]->saldo);
+        $this->assertEquals(7, $movements[1]->saldo);
+
+        // eliminamos
         $this->assertTrue($product->delete());
         $this->assertTrue($warehouse->delete());
     }

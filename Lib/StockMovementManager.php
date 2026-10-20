@@ -72,9 +72,6 @@ class StockMovementManager
     private static $mods = [];
 
     /** @var array */
-    private static $pendingSaldos = [];
-
-    /** @var array */
     private static $products = [];
 
     /**
@@ -113,12 +110,10 @@ class StockMovementManager
 
             if (empty($movement->cantidad) && false === static::shouldSaveZeroBusinessDocumentMovement($line)) {
                 $movement->delete();
-                static::updateReferenceSaldos($doc->codalmacen, $line->referencia);
                 return;
             }
 
             $movement->save();
-            static::updateReferenceSaldos($doc->codalmacen, $line->referencia);
         } finally {
             if ($opened) {
                 static::closeCache();
@@ -149,7 +144,10 @@ class StockMovementManager
             return false;
         }
 
-        static::updateReferenceSaldos($stockCount->codalmacen, $line->referencia);
+        // durante el rebuild los saldos se recalculan al final
+        if (false === static::$rebuilding) {
+            static::updateReferenceSaldos($stockCount->codalmacen, $line->referencia);
+        }
         return true;
     }
 
@@ -268,9 +266,8 @@ class StockMovementManager
             return;
         }
 
-        // activamos el modo rebuild para aplazar el recálculo de saldos
+        // durante el rebuild no se encolan productos ni se recalculan saldos
         static::$rebuilding = true;
-        static::$pendingSaldos = [];
 
         try {
             if (!empty(static::$idproducto)) {
@@ -288,19 +285,14 @@ class StockMovementManager
                 $mod->run(static::$idproducto);
             }
 
-            // recalculamos los saldos una sola vez por (almacén, referencia)
-            $pending = static::$pendingSaldos;
-            static::$pendingSaldos = [];
+            // recalculamos una sola vez los saldos de cada (almacén, referencia), también los de los mods
             static::$rebuilding = false;
-            foreach ($pending as [$codalmacen, $referencia]) {
-                static::updateReferenceSaldos($codalmacen, $referencia);
-            }
+            static::updateProductSaldos(static::$idproducto);
 
             if ($newTransaction) {
                 $db->commit();
             }
         } catch (Throwable $th) {
-            static::$pendingSaldos = [];
             static::$rebuilding = false;
             if ($newTransaction && $db->inTransaction()) {
                 $db->rollback();
@@ -323,20 +315,68 @@ class StockMovementManager
         }
     }
 
+    /**
+     * Ordena los movimientos como se acumulan sus saldos: fecha, hora, prioridad del documento e id.
+     */
+    public static function compareMovements(MovimientoStock $a, MovimientoStock $b): int
+    {
+        $dateA = strtotime($a->fecha . ' ' . $a->hora);
+        $dateB = strtotime($b->fecha . ' ' . $b->hora);
+        if ($dateA !== $dateB) {
+            return $dateA <=> $dateB;
+        }
+
+        $priority = static::getMovementSortPriority($a->docmodel) <=> static::getMovementSortPriority($b->docmodel);
+        if ($priority !== 0) {
+            return $priority;
+        }
+
+        return $a->id() <=> $b->id();
+    }
+
+    /**
+     * Devuelve el último movimiento de un almacén y referencia en el orden de los saldos, que es el que
+     * tiene el stock final. Con la misma fecha y hora no basta con el id: decide la prioridad del documento.
+     */
+    public static function getLastMovement(string $codalmacen, string $referencia): MovimientoStock
+    {
+        $where = [
+            Where::eq('codalmacen', $codalmacen),
+            Where::eq('referencia', $referencia)
+        ];
+        $last = new MovimientoStock();
+        if (false === $last->loadWhere($where, ['fecha' => 'DESC', 'hora' => 'DESC', 'id' => 'DESC'])) {
+            return $last;
+        }
+
+        $where[] = Where::eq('fecha', $last->fecha);
+        $where[] = Where::eq('hora', $last->hora);
+        foreach (MovimientoStock::all($where, [], 0, 0) as $movement) {
+            if (static::compareMovements($movement, $last) > 0) {
+                $last = $movement;
+            }
+        }
+
+        return $last;
+    }
+
     public static function setIdProducto(?int $idproducto): void
     {
         static::$idproducto = $idproducto;
     }
 
     /**
-     * Recalcula los saldos de todos los pares (almacén, referencia) con movimientos del producto.
+     * Recalcula los saldos de todos los pares (almacén, referencia) con movimientos del producto,
+     * o de todos los productos si no se indica ninguno.
      */
-    public static function updateProductSaldos(int $idproducto): void
+    public static function updateProductSaldos(?int $idproducto): void
     {
         $db = new DataBase();
-        $sql = 'SELECT codalmacen, referencia FROM stocks_movimientos'
-            . ' WHERE idproducto = ' . $db->var2str($idproducto)
-            . ' GROUP BY codalmacen, referencia';
+        $sql = 'SELECT codalmacen, referencia FROM stocks_movimientos';
+        if (null !== $idproducto) {
+            $sql .= ' WHERE idproducto = ' . $db->var2str($idproducto);
+        }
+        $sql .= ' GROUP BY codalmacen, referencia';
         foreach ($db->select($sql) as $row) {
             static::updateReferenceSaldos($row['codalmacen'], $row['referencia']);
         }
@@ -344,32 +384,13 @@ class StockMovementManager
 
     public static function updateReferenceSaldos(string $codalmacen, string $referencia): void
     {
-        // durante un rebuild aplazamos el recálculo y lo hacemos una sola vez por par al final
-        if (static::$rebuilding) {
-            static::$pendingSaldos[$codalmacen . '|' . $referencia] = [$codalmacen, $referencia];
-            return;
-        }
-
         $saldo = 0.0;
         $where = [
             Where::eq('codalmacen', $codalmacen),
             Where::eq('referencia', $referencia)
         ];
         $movements = MovimientoStock::all($where, ['fecha' => 'ASC', 'hora' => 'ASC', 'id' => 'ASC'], 0, 0);
-        usort($movements, function (MovimientoStock $a, MovimientoStock $b) {
-            $dateA = strtotime($a->fecha . ' ' . $a->hora);
-            $dateB = strtotime($b->fecha . ' ' . $b->hora);
-            if ($dateA !== $dateB) {
-                return $dateA <=> $dateB;
-            }
-
-            $priority = static::getMovementSortPriority($a->docmodel) <=> static::getMovementSortPriority($b->docmodel);
-            if ($priority !== 0) {
-                return $priority;
-            }
-
-            return $a->id() <=> $b->id();
-        });
+        usort($movements, [static::class, 'compareMovements']);
 
         foreach ($movements as $movement) {
             if ($movement->docmodel === 'ConteoStock') {
@@ -408,9 +429,7 @@ class StockMovementManager
         $movement->cantidad += $cantidad;
         $movement->saldo = 0;
 
-        $result = empty($movement->cantidad) ? $movement->delete() : $movement->save();
-        static::updateReferenceSaldos($codalmacen, $line->referencia);
-        return $result;
+        return empty($movement->cantidad) ? $movement->delete() : $movement->save();
     }
 
     /**
@@ -781,16 +800,24 @@ class StockMovementManager
 
     protected static function rebuildStockCounting(): void
     {
-        // recorremos todas las líneas de conteo de stock
+        // un conteo puede tener varias líneas de la misma referencia: su saldo es la suma
+        $groups = [];
         foreach (LineaConteoStock::allWhereEq('idproducto', static::$idproducto, ['idlinea' => 'ASC']) as $line) {
+            $key = $line->idconteo . '|' . $line->referencia;
+            if (false === isset($groups[$key])) {
+                $groups[$key] = ['line' => $line, 'stock' => 0.0];
+            }
+            $groups[$key]['stock'] += $line->cantidad;
+        }
+
+        foreach ($groups as $group) {
             // si el conteo no está finalizado, lo omitimos
-            $conteo = $line->getConteo();
+            $conteo = $group['line']->getConteo();
             if (!$conteo->completed) {
                 continue;
             }
 
-            // ahora generamos el movimiento de stock
-            static::addLineCounting($line, $conteo, $line->cantidad);
+            static::addLineCounting($group['line'], $conteo, $group['stock']);
         }
     }
 

@@ -21,6 +21,7 @@ namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
+use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
@@ -747,6 +748,23 @@ final class ConteoStockTest extends TestCase
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ]));
+        $this->assertEquals(10, $stock->cantidad);
+
+        // al reconstruir, el movimiento del conteo conserva la suma de sus líneas
+        $this->runWorkQueue();
+        $movement = new MovimientoStock();
+        $this->assertTrue($movement->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('docid', $conteo->id()),
+            Where::eq('docmodel', $conteo->modelClassName()),
+            Where::eq('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(10, $movement->saldo);
+
+        // y el stock recalculado a partir de los movimientos también
+        StockMovementManager::queueProductRebuild($product->idproducto, true);
+        $this->runWorkQueue();
+        $this->assertTrue($stock->reload());
         $this->assertEquals(10, $stock->cantidad);
 
         // eliminamos

@@ -24,7 +24,7 @@ use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\KernelException;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
-use FacturaScripts\Dinamic\Model\MovimientoStock;
+use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
 
@@ -111,15 +111,15 @@ class StockRebuildManager
      */
     public static function rebuildReference(string $codalmacen, string $referencia, array &$messages = []): void
     {
-        $lastMovement = new MovimientoStock();
+        $lastMovement = StockMovementManager::getLastMovement($codalmacen, $referencia);
+        if (false === $lastMovement->exists()) {
+            return;
+        }
+
         $where = [
             Where::eq('codalmacen', $codalmacen),
             Where::eq('referencia', $referencia)
         ];
-        if (false === $lastMovement->loadWhere($where, ['fecha' => 'DESC', 'hora' => 'DESC', 'id' => 'DESC'])) {
-            return;
-        }
-
         $stock = new Stock();
         if (false === $stock->loadWhere($where)) {
             $stock->codalmacen = $codalmacen;
@@ -175,14 +175,8 @@ class StockRebuildManager
         }
 
         foreach ($rows as $row) {
-            $where = [
-                Where::eq('codalmacen', $codalmacen),
-                Where::eq('referencia', $row['referencia'])
-            ];
-
             // obtenemos el último movimiento de cada referencia
-            $lastMovement = new MovimientoStock();
-            $lastMovement->loadWhere($where, ['fecha' => 'DESC', 'hora' => 'DESC', 'id' => 'DESC']);
+            $lastMovement = StockMovementManager::getLastMovement($codalmacen, $row['referencia']);
 
             $ref = trim($row['referencia']);
             if (!isset($stockData[$ref])) {
