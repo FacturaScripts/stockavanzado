@@ -22,8 +22,7 @@ namespace FacturaScripts\Plugins\StockAvanzado\CronJob;
 use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
-use FacturaScripts\Dinamic\Lib\StockMovementManager;
-use FacturaScripts\Dinamic\Model\Producto;
+use FacturaScripts\Dinamic\Model\WorkEvent;
 
 /**
  * @author Daniel Fernández Giménez <contacto@danielfg.es>
@@ -37,31 +36,21 @@ final class StockMovement extends CronJobClass
     {
         self::echo("\n\n* JOB: " . self::JOB_NAME . ' ...');
 
-        // limpiamos todos los movimientos de stock
-        StockMovementManager::setIdProducto(null);
-        if (false === StockMovementManager::deleteMovements()) {
-            self::echo("\n- Error al eliminar los movimientos de stock.");
+        // si ya hay una reconstrucción completa en curso, no lanzamos otra
+        $where = [
+            Where::eq('done', false),
+            Where::eq('name', 'StockAvanzado.rebuildAllStockMovements')
+        ];
+        if (WorkEvent::count($where) > 0) {
+            self::echo("\n- Ya hay una reconstrucción de movimientos en curso.");
             self::saveEcho();
             return;
         }
 
-        // creamos un evento para regenerar los movimientos de stock de cada producto
-        $where = [Where::eq('nostock', false)];
-        $orderBy = ['idproducto' => 'ASC'];
-        $offset = 0;
-        $limit = 50;
-        do {
-            $delay = 1;
-            $products = Producto::all($where, $orderBy, $offset, $limit);
-            foreach ($products as $product) {
-                // enviamos a la cola de trabajo la reconstrucción de los movimientos de stock
-                WorkQueue::sendFuture($delay, 'Model.Producto.rebuildStockMovements', $product->id());
-
-                $delay += 2; // incrementamos el retardo para no saturar el sistema
-            }
-
-            $offset += $limit;
-        } while (count($products) > 0);
+        // no borramos los movimientos: cada producto los sustituye al reconstruirse, dentro de una transacción.
+        // El worker RebuildAllStockMovements recorre los productos con actividad por páginas y encola su reconstrucción.
+        // El identificador de ejecución evita que WorkQueue lo descarte si ya se lanzó otro en este proceso
+        WorkQueue::send('StockAvanzado.rebuildAllStockMovements', '0', ['run' => uniqid()]);
 
         self::saveEcho();
     }

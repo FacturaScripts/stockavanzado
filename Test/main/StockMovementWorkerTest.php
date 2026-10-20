@@ -20,8 +20,10 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Model\WorkEvent;
+use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
+use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\ConteoStock;
@@ -29,6 +31,7 @@ use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\Proveedor;
 use FacturaScripts\Dinamic\Model\Stock;
+use FacturaScripts\Plugins\StockAvanzado\CronJob\StockMovement;
 use FacturaScripts\Test\Traits\DefaultSettingsTrait;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
@@ -192,9 +195,113 @@ final class StockMovementWorkerTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testRebuildAllKeepsMovementsAndSkipsInactiveProducts(): void
+    {
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $supplier = $this->getRandomSupplier();
+        $this->assertTrue($supplier->save());
+
+        // dos productos con albarán y uno sin ninguna actividad de stock
+        $product1 = $this->getRandomProduct();
+        $this->assertTrue($product1->save());
+        $product2 = $this->getRandomProduct();
+        $this->assertTrue($product2->save());
+        $inactive = $this->getRandomProduct();
+        $this->assertTrue($inactive->save());
+
+        $albaran1 = $this->createAlbaran($supplier, $warehouse, $product1, 4);
+        $albaran2 = $this->createAlbaran($supplier, $warehouse, $product2, 2);
+        $this->runWorkQueue();
+
+        // borramos el movimiento del primero para comprobar que la reconstrucción lo vuelve a crear
+        $this->assertTrue($this->getMovement($albaran1, $warehouse, $product1)->delete());
+
+        // el cron sólo encola el recorrido por páginas: no borra los movimientos existentes
+        StockMovement::echoMode(CronJobClass::ECHO_MODE_LOG);
+        StockMovement::run();
+        $this->assertTrue($this->hasMovement($albaran2, $warehouse, $product2));
+        $this->assertFalse($this->hasMovement($albaran1, $warehouse, $product1));
+
+        // al procesar la cola se reconstruyen los productos con actividad
+        $this->runWorkQueue();
+        $this->assertEquals(4, $this->getMovement($albaran1, $warehouse, $product1)->saldo);
+        $this->assertEquals(2, $this->getMovement($albaran2, $warehouse, $product2)->saldo);
+        $this->assertEquals(0, $this->countPendingEvents($product1));
+        $this->assertEquals(0, $this->countPendingRebuildAll());
+
+        // el producto sin actividad no se ha encolado
+        $this->assertEquals(0, WorkEvent::count([
+            Where::eq('name', 'Model.Producto.rebuildStockMovements'),
+            Where::eq('value', $inactive->idproducto)
+        ]));
+
+        // eliminamos
+        $this->assertTrue($albaran1->delete());
+        $this->assertTrue($albaran2->delete());
+        $this->runWorkQueue();
+        $this->assertTrue($supplier->delete());
+        $this->assertTrue($supplier->getDefaultAddress()->delete());
+        $this->assertTrue($product1->delete());
+        $this->assertTrue($product2->delete());
+        $this->assertTrue($inactive->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testRebuildAllDoesNotDuplicateEvents(): void
+    {
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        $supplier = $this->getRandomSupplier();
+        $this->assertTrue($supplier->save());
+
+        $albaran = $this->createAlbaran($supplier, $warehouse, $product, 3);
+        $this->runWorkQueue();
+
+        // el producto ya tiene una reconstrucción pendiente, con otros parámetros
+        StockMovementManager::queueProductRebuild($product->idproducto, true);
+        $this->assertEquals(1, $this->countPendingEvents($product));
+
+        // la página empieza en este producto y no vuelve a encolarlo
+        $this->assertEquals($product->idproducto, StockMovementManager::queueRebuildPage($product->idproducto - 1, 1));
+        $this->assertEquals(1, $this->countPendingEvents($product));
+
+        // lanzar el cron dos veces deja un solo recorrido pendiente
+        StockMovement::echoMode(CronJobClass::ECHO_MODE_LOG);
+        StockMovement::run();
+        StockMovement::run();
+        $this->assertEquals(1, $this->countPendingRebuildAll());
+
+        $this->runWorkQueue();
+        $this->assertEquals(0, $this->countPendingEvents($product));
+        $this->assertEquals(0, $this->countPendingRebuildAll());
+        $this->assertEquals(3, $this->getMovement($albaran, $warehouse, $product)->saldo);
+
+        // eliminamos
+        $this->assertTrue($albaran->delete());
+        $this->runWorkQueue();
+        $this->assertTrue($supplier->delete());
+        $this->assertTrue($supplier->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     protected function tearDown(): void
     {
         $this->logErrors();
+    }
+
+    private function countPendingRebuildAll(): int
+    {
+        return WorkEvent::count([
+            Where::eq('done', false),
+            Where::eq('name', 'StockAvanzado.rebuildAllStockMovements')
+        ]);
     }
 
     private function countPendingEvents(Producto $product): int

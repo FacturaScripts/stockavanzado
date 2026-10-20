@@ -38,6 +38,7 @@ use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\TransferenciaStock;
 use FacturaScripts\Dinamic\Model\Variante;
+use FacturaScripts\Dinamic\Model\WorkEvent;
 use FacturaScripts\Plugins\StockAvanzado\Contract\StockMovementModInterface;
 use Throwable;
 
@@ -192,6 +193,59 @@ class StockMovementManager
         }
 
         WorkQueue::send('Model.Producto.rebuildStockMovements', (string)$idproducto, $params);
+    }
+
+    /**
+     * Encola la reconstrucción de los siguientes productos con actividad de stock: líneas de documentos,
+     * transferencias, conteos o movimientos. Omite los que ya tienen una reconstrucción pendiente.
+     *
+     * @return int|null el último idproducto revisado, o null si no quedan más productos.
+     */
+    public static function queueRebuildPage(int $afterId, int $limit = 100): ?int
+    {
+        $db = new DataBase();
+        $tables = [
+            'lineasalbaranescli', 'lineasalbaranesprov', 'lineasfacturascli', 'lineasfacturasprov',
+            'stocks_lineasconteos', 'stocks_lineastransferencias', 'stocks_movimientos'
+        ];
+
+        // cada subconsulta devuelve como mucho una página, así no recorremos tablas enteras por página
+        $parts = [];
+        foreach ($tables as $table) {
+            if ($db->tableExists($table)) {
+                $parts[] = '(SELECT DISTINCT idproducto FROM ' . $table
+                    . ' WHERE idproducto > ' . $db->var2str($afterId)
+                    . ' ORDER BY idproducto ASC LIMIT ' . $limit . ')';
+            }
+        }
+        if (empty($parts)) {
+            return null;
+        }
+
+        $sql = 'SELECT idproducto FROM (' . implode(' UNION ', $parts) . ') AS productos ORDER BY idproducto ASC';
+        $ids = array_map('intval', array_column($db->selectLimit($sql, $limit), 'idproducto'));
+        if (empty($ids)) {
+            return null;
+        }
+
+        // los eventos repetidos sólo se descartan dentro del mismo proceso, así que consultamos los pendientes
+        $pending = [];
+        $where = [
+            Where::eq('done', false),
+            Where::eq('name', 'Model.Producto.rebuildStockMovements'),
+            Where::in('value', array_map('strval', $ids))
+        ];
+        foreach (WorkEvent::all($where, [], 0, 0) as $event) {
+            $pending[(int)$event->value] = true;
+        }
+
+        foreach ($ids as $idproducto) {
+            if (false === isset($pending[$idproducto])) {
+                static::queueProductRebuild($idproducto);
+            }
+        }
+
+        return count($ids) < $limit ? null : end($ids);
     }
 
     public static function rebuild(?int $idproducto = null, array &$messages = [], bool $cron = false): void
