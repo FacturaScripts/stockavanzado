@@ -20,6 +20,7 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Model\WorkEvent;
+use FacturaScripts\Dinamic\Lib\BusinessDocumentGenerator;
 use FacturaScripts\Core\Template\CronJobClass;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
@@ -333,6 +334,55 @@ final class StockMovementWorkerTest extends TestCase
         // eliminamos
         $this->assertTrue($factura->delete());
         $this->assertTrue($conteo->delete());
+        $this->runWorkQueue();
+        $this->assertTrue($supplier->delete());
+        $this->assertTrue($supplier->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testInvoiceLineSetToZeroKeepsSaldoInLineWithStock(): void
+    {
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        $supplier = $this->getRandomSupplier();
+        $this->assertTrue($supplier->save());
+
+        // facturamos un albarán de 5 unidades
+        $albaran = $this->createAlbaran($supplier, $warehouse, $product, 5);
+        $generator = new BusinessDocumentGenerator();
+        $this->assertTrue($generator->generate($albaran, 'FacturaProveedor'));
+        $facturas = $albaran->childrenDocuments();
+        $this->assertCount(1, $facturas);
+
+        // dejamos a 0 la línea de la factura: el stock vuelve a 0
+        foreach ($facturas[0]->getLines() as $linea) {
+            $linea->cantidad = 0;
+            $this->assertTrue($linea->save());
+        }
+        $this->assertEquals(0, $this->getStock($warehouse, $product)->cantidad);
+
+        // el albarán conserva su entrada y la factura aporta la salida: el saldo final coincide con el stock
+        $this->runWorkQueue();
+        $movements = MovimientoStock::all([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ], ['id' => 'ASC']);
+        $this->assertCount(2, $movements);
+        $this->assertEquals(0, end($movements)->saldo);
+
+        StockMovementManager::queueProductRebuild($product->idproducto, true);
+        $this->runWorkQueue();
+        $this->assertEquals(0, $this->getStock($warehouse, $product)->cantidad);
+
+        // eliminamos
+        $this->assertTrue($facturas[0]->delete());
+        $albaran->reload();
+        $this->assertTrue($albaran->delete());
         $this->runWorkQueue();
         $this->assertTrue($supplier->delete());
         $this->assertTrue($supplier->getDefaultAddress()->delete());
