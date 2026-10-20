@@ -163,21 +163,6 @@ class StockMovementManager
         static::$mods[] = $mod;
     }
 
-    public static function deleteLineCounting(LineaConteoStock $line, ConteoStock $stockCount): bool
-    {
-        $movement = static::findMovement($stockCount->codalmacen, $stockCount, $line->referencia);
-        if (false === $movement->exists()) {
-            return true;
-        }
-
-        if (false === $movement->delete()) {
-            return false;
-        }
-
-        static::updateReferenceSaldos($stockCount->codalmacen, $line->referencia);
-        return true;
-    }
-
     public static function deleteMovements(): bool
     {
         $db = new DataBase();
@@ -193,16 +178,20 @@ class StockMovementManager
     /**
      * Encola la reconstrucción de los movimientos de stock del producto, que hace el worker
      * RebuildStockMovements. Los eventos repetidos del mismo producto se descartan.
+     * Con $rebuildStock, el worker recalcula también el stock aunque stock_rebuild esté desactivado.
      */
-    public static function queueProductRebuild(?int $idproducto): void
+    public static function queueProductRebuild(?int $idproducto, bool $rebuildStock = false): void
     {
         if (empty($idproducto) || static::$rebuilding) {
             return;
         }
 
-        WorkQueue::send('Model.Producto.rebuildStockMovements', (string)$idproducto, [
-            'round' => static::$rebuildRound
-        ]);
+        $params = ['round' => static::$rebuildRound];
+        if ($rebuildStock) {
+            $params['stock'] = true;
+        }
+
+        WorkQueue::send('Model.Producto.rebuildStockMovements', (string)$idproducto, $params);
     }
 
     public static function rebuild(?int $idproducto = null, array &$messages = [], bool $cron = false): void

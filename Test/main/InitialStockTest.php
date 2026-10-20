@@ -20,6 +20,7 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Lib\InitialStockMovementManager;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
@@ -83,6 +84,9 @@ final class InitialStockTest extends TestCase
         // eliminamos el conteo
         $this->assertTrue($conteo->delete());
 
+        // procesamos la cola para que el worker reconstruya los movimientos y el stock
+        $this->runWorkQueue();
+
         // comprobamos que la línea no existe
         $this->assertFalse($line->exists());
 
@@ -93,5 +97,11 @@ final class InitialStockTest extends TestCase
         $this->assertTrue($stock->delete());
         $this->assertTrue($product->delete());
         $this->assertTrue($warehouse->delete());
+    }
+
+    private function runWorkQueue(): void
+    {
+        while (WorkQueue::run()) {
+        }
     }
 }

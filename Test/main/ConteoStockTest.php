@@ -20,6 +20,7 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
@@ -136,6 +137,9 @@ final class ConteoStockTest extends TestCase
 
         // eliminamos el conteo
         $this->assertTrue($conteo->delete());
+
+        // procesamos la cola para que el worker reconstruya los movimientos y el stock
+        $this->runWorkQueue();
 
         // comprobamos que la línea ya no existe
         $this->assertFalse($linea1->exists());
@@ -906,6 +910,13 @@ final class ConteoStockTest extends TestCase
         // eliminamos el conteo
         $this->assertTrue($conteo->delete());
 
+        // el stock no cambia hasta que el worker lo recalcula
+        $this->assertTrue($stock1->reload());
+        $this->assertEquals(7, $stock1->cantidad);
+
+        // procesamos la cola para que el worker reconstruya los movimientos y el stock
+        $this->runWorkQueue();
+
         // no deben quedar líneas ni movimientos del conteo
         $this->assertCount(0, LineaConteoStock::all([Where::eq('idconteo', $conteo->idconteo)]));
         $this->assertCount(0, MovimientoStock::all([
@@ -949,5 +960,11 @@ final class ConteoStockTest extends TestCase
     protected function tearDown(): void
     {
         $this->logErrors();
+    }
+
+    private function runWorkQueue(): void
+    {
+        while (WorkQueue::run()) {
+        }
     }
 }

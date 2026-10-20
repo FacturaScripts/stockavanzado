@@ -33,7 +33,8 @@ class RebuildStockMovements extends WorkerClass
         $messages = [];
         StockMovementManager::rebuild((int)$event->value, $messages, true);
 
-        if ((bool)Tools::settings('default', 'stock_rebuild', false)) {
+        // el evento puede forzar el recálculo del stock, por ejemplo al eliminar un conteo
+        if ($event->param('stock', false) || (bool)Tools::settings('default', 'stock_rebuild', false)) {
             StockRebuildManager::rebuild((int)$event->value);
         }
 

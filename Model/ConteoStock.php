@@ -161,13 +161,6 @@ class ConteoStock extends ModelClass
                 return false;
             }
 
-            if (false === StockMovementManager::deleteLineCounting($line, $conteo)) {
-                if ($newTransaction) {
-                    self::db()->rollback();
-                }
-                return false;
-            }
-
             $line->bypassCompletedCheck = true;
             if (false === $line->delete()) {
                 if ($newTransaction) {
@@ -181,25 +174,16 @@ class ConteoStock extends ModelClass
             }
         }
 
-        // con todas las líneas ya eliminadas, reconstruimos una sola vez cada producto:
-        // sus movimientos pueden estar pendientes, así que lo hacemos antes de deducir de ellos el stock
-        foreach ($idproductos as $idproducto) {
-            $messages = [];
-            StockMovementManager::rebuild($idproducto, $messages, true);
-            StockRebuildManager::rebuild($idproducto, $messages);
-            if (!empty($messages)) {
-                if ($newTransaction) {
-                    self::db()->rollback();
-                }
-                return false;
-            }
-        }
-
         if (false === parent::delete()) {
             if ($newTransaction) {
                 self::db()->rollback();
             }
             return false;
+        }
+
+        // el worker reconstruye los movimientos de cada producto y, a partir de ellos, recalcula el stock
+        foreach ($idproductos as $idproducto) {
+            StockMovementManager::queueProductRebuild($idproducto, true);
         }
 
         if ($newTransaction) {
