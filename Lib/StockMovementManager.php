@@ -424,6 +424,10 @@ class StockMovementManager
         $limit = 250;
         $models = [new LineaAlbaranProveedor(), new LineaFacturaProveedor(), new LineaAlbaranCliente(), new LineaFacturaCliente()];
         foreach ($models as $model) {
+            if (false === static::tableExists($model::tableName())) {
+                continue;
+            }
+
             // ordenamos por documento para cargar cada documento y sus transformaciones una sola vez
             $where = [Where::eq('idproducto', static::$idproducto), Where::isNotNull('referencia')];
             $order = [$model->documentColumn() => 'ASC', 'idlinea' => 'ASC'];
@@ -497,6 +501,10 @@ class StockMovementManager
      */
     protected static function getCountingMovements(): array
     {
+        if (false === static::tableExists(LineaConteoStock::tableName())) {
+            return [];
+        }
+
         $movements = [];
         $conteos = [];
         foreach (LineaConteoStock::allWhereEq('idproducto', static::$idproducto, ['idlinea' => 'ASC']) as $line) {
@@ -588,6 +596,10 @@ class StockMovementManager
      */
     protected static function getTransferMovements(): array
     {
+        if (false === static::tableExists(LineaTransferenciaStock::tableName())) {
+            return [];
+        }
+
         $movements = [];
         $transfers = [];
         foreach (LineaTransferenciaStock::allWhereEq('idproducto', static::$idproducto, ['idlinea' => 'ASC']) as $line) {
@@ -696,5 +708,14 @@ class StockMovementManager
         }
 
         return true;
+    }
+
+    /**
+     * En una instalación nueva, las tablas se crean al usar sus modelos. En PostgreSQL, consultar una
+     * tabla que no existe aborta toda la transacción del rebuild, así que lo comprobamos antes.
+     */
+    protected static function tableExists(string $tableName): bool
+    {
+        return (new DataBase())->tableExists($tableName);
     }
 }
