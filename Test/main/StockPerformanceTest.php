@@ -19,9 +19,13 @@
 
 namespace FacturaScripts\Test\Plugins;
 
+use FacturaScripts\Core\Base\DataBase;
+use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Lib\BusinessDocumentGenerator;
+use FacturaScripts\Dinamic\Lib\StockMovementManager;
+use FacturaScripts\Dinamic\Lib\StockRebuildManager;
 use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\LogMessage;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
@@ -232,6 +236,131 @@ final class StockPerformanceTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testPerformanceAlbaranProveedor50ProductosConHistorico(): void
+    {
+        // semilla fija para que el test sea reproducible
+        mt_srand(20261020);
+
+        // nos aseguramos de que la tabla de logs existe: al borrar la factura se escribe
+        // el log de auditoría dentro de una transacción, y ahí no se puede crear la tabla
+        new LogMessage();
+
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un proveedor
+        $proveedor = $this->getRandomSupplier();
+        $this->assertTrue($proveedor->save());
+
+        // creamos 50 productos, cada uno con entre 200 y 1000 movimientos previos
+        $numProducts = 50;
+        $products = [];
+        $history = [];
+        for ($num = 0; $num < $numProducts; $num++) {
+            $product = $this->getRandomProduct();
+            $this->assertTrue($product->save());
+            $products[] = $product;
+            $history[$product->referencia] = mt_rand(200, 1000);
+        }
+
+        // creamos el histórico: un albarán por cada movimiento previo
+        $start = microtime(true);
+        $historyIds = $this->createSupplierHistory($proveedor, $warehouse->codalmacen, $products, $history);
+        $historyElapsed = microtime(true) - $start;
+
+        try {
+            // creamos el albarán con una línea por producto
+            $albaran = new AlbaranProveedor();
+            $this->assertTrue($albaran->setSubject($proveedor));
+            $this->assertTrue($albaran->setWarehouse($warehouse->codalmacen));
+            $this->assertTrue($albaran->save());
+
+            foreach ($products as $product) {
+                $linea = $albaran->getNewProductLine($product->referencia);
+                $linea->cantidad = 1;
+                $linea->pvpunitario = 1;
+                $this->assertTrue($linea->save());
+            }
+
+            // buscamos el estado que genera factura
+            $invoiceStatusId = null;
+            foreach ($albaran->getAvailableStatus() as $status) {
+                if ('FacturaProveedor' === $status->generadoc) {
+                    $invoiceStatusId = $status->idestado;
+                    break;
+                }
+            }
+            $this->assertNotNull($invoiceStatusId);
+
+            // medimos el tiempo que tarda en pasar a factura
+            $start = microtime(true);
+            $albaran->idestado = $invoiceStatusId;
+            $this->assertTrue($albaran->save());
+            $elapsed = microtime(true) - $start;
+            $queueElapsed = $this->runWorkQueue();
+
+            fwrite(STDERR, PHP_EOL . '50 productos con histórico (' . array_sum($history) . ' movimientos previos) -> factura: '
+                . round($elapsed, 2) . ' s (cola: ' . round($queueElapsed, 2) . ' s, histórico: '
+                . round($historyElapsed, 2) . ' s)' . PHP_EOL);
+
+            // comprobamos que la factura se ha creado
+            $facturas = $albaran->childrenDocuments();
+            $this->assertCount(1, $facturas);
+            $factura = $facturas[0];
+
+            // comprobamos los movimientos de cada producto
+            foreach ($products as $product) {
+                $total = $history[$product->referencia];
+                $whereRef = [
+                    Where::eq('codalmacen', $warehouse->codalmacen),
+                    Where::eq('referencia', $product->referencia)
+                ];
+
+                // un movimiento por albarán del histórico + el del albarán nuevo + el de la factura
+                $movements = MovimientoStock::all($whereRef, [], 0, 0);
+                $this->assertCount($total + 2, $movements, 'movimientos incorrectos en ' . $product->referencia);
+
+                // los saldos se acumulan en orden: el histórico, el albarán nuevo y la factura, que no mueve stock
+                $expected = [];
+                for ($pos = 0; $pos < $total; $pos++) {
+                    $expected[] = ['AlbaranProveedor', $historyIds[$pos], 1, $pos + 1];
+                }
+                $expected[] = ['AlbaranProveedor', $albaran->id(), 1, $total + 1];
+                $expected[] = ['FacturaProveedor', $factura->id(), 0, $total + 1];
+
+                usort($movements, [StockMovementManager::class, 'compareMovements']);
+                $actual = array_map(function (MovimientoStock $movement) {
+                    return [$movement->docmodel, (int)$movement->docid, (float)$movement->cantidad, (float)$movement->saldo];
+                }, $movements);
+                $this->assertEquals($expected, $actual, 'saldos incorrectos en ' . $product->referencia);
+
+                // el stock refleja el histórico y el albarán nuevo
+                $stock = new Stock();
+                $this->assertTrue($stock->loadWhere($whereRef));
+                $this->assertEquals($total + 1, $stock->cantidad, 'stock incorrecto en ' . $product->referencia);
+            }
+
+            // el paso a factura sólo encola los productos, así que no depende del histórico.
+            // La cola reconstruye cada producto completo y sí depende de él
+            $this->assertLessThan(self::perfBudget(30.0), $elapsed, 'el paso a factura es demasiado lento');
+            $this->assertLessThan(self::perfBudget(120.0), $queueElapsed, 'la reconstrucción de los movimientos es demasiado lenta');
+
+            // eliminamos
+            $this->assertTrue($factura->delete());
+            $this->assertTrue($albaran->delete());
+        } finally {
+            $this->deleteSupplierHistory($historyIds);
+        }
+
+        $this->assertTrue($proveedor->delete());
+        $this->assertTrue($proveedor->getDefaultAddress()->delete());
+        foreach ($products as $product) {
+            $this->assertTrue($product->delete());
+        }
+        $this->assertTrue($warehouse->delete());
+    }
+
     public function testPerformanceAgrupar40AlbaranesProveedorEnUnaFactura(): void
     {
         // semilla fija para que el test sea reproducible
@@ -427,6 +556,129 @@ final class StockPerformanceTest extends TestCase
     protected function tearDown(): void
     {
         $this->logErrors();
+    }
+
+    /**
+     * Crea un histórico de albaranes de proveedor de ayer, con sus movimientos y su stock. Cada albarán tiene
+     * una línea de cantidad 1 por cada producto al que aún le faltan movimientos, así que cada producto
+     * acaba con tantos movimientos como indica $history. El primer albarán se crea con el modelo y el resto
+     * se copian de él con inserciones masivas, porque crear miles de documentos con el modelo sería inviable.
+     * Los movimientos también se insertan directamente, como los tendría un producto con un histórico largo.
+     *
+     * @param array $products productos del histórico
+     * @param array $history número de movimientos por referencia
+     *
+     * @return int[] los ids de los albaranes, en orden cronológico
+     */
+    private function createSupplierHistory($proveedor, string $codalmacen, array $products, array $history): array
+    {
+        $db = new DataBase();
+
+        // creamos el primer albarán con una línea por producto, a primera hora de ayer
+        $first = new AlbaranProveedor();
+        $this->assertTrue($first->setSubject($proveedor));
+        $this->assertTrue($first->setWarehouse($codalmacen));
+        $this->assertTrue($first->setDate(Tools::date('-1 day'), '00:00:00'));
+        $this->assertTrue($first->save());
+
+        $lineIds = [];
+        foreach ($products as $product) {
+            $linea = $first->getNewProductLine($product->referencia);
+            $linea->cantidad = 1;
+            $linea->pvpunitario = 1;
+            $this->assertTrue($linea->save());
+            $lineIds[$product->referencia] = $linea->id();
+        }
+
+        // copiamos el albarán: cada copia tiene un código propio y es un segundo posterior a la anterior
+        $docRow = $db->select('SELECT * FROM albaranesprov WHERE idalbaran = ' . $db->var2str($first->id()))[0];
+        unset($docRow['idalbaran']);
+        $prefix = 'H' . $first->id() . '-';
+        $rows = [];
+        for ($num = 2; $num <= max($history); $num++) {
+            $rows[] = array_merge($docRow, [
+                'codigo' => $prefix . $num,
+                'hora' => gmdate('H:i:s', $num - 1)
+            ]);
+        }
+        $this->bulkInsert($db, 'albaranesprov', $rows);
+
+        $ids = [1 => $first->id()];
+        $sql = 'SELECT idalbaran, codigo FROM albaranesprov WHERE codigo LIKE ' . $db->var2str($prefix . '%');
+        foreach ($db->select($sql) as $row) {
+            $ids[(int)substr($row['codigo'], strlen($prefix))] = (int)$row['idalbaran'];
+        }
+        ksort($ids);
+        $this->assertCount(max($history), $ids);
+
+        // copiamos las líneas de cada producto y creamos sus movimientos con el saldo acumulado
+        $lines = [];
+        $movements = [];
+        foreach ($products as $product) {
+            $lineRow = $db->select('SELECT * FROM lineasalbaranesprov WHERE idlinea = '
+                . $db->var2str($lineIds[$product->referencia]))[0];
+            unset($lineRow['idlinea']);
+
+            for ($num = 1; $num <= $history[$product->referencia]; $num++) {
+                if ($num > 1) {
+                    $lines[] = array_merge($lineRow, ['idalbaran' => $ids[$num]]);
+                }
+
+                $movements[] = [
+                    'cantidad' => 1,
+                    'codalmacen' => $codalmacen,
+                    'docid' => $ids[$num],
+                    'docmodel' => 'AlbaranProveedor',
+                    'documento' => 'AlbaranProveedor ' . $ids[$num],
+                    'fecha' => $docRow['fecha'],
+                    'hora' => gmdate('H:i:s', $num - 1),
+                    'idproducto' => $product->idproducto,
+                    'referencia' => $product->referencia,
+                    'saldo' => $num
+                ];
+            }
+        }
+        $this->bulkInsert($db, 'lineasalbaranesprov', $lines);
+        $this->bulkInsert($db, 'stocks_movimientos', $movements);
+
+        // las líneas insertadas no actualizan el stock: lo recalculamos con el último movimiento
+        $messages = [];
+        foreach ($products as $product) {
+            StockRebuildManager::rebuild($product->idproducto, $messages, true);
+        }
+
+        return array_values($ids);
+    }
+
+    /**
+     * Elimina los albaranes del histórico. Sus líneas se eliminan en cascada.
+     *
+     * @param int[] $ids
+     */
+    private function deleteSupplierHistory(array $ids): void
+    {
+        $db = new DataBase();
+        foreach (array_chunk($ids, 500) as $chunk) {
+            $this->assertTrue($db->exec('DELETE FROM albaranesprov WHERE idalbaran IN (' . implode(',', $chunk) . ');'));
+        }
+    }
+
+    /**
+     * Inserta las filas en la tabla por bloques de 500. Todas las filas deben tener las mismas columnas.
+     */
+    private function bulkInsert(DataBase $db, string $table, array $rows): void
+    {
+        foreach (array_chunk($rows, 500) as $chunk) {
+            $values = [];
+            foreach ($chunk as $row) {
+                $values[] = '(' . implode(', ', array_map([$db, 'var2str'], $row)) . ')';
+            }
+
+            $columns = array_map([$db, 'escapeColumn'], array_keys($chunk[0]));
+            $sql = 'INSERT INTO ' . $table . ' (' . implode(', ', $columns) . ')'
+                . ' VALUES ' . implode(', ', $values) . ';';
+            $this->assertTrue($db->exec($sql));
+        }
     }
 
     /**
