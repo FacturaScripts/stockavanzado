@@ -157,6 +157,41 @@ final class StockMovementWorkerTest extends TestCase
         $this->assertTrue($warehouse2->delete());
     }
 
+    public function testLegacyUpdateEventRebuildsMovements(): void
+    {
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        $supplier = $this->getRandomSupplier();
+        $this->assertTrue($supplier->save());
+
+        $albaran = $this->createAlbaran($supplier, $warehouse, $product, 4);
+        $this->runWorkQueue();
+
+        // borramos el movimiento para comprobar que el evento antiguo lo vuelve a crear
+        $this->assertTrue($this->getMovement($albaran, $warehouse, $product)->delete());
+        $this->assertFalse($this->hasMovement($albaran, $warehouse, $product));
+
+        // un evento antiguo de recálculo de saldos que quedó en cola lo procesa RebuildStockMovements
+        $this->assertTrue(WorkQueue::send('Model.Producto.updateStockMovements', (string)$product->idproducto));
+        $this->runWorkQueue();
+
+        $movement = $this->getMovement($albaran, $warehouse, $product);
+        $this->assertEquals(4, $movement->cantidad);
+        $this->assertEquals(4, $movement->saldo);
+
+        // eliminamos
+        $this->assertTrue($albaran->delete());
+        $this->runWorkQueue();
+        $this->assertTrue($supplier->delete());
+        $this->assertTrue($supplier->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     protected function tearDown(): void
     {
         $this->logErrors();

@@ -68,7 +68,9 @@ class Init extends InitClass
 
         // workers
         WorkQueue::addWorker('RebuildStockMovements', 'Model.Producto.rebuildStockMovements');
-        WorkQueue::addWorker('UpdateStockMovements', 'Model.Producto.updateStockMovements');
+        // compatibilidad: los eventos antiguos de recálculo de saldos que queden en cola,
+        // o que envíen otros plugins, hacen un rebuild, que también recalcula los saldos
+        WorkQueue::addWorker('RebuildStockMovements', 'Model.Producto.updateStockMovements');
     }
 
     public function uninstall(): void
