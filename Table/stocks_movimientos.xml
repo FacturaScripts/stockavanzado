@@ -72,4 +72,19 @@
         <name>ca_stocks_movimientos_variantes</name>
         <type>FOREIGN KEY (referencia) REFERENCES variantes (referencia) ON DELETE CASCADE ON UPDATE CASCADE</type>
     </constraint>
+    <!-- índice para el recálculo de saldos por almacén y referencia -->
+    <index>
+        <name>stocks_movimientos_alm_ref</name>
+        <columns>codalmacen,referencia</columns>
+    </index>
+    <!-- índice para localizar los movimientos de un documento -->
+    <index>
+        <name>stocks_movimientos_doc</name>
+        <columns>docid,docmodel</columns>
+    </index>
+    <!-- índice para obtener los pares (almacén, referencia) de un producto -->
+    <index>
+        <name>stocks_movimientos_prod</name>
+        <columns>idproducto,codalmacen,referencia</columns>
+    </index>
 </table>

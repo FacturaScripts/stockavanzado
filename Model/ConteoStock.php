@@ -147,6 +147,7 @@ class ConteoStock extends ModelClass
         }
 
         $newTransaction = false === self::db()->inTransaction() && self::db()->beginTransaction();
+        $idproductos = [];
         foreach ($this->getLines(['fecha' => 'DESC']) as $line) {
             // si no está completado, saltamos
             if (false === $conteo->completed) {
@@ -154,13 +155,6 @@ class ConteoStock extends ModelClass
             }
 
             if (false === $this->pipeFalse('deleteLineCounting', $line, $conteo)) {
-                if ($newTransaction) {
-                    self::db()->rollback();
-                }
-                return false;
-            }
-
-            if (false === StockMovementManager::deleteLineCounting($line, $conteo)) {
                 if ($newTransaction) {
                     self::db()->rollback();
                 }
@@ -175,13 +169,8 @@ class ConteoStock extends ModelClass
                 return false;
             }
 
-            $messages = [];
-            StockRebuildManager::rebuild($line->idproducto, $messages);
-            if (!empty($messages)) {
-                if ($newTransaction) {
-                    self::db()->rollback();
-                }
-                return false;
+            if (!empty($line->idproducto)) {
+                $idproductos[$line->idproducto] = $line->idproducto;
             }
         }
 
@@ -190,6 +179,11 @@ class ConteoStock extends ModelClass
                 self::db()->rollback();
             }
             return false;
+        }
+
+        // el worker reconstruye los movimientos de cada producto y, a partir de ellos, recalcula el stock
+        foreach ($idproductos as $idproducto) {
+            StockMovementManager::queueProductRebuild($idproducto, true);
         }
 
         if ($newTransaction) {
@@ -298,8 +292,11 @@ class ConteoStock extends ModelClass
                 return false;
             }
 
+            // actualizamos sólo el stock contado: los movimientos de documentos pueden estar pendientes
+            // de reconstruir, así que no podemos deducir de ellos el stock de otros almacenes
             $messages = [];
-            StockRebuildManager::rebuild($line->idproducto, $messages);
+            StockRebuildManager::rebuildReference($conteo->codalmacen, $line->referencia, $messages);
+            StockMovementManager::queueProductRebuild($line->idproducto);
             if (empty($messages)) {
                 continue;
             }

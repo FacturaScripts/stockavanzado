@@ -21,6 +21,7 @@ namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
@@ -80,9 +81,9 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($lineaTrans2->exists());
 
         // comprobamos que no se ha alterado el stock del almacén 1
-        $stock1->load($stock1->idstock);
+        $stock1->reload();
         $this->assertEquals(100, $stock1->cantidad);
-        $stock2->load($stock2->idstock);
+        $stock2->reload();
         $this->assertEquals(25, $stock2->cantidad);
 
         // ejecutamos la transferencia
@@ -91,8 +92,11 @@ final class TransferenciaStockTest extends TestCase
         // si intento volver a ejecutarlo debe devolver true porque ya está completado
         $this->assertTrue($transferencia->transferStock());
 
+        // procesamos la cola para que el worker reconstruya los movimientos
+        $this->runWorkQueue();
+
         // comprobamos que la transferencia está completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertTrue($transferencia->completed);
 
         // comprobamos que está el movimiento de stock del almacén 1
@@ -128,11 +132,11 @@ final class TransferenciaStockTest extends TestCase
         $this->assertEquals(10, $movement2->saldo);
 
         // comprobamos que el stock del producto 1 en almacén 1 ahora es 90
-        $stock1->load($stock1->idstock);
+        $stock1->reload();
         $this->assertEquals(90, $stock1->cantidad);
 
         // comprobamos que el stock del producto 2 en almacén 1 ahora es 20
-        $stock2->load($stock2->idstock);
+        $stock2->reload();
         $this->assertEquals(20, $stock2->cantidad);
 
         // comprobamos que el stock del producto 1 en almacén 2 ahora es 10
@@ -156,6 +160,9 @@ final class TransferenciaStockTest extends TestCase
         // eliminamos la transferencia
         $this->assertTrue($transferencia->delete());
 
+        // procesamos la cola para que el worker reconstruya los movimientos
+        $this->runWorkQueue();
+
         // comprobamos que la línea se ha eliminado
         $this->assertFalse($lineaTrans1->exists());
 
@@ -166,19 +173,19 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($movement2->exists());
 
         // comprobamos que el stock del almacén 1 vuelve a ser 100
-        $stock1->load($stock1->idstock);
+        $stock1->reload();
         $this->assertEquals(100, $stock1->cantidad);
 
         // comprobamos que el stock del almacén 2 vuelve a ser 25
-        $stock2->load($stock2->idstock);
+        $stock2->reload();
         $this->assertEquals(25, $stock2->cantidad);
 
         // comprobamos que el stock del producto 1 en el almacén 2 ahora es 0
-        $stock21->load($stock21->idstock);
+        $stock21->reload();
         $this->assertEquals(0, $stock21->cantidad);
 
         // comprobamos que el stock del producto 2 en el almacén 2 ahora es 0
-        $stock22->load($stock22->idstock);
+        $stock22->reload();
         $this->assertEquals(0, $stock22->cantidad);
 
         // eliminamos
@@ -232,8 +239,11 @@ final class TransferenciaStockTest extends TestCase
         // si intento volver a ejecutarlo debe devolver true porque ya está completado
         $this->assertTrue($transferencia->transferStock());
 
+        // procesamos la cola para que el worker reconstruya los movimientos
+        $this->runWorkQueue();
+
         // comprobamos que la transferencia está completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertTrue($transferencia->completed);
 
         // comprobamos que está el movimiento de stock del almacén 1
@@ -277,6 +287,9 @@ final class TransferenciaStockTest extends TestCase
         // eliminamos la transferencia
         $this->assertTrue($transferencia->delete());
 
+        // procesamos la cola para que el worker reconstruya los movimientos
+        $this->runWorkQueue();
+
         // comprobamos que la línea se ha eliminado
         $this->assertFalse($lineaTrans->exists());
 
@@ -287,11 +300,11 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($movement2->exists());
 
         // comprobamos que el stock del almacén 1 es 100
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(100, $stock->cantidad);
 
         // comprobamos que el stock del almacén 2 es 0
-        $stock2->load($stock2->idstock);
+        $stock2->reload();
         $this->assertEquals(0, $stock2->cantidad);
 
         // eliminamos
@@ -345,6 +358,9 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($linea2->exists());
         $this->assertTrue($transferencia2->transferStock());
 
+        // procesamos la cola para que el worker reconstruya los movimientos
+        $this->runWorkQueue();
+
         // comprobamos el movimiento de la primera transferencia en el almacén de origen
         $movOrig1 = new MovimientoStock();
         $this->assertTrue($movOrig1->loadWhere([
@@ -392,7 +408,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertEquals(17, $movDest2->saldo);
 
         // comprobamos los stocks finales: origen 100 - 17 = 83, destino 17
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(83, $stock->cantidad);
 
         $stockDest = new Stock();
@@ -405,6 +421,99 @@ final class TransferenciaStockTest extends TestCase
         // eliminamos
         $this->assertTrue($transferencia2->delete());
         $this->assertTrue($transferencia1->delete());
+
+        // procesamos la cola para que el worker reconstruya los movimientos
+        $this->runWorkQueue();
+
+        $this->assertTrue($warehouse2->delete());
+        $this->assertTrue($warehouse->delete());
+        $this->assertTrue($product->delete());
+    }
+
+    public function testBackdatedTransferUpdatesLaterSaldos(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un segundo almacén
+        $warehouse2 = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse2->save());
+
+        // creamos un producto
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        // añadimos stock al almacén de origen
+        $stock = new Stock();
+        $stock->codalmacen = $warehouse->codalmacen;
+        $stock->referencia = $product->referencia;
+        $stock->idproducto = $product->idproducto;
+        $stock->cantidad = 100;
+        $this->assertTrue($stock->save());
+
+        // completamos primero una transferencia de hace una hora: 10 unidades
+        $recent = new TransferenciaStock();
+        $recent->codalmacenorigen = $warehouse->codalmacen;
+        $recent->codalmacendestino = $warehouse2->codalmacen;
+        $recent->fecha = date('Y-m-d H:i:s', strtotime('-1 hour'));
+        $this->assertTrue($recent->save());
+        $this->assertTrue($recent->addLine($product->referencia, $product->idproducto, 10)->exists());
+        $this->assertTrue($recent->transferStock());
+        $this->runWorkQueue();
+
+        // después completamos otra con fecha anterior: 7 unidades hace dos horas
+        $older = new TransferenciaStock();
+        $older->codalmacenorigen = $warehouse->codalmacen;
+        $older->codalmacendestino = $warehouse2->codalmacen;
+        $older->fecha = date('Y-m-d H:i:s', strtotime('-2 hours'));
+        $this->assertTrue($older->save());
+        $this->assertTrue($older->addLine($product->referencia, $product->idproducto, 7)->exists());
+        $this->assertTrue($older->transferStock());
+        $this->runWorkQueue();
+
+        // el movimiento posterior debe acumular el saldo de la transferencia anterior
+        $movOrig = new MovimientoStock();
+        $this->assertTrue($movOrig->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('docid', $recent->id()),
+            Where::eq('docmodel', $recent->modelClassName()),
+            Where::eq('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(-17, $movOrig->saldo);
+
+        $movDest = new MovimientoStock();
+        $this->assertTrue($movDest->loadWhere([
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('docid', $recent->id()),
+            Where::eq('docmodel', $recent->modelClassName()),
+            Where::eq('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(17, $movDest->saldo);
+
+        // al eliminar la transferencia anterior, el saldo posterior vuelve a ser el de su cantidad
+        $this->assertTrue($older->delete());
+        $this->runWorkQueue();
+
+        // el rebuild vuelve a crear los movimientos, así que los buscamos de nuevo
+        $this->assertTrue($movOrig->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('docid', $recent->id()),
+            Where::eq('docmodel', $recent->modelClassName()),
+            Where::eq('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(-10, $movOrig->saldo);
+        $this->assertTrue($movDest->loadWhere([
+            Where::eq('codalmacen', $warehouse2->codalmacen),
+            Where::eq('docid', $recent->id()),
+            Where::eq('docmodel', $recent->modelClassName()),
+            Where::eq('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(10, $movDest->saldo);
+
+        // eliminamos
+        $this->assertTrue($recent->delete());
+        $this->runWorkQueue();
         $this->assertTrue($warehouse2->delete());
         $this->assertTrue($warehouse->delete());
         $this->assertTrue($product->delete());
@@ -452,7 +561,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($linea->exists());
 
         // el stock del almacén de origen no debe haberse alterado
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(50, $stock->cantidad);
 
         // no debe existir stock en el almacén de destino
@@ -551,11 +660,11 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($transferencia->transferStock());
 
         // la transferencia no debe estar completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertFalse($transferencia->completed);
 
         // el stock del almacén de origen no debe haberse alterado
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(30, $stock->cantidad);
 
         // no debe existir stock en el almacén de destino
@@ -627,7 +736,7 @@ final class TransferenciaStockTest extends TestCase
         // ejecutamos la transferencia y comprobamos que se transfieren 10 unidades
         $this->assertTrue($transferencia->transferStock());
 
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(40, $stock->cantidad);
 
         $stockDest = new Stock();
@@ -686,7 +795,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($transferencia->transferStock());
 
         // recargamos la transferencia y confirmamos que está completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertTrue($transferencia->completed);
 
         // 1) addLine de un producto nuevo debe fallar
@@ -695,17 +804,17 @@ final class TransferenciaStockTest extends TestCase
         $this->assertCount(1, $transferencia->getLines());
 
         // 2) addLine sobre la misma referencia tampoco debe modificar la línea existente
-        $linea->load($linea->idlinea);
+        $linea->reload();
         $cantidadOriginal = $linea->cantidad;
         $reintento = $transferencia->addLine($product1->referencia, $product1->idproducto, 7);
         $this->assertFalse($reintento->exists());
-        $linea->load($linea->idlinea);
+        $linea->reload();
         $this->assertEquals($cantidadOriginal, $linea->cantidad);
 
         // 3) guardar directamente una modificación sobre la línea existente debe fallar
         $linea->cantidad = 99;
         $this->assertFalse($linea->save());
-        $linea->load($linea->idlinea);
+        $linea->reload();
         $this->assertEquals($cantidadOriginal, $linea->cantidad);
 
         // 4) eliminar directamente la línea de una transferencia completada debe fallar
@@ -716,7 +825,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertTrue($transferencia->delete());
         $this->assertFalse($linea->exists());
 
-        $stock1->load($stock1->idstock);
+        $stock1->reload();
         $this->assertEquals(30, $stock1->cantidad);
 
         // eliminamos
@@ -747,7 +856,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($transferencia->transferStock());
 
         // la transferencia no debe estar completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertFalse($transferencia->completed);
 
         // eliminamos
@@ -793,8 +902,11 @@ final class TransferenciaStockTest extends TestCase
         // ejecutamos la transferencia
         $this->assertTrue($transferencia->transferStock());
 
+        // procesamos la cola para que el worker reconstruya los movimientos
+        $this->runWorkQueue();
+
         // el stock del almacén de origen baja a 12
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(12, $stock->cantidad);
 
         // el almacén de destino tiene 8 unidades de la variante
@@ -880,7 +992,7 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($transferencia->transferStock());
 
         // comprobamos que la transferencia no está completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertFalse($transferencia->completed);
 
         // comprobamos que no hay stock en el almacén de origen
@@ -950,11 +1062,11 @@ final class TransferenciaStockTest extends TestCase
         $this->assertFalse($transferencia->transferStock());
 
         // comprobamos que la transferencia no está completada
-        $transferencia->load($transferencia->idtrans);
+        $transferencia->reload();
         $this->assertFalse($transferencia->completed);
 
         // comprobamos que el stock del almacén de origen no se ha alterado
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(5, $stock->cantidad);
 
         // comprobamos que no hay stock en el almacén de destino
@@ -1305,5 +1417,11 @@ final class TransferenciaStockTest extends TestCase
     protected function tearDown(): void
     {
         $this->logErrors();
+    }
+
+    private function runWorkQueue(): void
+    {
+        while (WorkQueue::run()) {
+        }
     }
 }

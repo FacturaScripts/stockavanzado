@@ -30,8 +30,14 @@ class BusinessDocument
     public function saveUpdate(): Closure
     {
         return function () {
-            StockMovementManager::updateDocumentDate($this);
-            StockMovementManager::cleanResidualMovements($this);
+            // si cambia la fecha, cambia el orden de los movimientos: reconstruimos los productos del documento
+            if ($this->getOriginal('fecha') === $this->fecha && $this->getOriginal('hora') === $this->hora) {
+                return true;
+            }
+
+            foreach ($this->getLines() as $line) {
+                StockMovementManager::queueProductRebuild($line->idproducto);
+            }
             return true;
         };
     }

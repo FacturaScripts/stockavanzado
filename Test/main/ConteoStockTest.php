@@ -20,10 +20,13 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
+use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Stock;
+use FacturaScripts\Dinamic\Model\Variante;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
@@ -76,18 +79,18 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($linea2->exists());
 
         // comprobamos que el stock del producto 1 es 0
-        $stock1->load($stock1->id());
+        $stock1->reload();
         $this->assertEquals(0, $stock1->cantidad);
 
         // comprobamos que el stock del producto 2 es 5
-        $stock2->load($stock2->id());
+        $stock2->reload();
         $this->assertEquals(5, $stock2->cantidad);
 
         // ejecutamos el conteo
         $this->assertTrue($conteo->updateStock());
 
         // comprobamos que el conteo está completado
-        $conteo->load($conteo->id());
+        $conteo->reload();
         $this->assertTrue($conteo->completed);
 
         // si intento volver a ejecutarlo debe devolver true porque ya está completado
@@ -126,15 +129,18 @@ final class ConteoStockTest extends TestCase
         $this->assertEquals(1, $movement2->saldo);
 
         // comprobamos que el stock del producto 1 es 50
-        $stock1->load($stock1->id());
+        $stock1->reload();
         $this->assertEquals(50, $stock1->cantidad);
 
         // comprobamos que el stock del producto 2 es 1
-        $stock2->load($stock2->id());
+        $stock2->reload();
         $this->assertEquals(1, $stock2->cantidad);
 
         // eliminamos el conteo
         $this->assertTrue($conteo->delete());
+
+        // procesamos la cola para que el worker reconstruya los movimientos y el stock
+        $this->runWorkQueue();
 
         // comprobamos que la línea ya no existe
         $this->assertFalse($linea1->exists());
@@ -144,11 +150,11 @@ final class ConteoStockTest extends TestCase
         $this->assertFalse($movement2->exists());
 
         // comprobamos que el stock vuelve a 0
-        $stock1->load($stock1->id());
+        $stock1->reload();
         $this->assertEquals(0, $stock1->cantidad);
 
         // comprobamos que el stock vuelve a 5
-        $stock2->load($stock2->id());
+        $stock2->reload();
         $this->assertEquals(0, $stock2->cantidad);
 
         // eliminamos
@@ -281,7 +287,7 @@ final class ConteoStockTest extends TestCase
         $this->assertFalse($conteo->updateStock());
 
         // el conteo no debe estar completado
-        $conteo->load($conteo->idconteo);
+        $conteo->reload();
         $this->assertFalse($conteo->completed);
 
         // eliminamos
@@ -334,7 +340,7 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($conteo->updateStock());
 
         // recargamos para tener el estado completado
-        $conteo->load($conteo->idconteo);
+        $conteo->reload();
         $this->assertTrue($conteo->completed);
 
         $originalFechainicio = $conteo->fechainicio;
@@ -624,7 +630,7 @@ final class ConteoStockTest extends TestCase
         $this->assertFalse($conteo->updateStock());
 
         // el conteo no debe estar completado
-        $conteo->load($conteo->idconteo);
+        $conteo->reload();
         $this->assertFalse($conteo->completed);
 
         // no debe existir movimiento de stock para este conteo
@@ -663,7 +669,7 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($conteo->updateStock());
 
         // recargamos el conteo y confirmamos que está completado
-        $conteo->load($conteo->idconteo);
+        $conteo->reload();
         $this->assertTrue($conteo->completed);
 
         // 1) addLine de un producto nuevo debe fallar
@@ -672,17 +678,17 @@ final class ConteoStockTest extends TestCase
         $this->assertCount(1, $conteo->getLines());
 
         // 2) addLine sobre la misma referencia tampoco debe modificar la línea existente
-        $linea->load($linea->idlinea);
+        $linea->reload();
         $cantidadOriginal = $linea->cantidad;
         $reintento = $conteo->addLine($product1->referencia, $product1->idproducto, 7);
         $this->assertFalse($reintento->exists());
-        $linea->load($linea->idlinea);
+        $linea->reload();
         $this->assertEquals($cantidadOriginal, $linea->cantidad);
 
         // 3) guardar directamente una modificación sobre la línea existente debe fallar
         $linea->cantidad = 99;
         $this->assertFalse($linea->save());
-        $linea->load($linea->idlinea);
+        $linea->reload();
         $this->assertEquals($cantidadOriginal, $linea->cantidad);
 
         // 4) eliminar directamente la línea de un conteo completado debe fallar
@@ -742,6 +748,23 @@ final class ConteoStockTest extends TestCase
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ]));
+        $this->assertEquals(10, $stock->cantidad);
+
+        // al reconstruir, el movimiento del conteo conserva la suma de sus líneas
+        $this->runWorkQueue();
+        $movement = new MovimientoStock();
+        $this->assertTrue($movement->loadWhere([
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('docid', $conteo->id()),
+            Where::eq('docmodel', $conteo->modelClassName()),
+            Where::eq('referencia', $product->referencia)
+        ]));
+        $this->assertEquals(10, $movement->saldo);
+
+        // y el stock recalculado a partir de los movimientos también
+        StockMovementManager::queueProductRebuild($product->idproducto, true);
+        $this->runWorkQueue();
+        $this->assertTrue($stock->reload());
         $this->assertEquals(10, $stock->cantidad);
 
         // eliminamos
@@ -848,17 +871,86 @@ final class ConteoStockTest extends TestCase
         $this->assertTrue($linea->exists());
 
         // comprobamos que el stock del producto es 3
-        $stock->load($stock->id());
+        $stock->reload();
         $this->assertEquals(3, $stock->cantidad);
 
         // eliminamos el conteo
         $this->assertTrue($conteo->delete());
 
         // comprobamos que el stock del producto sigue siendo 3
-        $stock->load($stock->idstock);
+        $stock->reload();
         $this->assertEquals(3, $stock->cantidad);
 
         // eliminamos
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
+    public function testDeleteWithVariantsOfSameProduct(): void
+    {
+        // creamos un almacén
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        // creamos un producto con una segunda variante
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+        $variant2 = new Variante();
+        $variant2->idproducto = $product->idproducto;
+        $variant2->referencia = $product->referencia . '-V2';
+        $this->assertTrue($variant2->save());
+
+        // creamos un conteo con las dos variantes y lo ejecutamos
+        $conteo = new ConteoStock();
+        $conteo->codalmacen = $warehouse->codalmacen;
+        $conteo->observaciones = 'Test variantes';
+        $this->assertTrue($conteo->save());
+        $this->assertTrue($conteo->addLine($product->referencia, $product->idproducto, 7)->exists());
+        $this->assertTrue($conteo->addLine($variant2->referencia, $product->idproducto, 3)->exists());
+        $this->assertTrue($conteo->updateStock());
+
+        // comprobamos el stock de las dos variantes
+        $whereRef1 = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $product->referencia)
+        ];
+        $whereRef2 = [
+            Where::eq('codalmacen', $warehouse->codalmacen),
+            Where::eq('referencia', $variant2->referencia)
+        ];
+        $stock1 = new Stock();
+        $this->assertTrue($stock1->loadWhere($whereRef1));
+        $this->assertEquals(7, $stock1->cantidad);
+        $stock2 = new Stock();
+        $this->assertTrue($stock2->loadWhere($whereRef2));
+        $this->assertEquals(3, $stock2->cantidad);
+
+        // eliminamos el conteo
+        $this->assertTrue($conteo->delete());
+
+        // el stock no cambia hasta que el worker lo recalcula
+        $this->assertTrue($stock1->reload());
+        $this->assertEquals(7, $stock1->cantidad);
+
+        // procesamos la cola para que el worker reconstruya los movimientos y el stock
+        $this->runWorkQueue();
+
+        // no deben quedar líneas ni movimientos del conteo
+        $this->assertCount(0, LineaConteoStock::all([Where::eq('idconteo', $conteo->idconteo)]));
+        $this->assertCount(0, MovimientoStock::all([
+            Where::eq('docid', $conteo->id()),
+            Where::eq('docmodel', $conteo->modelClassName())
+        ]));
+
+        // el stock de las dos variantes vuelve a 0
+        $this->assertTrue($stock1->reload());
+        $this->assertEquals(0, $stock1->cantidad);
+        $this->assertTrue($stock2->reload());
+        $this->assertEquals(0, $stock2->cantidad);
+
+        // eliminamos
+        $this->assertTrue($stock1->delete());
+        $this->assertTrue($stock2->delete());
         $this->assertTrue($product->delete());
         $this->assertTrue($warehouse->delete());
     }
@@ -886,5 +978,11 @@ final class ConteoStockTest extends TestCase
     protected function tearDown(): void
     {
         $this->logErrors();
+    }
+
+    private function runWorkQueue(): void
+    {
+        while (WorkQueue::run()) {
+        }
     }
 }

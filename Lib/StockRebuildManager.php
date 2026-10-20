@@ -24,7 +24,7 @@ use FacturaScripts\Core\DataSrc\Almacenes;
 use FacturaScripts\Core\KernelException;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
-use FacturaScripts\Dinamic\Model\MovimientoStock;
+use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
 
@@ -106,6 +106,33 @@ class StockRebuildManager
         }
     }
 
+    /**
+     * Actualiza la cantidad en stock de una referencia en un almacén con el saldo de su último movimiento.
+     */
+    public static function rebuildReference(string $codalmacen, string $referencia, array &$messages = []): void
+    {
+        $lastMovement = StockMovementManager::getLastMovement($codalmacen, $referencia);
+        if (false === $lastMovement->exists()) {
+            return;
+        }
+
+        $where = [
+            Where::eq('codalmacen', $codalmacen),
+            Where::eq('referencia', $referencia)
+        ];
+        $stock = new Stock();
+        if (false === $stock->loadWhere($where)) {
+            $stock->codalmacen = $codalmacen;
+            $stock->idproducto = $lastMovement->idproducto;
+            $stock->referencia = $referencia;
+        }
+
+        $stock->cantidad = $lastMovement->saldo;
+        if (false === $stock->save()) {
+            $messages[] = 'error-saving-stock';
+        }
+    }
+
     protected static function clear(): void
     {
         if (false === static::db()->tableExists('stocks')) {
@@ -148,14 +175,8 @@ class StockRebuildManager
         }
 
         foreach ($rows as $row) {
-            $where = [
-                Where::eq('codalmacen', $codalmacen),
-                Where::eq('referencia', $row['referencia'])
-            ];
-
             // obtenemos el último movimiento de cada referencia
-            $lastMovement = new MovimientoStock();
-            $lastMovement->loadWhere($where, ['fecha' => 'DESC', 'hora' => 'DESC', 'id' => 'DESC']);
+            $lastMovement = StockMovementManager::getLastMovement($codalmacen, $row['referencia']);
 
             $ref = trim($row['referencia']);
             if (!isset($stockData[$ref])) {

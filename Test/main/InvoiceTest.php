@@ -20,6 +20,7 @@
 namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Core\Where;
+use FacturaScripts\Core\WorkQueue;
 use FacturaScripts\Dinamic\Model\AlbaranCliente;
 use FacturaScripts\Dinamic\Model\FacturaCliente;
 use FacturaScripts\Dinamic\Model\FacturaProveedor;
@@ -82,11 +83,13 @@ final class InvoiceTest extends TestCase
         $this->assertEquals(6, $stock->disponible);
 
         // comprobamos que se ha generado el movimiento de stock
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $whereRef = [
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals(-4, $movement->cantidad);
         $this->assertEquals(-4, $movement->saldo);
@@ -135,11 +138,13 @@ final class InvoiceTest extends TestCase
         $this->assertTrue($linea->save());
 
         // comprobamos que el movimiento se ha creado con la fecha de la factura
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $whereRef = [
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals($factura->fecha, $movement->fecha);
 
@@ -149,6 +154,7 @@ final class InvoiceTest extends TestCase
         $this->assertTrue($factura->save());
 
         // comprobamos que el movimiento refleja la nueva fecha
+        $this->runWorkQueue();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals($newDate, $movement->fecha);
         $this->assertEquals($factura->id(), $movement->docid);
@@ -199,6 +205,7 @@ final class InvoiceTest extends TestCase
         $this->assertEquals(7, $stock->disponible);
 
         // comprobamos que se ha generado el movimiento de stock
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals(7, $movement->cantidad);
@@ -252,11 +259,13 @@ final class InvoiceTest extends TestCase
         $this->assertTrue($linea->save());
 
         // el movimiento debe tener la fecha y hora del albarán
+        $this->runWorkQueue();
         $movement = new MovimientoStock();
         $whereRef = [
             Where::eq('codalmacen', $warehouse->codalmacen),
             Where::eq('referencia', $product->referencia)
         ];
+        $this->runWorkQueue();
         $this->assertTrue($movement->loadWhere($whereRef));
         $this->assertEquals($pastDate, $movement->fecha);
         $this->assertEquals($pastHour, $movement->hora);
@@ -280,6 +289,7 @@ final class InvoiceTest extends TestCase
         $factura = $facturas[0];
 
         // el movimiento del albarán mantiene su fecha/hora originales
+        $this->runWorkQueue();
         $albaranMovement = new MovimientoStock();
         $this->assertTrue($albaranMovement->loadWhere([
             Where::eq('codalmacen', $warehouse->codalmacen),
@@ -291,6 +301,7 @@ final class InvoiceTest extends TestCase
         $this->assertEquals($pastHour, $albaranMovement->hora);
 
         // el movimiento de la factura toma su propia fecha/hora (distintas del albarán)
+        $this->runWorkQueue();
         $facturaMovement = new MovimientoStock();
         $this->assertTrue($facturaMovement->loadWhere([
             Where::eq('codalmacen', $warehouse->codalmacen),
@@ -314,5 +325,11 @@ final class InvoiceTest extends TestCase
     protected function tearDown(): void
     {
         $this->logErrors();
+    }
+
+    private function runWorkQueue(): void
+    {
+        while (WorkQueue::run()) {
+        }
     }
 }

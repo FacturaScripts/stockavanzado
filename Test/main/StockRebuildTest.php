@@ -87,7 +87,7 @@ final class StockRebuildTest extends TestCase
         $this->assertEmpty($messages);
 
         // recargamos el stock
-        $stock->load($stock->id());
+        $stock->reload();
 
         // comprobamos que el stock es correcto
         $this->assertEquals(50, $stock->cantidad);
