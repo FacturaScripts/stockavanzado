@@ -178,15 +178,6 @@ class StockMovementManager
         return true;
     }
 
-    public static function deleteLineTransfer(LineaTransferenciaStock $line, TransferenciaStock $stockCount): bool
-    {
-        if (false === static::deleteLineTransferMovement($stockCount->codalmacenorigen, $line, $stockCount)) {
-            return false;
-        }
-
-        return static::deleteLineTransferMovement($stockCount->codalmacendestino, $line, $stockCount);
-    }
-
     public static function deleteMovements(): bool
     {
         $db = new DataBase();
@@ -372,12 +363,11 @@ class StockMovementManager
 
         // actualizamos la cantidad
         $movement->cantidad += $cantidad;
+        $movement->saldo = 0;
 
-        // actualizamos el saldo
-        $previousSaldo = static::getPreviousSaldo($movement->codalmacen, $movement->referencia, $movement->fecha, $movement->hora);
-        $movement->saldo = $previousSaldo + $movement->cantidad;
-
-        return empty($movement->cantidad) ? $movement->delete() : $movement->save();
+        $result = empty($movement->cantidad) ? $movement->delete() : $movement->save();
+        static::updateReferenceSaldos($codalmacen, $line->referencia);
+        return $result;
     }
 
     /**
@@ -390,16 +380,6 @@ class StockMovementManager
         static::$cacheLineDocuments = [];
         static::$cacheTransAsChild = [];
         static::$cacheTransAsParent = [];
-    }
-
-    protected static function deleteLineTransferMovement(string $codalmacen, LineaTransferenciaStock $line, TransferenciaStock $stockCount): bool
-    {
-        $movement = static::findMovement($codalmacen, $stockCount, $line->referencia);
-        if ($movement->exists() && false === $movement->delete()) {
-            return false;
-        }
-
-        return true;
     }
 
     protected static function findMovement(string $codalmacen, $doc, string $referencia): MovimientoStock
@@ -522,25 +502,6 @@ class StockMovementManager
         }
 
         return 50;
-    }
-
-    protected static function getPreviousSaldo(string $codalmacen, string $referencia, string $fecha, string $hora): float
-    {
-        // buscamos el último movimiento anterior
-        $where = [
-            Where::eq('codalmacen', $codalmacen),
-            Where::eq('referencia', $referencia),
-            Where::lte('fecha', $fecha)
-        ];
-        $order = ['fecha' => 'DESC', 'hora' => 'DESC'];
-        foreach (MovimientoStock::all($where, $order, 0, 50) as $movement) {
-            // nos aseguramos de que la hora también sea anterior
-            if (strtotime($movement->fecha . ' ' . $movement->hora) < strtotime($fecha . ' ' . $hora)) {
-                return $movement->saldo;
-            }
-        }
-
-        return 0;
     }
 
     protected static function getProduct(string $reference): Producto

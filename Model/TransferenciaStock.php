@@ -131,14 +131,6 @@ class TransferenciaStock extends ModelClass
                 return false;
             }
 
-            // eliminamos el movimiento de stock
-            if (false === StockMovementManager::deleteLineTransfer($line, $transfer)) {
-                if ($newTransaction) {
-                    self::db()->rollback();
-                }
-                return false;
-            }
-
             // cargamos el stock de la línea
             $stock = new Stock();
             $where = [
@@ -168,6 +160,9 @@ class TransferenciaStock extends ModelClass
                 }
                 return false;
             }
+
+            // los movimientos de stock los reconstruye el worker
+            StockMovementManager::queueProductRebuild($line->idproducto);
         }
 
         // eliminamos la transferencia
@@ -295,13 +290,8 @@ class TransferenciaStock extends ModelClass
                 return false;
             }
 
-            // creamos el movimiento de stock
-            if (false === StockMovementManager::addLineTransferStock($line, $transfer)) {
-                if ($newTransaction) {
-                    self::db()->rollback();
-                }
-                return false;
-            }
+            // los movimientos de stock los reconstruye el worker
+            StockMovementManager::queueProductRebuild($line->idproducto);
 
             // ejecutamos las extensiones
             if (false === $this->pipeFalse('transferStock', $line, $transfer)) {
