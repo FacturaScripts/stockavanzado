@@ -32,6 +32,7 @@ use PHPUnit\Framework\TestCase;
 
 final class StockRebuildTest extends TestCase
 {
+    use CleanTestDataTrait;
     use DefaultSettingsTrait;
     use LogErrorsTrait;
     use RandomDataTrait;
@@ -41,6 +42,12 @@ final class StockRebuildTest extends TestCase
         self::setDefaultSettings();
         self::installAccountingPlan();
         self::removeTaxRegularization();
+        self::saveLastIds();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        self::deleteNewRecords();
     }
 
     public function testCreate(): void

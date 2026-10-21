@@ -46,6 +46,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class StockMovementWorkerTest extends TestCase
 {
+    use CleanTestDataTrait;
     use LogErrorsTrait;
     use RandomDataTrait;
     use DefaultSettingsTrait;
@@ -55,6 +56,12 @@ final class StockMovementWorkerTest extends TestCase
         self::setDefaultSettings();
         self::installAccountingPlan();
         self::removeTaxRegularization();
+        self::saveLastIds();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        self::deleteNewRecords();
     }
 
     public function testMovementsRebuiltByWorker(): void

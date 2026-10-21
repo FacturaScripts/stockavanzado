@@ -17,8 +17,19 @@ use PHPUnit\Framework\TestCase;
 
 final class StockValoradoHistoricoTest extends TestCase
 {
+    use CleanTestDataTrait;
     use LogErrorsTrait;
     use RandomDataTrait;
+
+    public static function setUpBeforeClass(): void
+    {
+        self::saveLastIds();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        self::deleteNewRecords();
+    }
 
     public function testHistoricSavedByCron(): void
     {
