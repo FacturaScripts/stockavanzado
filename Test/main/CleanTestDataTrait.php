@@ -19,6 +19,7 @@
 
 namespace FacturaScripts\Test\Plugins;
 
+use FacturaScripts\Core\DbQuery;
 use FacturaScripts\Core\Model\WorkEvent;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\LogMessage;
@@ -42,10 +43,17 @@ trait CleanTestDataTrait
         new WorkEvent();
 
         self::$lastIds = [
-            'logs' => (int)LogMessage::table()->max('id'),
-            'subcuentas' => (int)Subcuenta::table()->max('idsubcuenta'),
-            'work_events' => (int)WorkEvent::table()->max('id'),
+            'logs' => self::lastId(LogMessage::table(), 'id'),
+            'subcuentas' => self::lastId(Subcuenta::table(), 'idsubcuenta'),
+            'work_events' => self::lastId(WorkEvent::table(), 'id'),
         ];
+    }
+
+    private static function lastId(DbQuery $query, string $field): int
+    {
+        // no usamos max(): con la tabla vacía MAX() devuelve NULL y DbQuery::maxString() lanza un TypeError
+        $row = $query->select($field)->orderBy($field, 'DESC')->first();
+        return (int)($row[$field] ?? 0);
     }
 
     protected static function deleteNewRecords(): void
