@@ -27,6 +27,7 @@ use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\Variante;
+use FacturaScripts\Test\Traits\DefaultSettingsTrait;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
@@ -34,11 +35,18 @@ use PHPUnit\Framework\TestCase;
 final class ConteoStockTest extends TestCase
 {
     use CleanTestDataTrait;
+    use DefaultSettingsTrait;
     use LogErrorsTrait;
     use RandomDataTrait;
 
+    /**
+     * Crea las tablas del core antes de empezar: el worker que reconstruye los movimientos
+     * recorre todos los documentos dentro de una transacción, y en ella no puede crear las
+     * tablas que falten en una base de datos nueva.
+     */
     public static function setUpBeforeClass(): void
     {
+        self::loadCoreModels();
         self::saveLastIds();
     }
 
