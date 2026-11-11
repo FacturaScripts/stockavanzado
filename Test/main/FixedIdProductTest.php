@@ -25,6 +25,7 @@ use FacturaScripts\Dinamic\Lib\StockMovementManager;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Plugins\StockAvanzado\CronJob\FixedIdProduct;
+use FacturaScripts\Test\Traits\DefaultSettingsTrait;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
@@ -32,11 +33,13 @@ use PHPUnit\Framework\TestCase;
 final class FixedIdProductTest extends TestCase
 {
     use CleanTestDataTrait;
+    use DefaultSettingsTrait;
     use LogErrorsTrait;
     use RandomDataTrait;
 
     public static function setUpBeforeClass(): void
     {
+        self::loadCoreModels();
         self::saveLastIds();
     }
 

@@ -54,6 +54,7 @@ final class StockMovementWorkerTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
+        self::loadCoreModels();
         self::setDefaultSettings();
         self::installAccountingPlan();
         self::removeTaxRegularization();

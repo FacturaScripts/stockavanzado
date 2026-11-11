@@ -25,6 +25,7 @@ use FacturaScripts\Dinamic\Lib\InitialStockMovementManager;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
 use FacturaScripts\Dinamic\Model\MovimientoStock;
 use FacturaScripts\Dinamic\Model\Stock;
+use FacturaScripts\Test\Traits\DefaultSettingsTrait;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use PHPUnit\Framework\TestCase;
@@ -32,11 +33,13 @@ use PHPUnit\Framework\TestCase;
 final class InitialStockTest extends TestCase
 {
     use CleanTestDataTrait;
+    use DefaultSettingsTrait;
     use LogErrorsTrait;
     use RandomDataTrait;
 
     public static function setUpBeforeClass(): void
     {
+        self::loadCoreModels();
         self::saveLastIds();
     }
 

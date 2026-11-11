@@ -7,6 +7,7 @@ namespace FacturaScripts\Test\Plugins;
 
 use FacturaScripts\Dinamic\Model\Almacen;
 use FacturaScripts\Dinamic\Model\Stock as DinStock;
+use FacturaScripts\Test\Traits\DefaultSettingsTrait;
 use FacturaScripts\Test\Traits\LogErrorsTrait;
 use FacturaScripts\Test\Traits\RandomDataTrait;
 use FacturaScripts\Plugins\StockAvanzado\CronJob\StockValue;
@@ -18,11 +19,13 @@ use PHPUnit\Framework\TestCase;
 final class StockValoradoHistoricoTest extends TestCase
 {
     use CleanTestDataTrait;
+    use DefaultSettingsTrait;
     use LogErrorsTrait;
     use RandomDataTrait;
 
     public static function setUpBeforeClass(): void
     {
+        self::loadCoreModels();
         self::saveLastIds();
     }
 
