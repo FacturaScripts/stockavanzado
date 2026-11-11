@@ -58,6 +58,14 @@ class EditAlmacen
                 ->addFilterAutocomplete('nick', 'user', 'nick', 'users', 'nick', 'nick');
         };
     }
+    /**
+     * Añade la pestaña de histórico de stock valorado del almacén.
+     *
+     * Las filas no son pulsables porque el histórico no tiene ficha propia
+     * (no existe EditStockValoradoHistorico) y todos sus datos ya se ven en el listado.
+     *
+     * @return Closure
+     */
     protected function createViewsHistorico(): Closure
     {
         return function ($viewName = 'ListStockValoradoHistorico') {
@@ -67,7 +75,8 @@ class EditAlmacen
                 ->disableColumn('warehouse')
                 ->setSettings('btnNew', false)
                 ->setSettings('btnDelete', false)
-                ->setSettings('checkBoxes', false);
+                ->setSettings('checkBoxes', false)
+                ->setSettings('clickable', false);
         };
     }
 
