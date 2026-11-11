@@ -114,7 +114,8 @@ class EditProducto
                 ->disableColumn('product')
                 ->setSettings('btnDelete', false)
                 ->setSettings('btnNew', false)
-                ->setSettings('checkBoxes', false);
+                ->setSettings('checkBoxes', false)
+                ->setSettings('group', 'warehouse');
 
             // filtros: referencia, cantidad, periodo, almacén
             $references = $this->codeModel->all('variantes', 'referencia', 'referencia', false, [Where::eq('idproducto', $this->request->get('code'))]);
