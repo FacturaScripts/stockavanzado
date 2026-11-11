@@ -26,8 +26,12 @@ use FacturaScripts\Core\Model\Base\TransformerDocument;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
+use FacturaScripts\Dinamic\Model\AlbaranCliente;
+use FacturaScripts\Dinamic\Model\AlbaranProveedor;
 use FacturaScripts\Dinamic\Model\ConteoStock;
 use FacturaScripts\Dinamic\Model\DocTransformation;
+use FacturaScripts\Dinamic\Model\FacturaCliente;
+use FacturaScripts\Dinamic\Model\FacturaProveedor;
 use FacturaScripts\Dinamic\Model\LineaAlbaranCliente;
 use FacturaScripts\Dinamic\Model\LineaAlbaranProveedor;
 use FacturaScripts\Dinamic\Model\LineaConteoStock;
@@ -422,27 +426,32 @@ class StockMovementManager
         $movements = [];
         $keepZero = [];
         $limit = 250;
-        $models = [new LineaAlbaranProveedor(), new LineaFacturaProveedor(), new LineaAlbaranCliente(), new LineaFacturaCliente()];
-        foreach ($models as $model) {
+        $models = [
+            [new LineaAlbaranProveedor(), new AlbaranProveedor()],
+            [new LineaFacturaProveedor(), new FacturaProveedor()],
+            [new LineaAlbaranCliente(), new AlbaranCliente()],
+            [new LineaFacturaCliente(), new FacturaCliente()],
+        ];
+        foreach ($models as [$model, $docModel]) {
             if (false === static::tableExists($model::tableName())) {
                 continue;
             }
 
-            // ordenamos por documento para cargar cada documento y sus transformaciones una sola vez
+            // ordenamos por documento para que los movimientos se calculen siempre en el mismo orden
             $where = [Where::eq('idproducto', static::$idproducto), Where::isNotNull('referencia')];
             $order = [$model->documentColumn() => 'ASC', 'idlinea' => 'ASC'];
-            $doc = null;
             $offset = 0;
             $lines = $model->all($where, $order, $offset, $limit);
             while (count($lines) > 0) {
-                foreach ($lines as $line) {
-                    if (false === isset($references[$line->referencia])) {
-                        continue;
-                    }
+                // cargamos los documentos de la página y sus transformaciones con tres consultas
+                $docs = static::loadPageDocuments($docModel, $lines);
+                static::clearCache();
+                static::preloadPageTransformations($docModel->modelClassName(), array_keys($docs));
 
-                    if (null === $doc || $doc->id() != $line->documentColumnValue()) {
-                        $doc = $line->getDocument();
-                        static::clearCache();
+                foreach ($lines as $line) {
+                    $doc = $docs[$line->documentColumnValue()] ?? null;
+                    if (null === $doc || false === isset($references[$line->referencia])) {
+                        continue;
                     }
 
                     $key = static::movementKey($doc, $doc->codalmacen, $line->referencia);
@@ -629,6 +638,29 @@ class StockMovementManager
             ($transformation->model1 === 'AlbaranProveedor' && $transformation->model2 === 'FacturaProveedor');
     }
 
+    /**
+     * Carga con una consulta los documentos de una página de líneas, indexados por su id.
+     *
+     * @param BusinessDocumentLine[] $lines
+     *
+     * @return TransformerDocument[]
+     */
+    protected static function loadPageDocuments(TransformerDocument $docModel, array $lines): array
+    {
+        $ids = [];
+        foreach ($lines as $line) {
+            $ids[$line->documentColumnValue()] = $line->documentColumnValue();
+        }
+
+        $docs = [];
+        $where = [Where::in($docModel::primaryColumn(), array_values($ids))];
+        foreach ($docModel->all($where, [], 0, 0) as $doc) {
+            $docs[$doc->id()] = $doc;
+        }
+
+        return $docs;
+    }
+
     protected static function movementKey($doc, string $codalmacen, string $referencia): string
     {
         return $doc->modelClassName() . '|' . $doc->id() . '|' . $codalmacen . '|' . $referencia;
@@ -690,8 +722,51 @@ class StockMovementManager
     }
 
     /**
-     * Ordena los movimientos nuevos, calcula sus saldos y los guarda. Se insertan en orden para que
-     * sus ids respeten el mismo orden que usa compareMovements() con la misma fecha, hora y prioridad.
+     * Carga con dos consultas las transformaciones de todos los documentos de una página y las deja en la caché.
+     */
+    protected static function preloadPageTransformations(string $docmodel, array $docids): void
+    {
+        $pending = [];
+        foreach ($docids as $docid) {
+            $key = $docmodel . '|' . $docid;
+            if (false === isset(static::$cacheTransAsChild[$key])) {
+                static::$cacheTransAsChild[$key] = [];
+                static::$cacheTransAsParent[$key] = [];
+                $pending[] = $docid;
+            }
+        }
+        if (empty($pending)) {
+            return;
+        }
+
+        // transformaciones en las que estos documentos son el hijo: sólo la primera de cada línea
+        $where = [
+            Where::eq('model2', $docmodel),
+            Where::in('iddoc2', $pending),
+        ];
+        foreach (DocTransformation::all($where, ['id' => 'ASC'], 0, 0) as $transformation) {
+            $key = $docmodel . '|' . $transformation->iddoc2;
+            if (false === isset(static::$cacheTransAsChild[$key][$transformation->idlinea2])) {
+                static::$cacheTransAsChild[$key][$transformation->idlinea2] = $transformation;
+            }
+        }
+
+        // transformaciones en las que estos documentos son el padre
+        $where2 = [
+            Where::eq('model1', $docmodel),
+            Where::in('iddoc1', $pending),
+        ];
+        foreach (DocTransformation::all($where2, ['id' => 'ASC'], 0, 0) as $transformation) {
+            $key = $docmodel . '|' . $transformation->iddoc1;
+            static::$cacheTransAsParent[$key][$transformation->idlinea1][] = $transformation;
+        }
+    }
+
+    /**
+     * Ordena los movimientos nuevos, calcula sus saldos y los inserta por bloques. El rebuild ya ha borrado
+     * los del producto, así que todos son altas: no pasan por save() ni generan eventos del modelo.
+     * Se insertan en orden para que sus ids respeten el mismo orden que usa compareMovements() con la
+     * misma fecha, hora y prioridad.
      *
      * @param MovimientoStock[] $movements
      */
@@ -701,8 +776,19 @@ class StockMovementManager
         usort($movements, [static::class, 'compareMovements']);
         static::accumulateSaldos($movements);
 
+        $rows = [];
         foreach ($movements as $movement) {
-            if (false === $movement->save()) {
+            if (false === $movement->test()) {
+                return false;
+            }
+
+            $row = $movement->toArray();
+            unset($row[MovimientoStock::primaryColumn()]);
+            $rows[] = $row;
+        }
+
+        foreach (array_chunk($rows, 500) as $chunk) {
+            if (false === MovimientoStock::table()->insert($chunk)) {
                 return false;
             }
         }

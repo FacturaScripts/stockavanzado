@@ -19,6 +19,7 @@
 
 namespace FacturaScripts\Test\Plugins;
 
+use FacturaScripts\Core\Base\DataBase;
 use FacturaScripts\Core\Model\WorkEvent;
 use FacturaScripts\Dinamic\Lib\BusinessDocumentGenerator;
 use FacturaScripts\Core\Template\CronJobClass;
@@ -456,9 +457,118 @@ final class StockMovementWorkerTest extends TestCase
         $this->assertTrue($warehouse->delete());
     }
 
+    public function testRebuildQueriesDoNotGrowWithDocuments(): void
+    {
+        if ('mysql' !== strtolower((new DataBase())->type())) {
+            $this->markTestSkipped('El contador de consultas de la sesión sólo existe en MySQL y MariaDB.');
+        }
+
+        $warehouse = $this->getRandomWarehouse();
+        $this->assertTrue($warehouse->save());
+
+        $product = $this->getRandomProduct();
+        $this->assertTrue($product->save());
+
+        $supplier = $this->getRandomSupplier();
+        $this->assertTrue($supplier->save());
+
+        // 6 albaranes, la mitad facturados: 9 documentos con sus transformaciones
+        $docs = $this->createAlbaranesAndInvoices($supplier, $warehouse, $product, 6);
+        $this->runWorkQueue();
+        $expected = $this->getMovementRows($product);
+        $this->assertCount(9, $expected);
+
+        $queries = $this->countRebuildQueries($product);
+        $this->assertEquals($expected, $this->getMovementRows($product), 'la reconstrucción cambia los movimientos');
+
+        // con el triple de documentos, la reconstrucción hace las mismas consultas
+        $docs = array_merge($docs, $this->createAlbaranesAndInvoices($supplier, $warehouse, $product, 12));
+        $this->runWorkQueue();
+        $expected = $this->getMovementRows($product);
+        $this->assertCount(27, $expected);
+
+        $moreQueries = $this->countRebuildQueries($product);
+        $this->assertEquals($expected, $this->getMovementRows($product), 'la reconstrucción cambia los movimientos');
+        $this->assertLessThanOrEqual($queries + 2, $moreQueries, 'las consultas crecen con el número de documentos');
+
+        // el stock coincide con el saldo del último movimiento
+        $this->assertEquals(18, $this->getStock($warehouse, $product)->cantidad);
+        $this->assertEquals(18, StockMovementManager::getLastMovement($warehouse->codalmacen, $product->referencia)->saldo);
+
+        // eliminamos: primero las facturas y después los albaranes
+        foreach (array_reverse($docs) as $doc) {
+            $this->assertTrue($doc->delete());
+        }
+        $this->runWorkQueue();
+        $this->assertTrue($supplier->delete());
+        $this->assertTrue($supplier->getDefaultAddress()->delete());
+        $this->assertTrue($product->delete());
+        $this->assertTrue($warehouse->delete());
+    }
+
     protected function tearDown(): void
     {
         $this->logErrors();
+    }
+
+    private function countRebuildQueries(Producto $product): int
+    {
+        $before = $this->countSessionQueries();
+        StockMovementManager::rebuild($product->idproducto);
+
+        // descontamos la consulta del propio contador
+        return $this->countSessionQueries() - $before - 1;
+    }
+
+    private function countSessionQueries(): int
+    {
+        $rows = (new DataBase())->select("SHOW SESSION STATUS LIKE 'Questions'");
+        return (int)($rows[0]['Value'] ?? $rows[0]['value'] ?? 0);
+    }
+
+    /**
+     * Crea albaranes de 1 unidad y factura uno de cada dos. Devuelve primero los albaranes y después las facturas.
+     */
+    private function createAlbaranesAndInvoices(Proveedor $supplier, Almacen $warehouse, Producto $product, int $num): array
+    {
+        $albaranes = [];
+        $facturas = [];
+        for ($i = 0; $i < $num; $i++) {
+            $albaran = $this->createAlbaran($supplier, $warehouse, $product, 1);
+            $albaranes[] = $albaran;
+            if ($i % 2 === 0) {
+                continue;
+            }
+
+            foreach ($albaran->getAvailableStatus() as $status) {
+                if ('FacturaProveedor' === $status->generadoc) {
+                    $albaran->idestado = $status->idestado;
+                    break;
+                }
+            }
+            $this->assertTrue($albaran->save());
+            $children = $albaran->childrenDocuments();
+            $this->assertCount(1, $children);
+            $facturas[] = $children[0];
+        }
+
+        return array_merge($albaranes, $facturas);
+    }
+
+    /**
+     * Movimientos del producto en el orden de sus ids, sin el id, para comparar dos reconstrucciones.
+     */
+    private function getMovementRows(Producto $product): array
+    {
+        $rows = [];
+        $where = [Where::eq('idproducto', $product->idproducto)];
+        foreach (MovimientoStock::all($where, ['id' => 'ASC'], 0, 0) as $movement) {
+            $row = $movement->toArray();
+            unset($row['id']);
+            $rows[] = $row;
+        }
+
+        return $rows;
     }
 
     private function countPendingRebuildAll(): int
