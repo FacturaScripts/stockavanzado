@@ -283,9 +283,10 @@ final class ConteoStockTest extends TestCase
         $this->assertCount(2, $conteo->getLines());
 
         // eliminamos
+        // el stock tiene cantidad y no se puede eliminar: desaparece al borrar el almacén
         $this->assertTrue($conteo->delete());
-        $this->assertTrue($stock1->delete());
         $this->assertTrue($warehouse->delete());
+        $this->assertFalse($stock1->exists());
         $this->assertTrue($product1->delete());
         $this->assertTrue($product2->delete());
     }

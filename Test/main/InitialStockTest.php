@@ -107,9 +107,9 @@ final class InitialStockTest extends TestCase
         // comprobamos que el movimiento no existe
         $this->assertFalse($movimiento->exists());
 
-        // eliminamos
-        $this->assertTrue($stock->delete());
+        // eliminamos: el stock desaparece al borrar el producto
         $this->assertTrue($product->delete());
+        $this->assertFalse($stock->exists());
         $this->assertTrue($warehouse->delete());
     }
 
