@@ -117,7 +117,7 @@ class ReportStock extends ListController
             ->addOrderBy(['cantidad'], 'quantity')
             ->addOrderBy(['total_movimientos'], 'movements')
             ->addOrderBy(['coste'], 'cost-price')
-            ->addOrderBy(['total_precio'], 'total-precio')
+            ->addOrderBy(['total_precio'], 'total-price')
             ->addSearchFields(['productos.descripcion', 'stocks.referencia'])
             ->addFilterSelectWhere('type', $values)
             ->addFilterSelectWhere('status', [
